@@ -13,11 +13,11 @@ const Backtester = {
     async fetchHistoricalData(days = 180) {
         try {
             const priceData = await fetchWithTimeout(
-                `${CONFIG.apis.coinGecko}/coins/bitcoin/market_chart?vs_currency=usd&days=${days}&interval=daily`
+                `${CONFIG.apis.coinGecko}/coins/bitcoin/market_chart?vs_currency=usd&days=${days}&interval=daily&x_cg_demo_api_key=${CONFIG.coinGeckoApiKey}`
             );
 
             const fgData = await fetchWithTimeout(
-                `${CONFIG.apis.fearGreed}?limit=${Math.min(days, 60)}`
+                `${CONFIG.apis.fearGreed}?limit=${Math.min(days, 60)}`, 10000
             );
 
             const dailyData = [];
