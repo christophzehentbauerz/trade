@@ -9,13 +9,13 @@
 
 const CONFIG = {
     refreshInterval: 300000, // 5 minutes in ms
-    coinGeckoApiKey: 'CG-FnyBMq4qXipMTjBnbYbmiLBq',
     apis: {
         coinGecko: 'https://api.coingecko.com/api/v3',
         fearGreed: 'https://api.alternative.me/fng/',
         binance: 'https://api.binance.com/api/v3',
         binanceFutures: 'https://fapi.binance.com',
-        binanceFuturesData: 'https://fapi.binance.com/futures/data'
+        binanceFuturesData: 'https://fapi.binance.com/futures/data',
+        corsProxy: 'https://corsproxy.io/?url='
     },
     weights: {
         technical: 0.35,
@@ -304,10 +304,16 @@ async function fetchWithTimeout(url, timeout = 10000, headers = {}) {
 }
 
 async function fetchPriceData() {
+    const url = `${CONFIG.apis.coinGecko}/coins/bitcoin?localization=false&tickers=false&community_data=false&developer_data=false`;
     try {
-        const data = await fetchWithTimeout(
-            `${CONFIG.apis.coinGecko}/coins/bitcoin?localization=false&tickers=false&community_data=false&developer_data=false&x_cg_demo_api_key=${CONFIG.coinGeckoApiKey}`
-        );
+        let data;
+        try {
+            data = await fetchWithTimeout(url);
+        } catch (e) {
+            // Fallback: try via CORS proxy
+            console.warn('CoinGecko direct failed, trying CORS proxy...');
+            data = await fetchWithTimeout(`${CONFIG.apis.corsProxy}${encodeURIComponent(url)}`);
+        }
 
         state.price = data.market_data.current_price.usd;
         state.priceChange24h = data.market_data.price_change_percentage_24h;
@@ -324,10 +330,15 @@ async function fetchPriceData() {
 }
 
 async function fetchPriceHistory() {
+    const url = `${CONFIG.apis.coinGecko}/coins/bitcoin/market_chart?vs_currency=usd&days=14&interval=daily`;
     try {
-        const data = await fetchWithTimeout(
-            `${CONFIG.apis.coinGecko}/coins/bitcoin/market_chart?vs_currency=usd&days=14&interval=daily&x_cg_demo_api_key=${CONFIG.coinGeckoApiKey}`
-        );
+        let data;
+        try {
+            data = await fetchWithTimeout(url);
+        } catch (e) {
+            console.warn('CoinGecko history direct failed, trying CORS proxy...');
+            data = await fetchWithTimeout(`${CONFIG.apis.corsProxy}${encodeURIComponent(url)}`);
+        }
 
         state.priceHistory = data.prices.map(p => p[1]);
         return true;
@@ -338,8 +349,15 @@ async function fetchPriceHistory() {
 }
 
 async function fetchFearGreedIndex() {
+    const url = `${CONFIG.apis.fearGreed}?limit=8`;
     try {
-        const data = await fetchWithTimeout(`${CONFIG.apis.fearGreed}?limit=8`, 10000);
+        let data;
+        try {
+            data = await fetchWithTimeout(url, 10000);
+        } catch (e) {
+            console.warn('Fear & Greed direct failed, trying CORS proxy...');
+            data = await fetchWithTimeout(`${CONFIG.apis.corsProxy}${encodeURIComponent(url)}`, 10000);
+        }
 
         if (data.data && data.data.length > 0) {
             state.fearGreedIndex = parseInt(data.data[0].value);
@@ -352,15 +370,21 @@ async function fetchFearGreedIndex() {
         return true;
     } catch (error) {
         console.error('Error fetching Fear & Greed:', error);
+        state.fearGreedIndex = 50;
         return false;
     }
 }
 
 async function fetchFundingRate() {
+    const url = `${CONFIG.apis.binanceFutures}/fapi/v1/fundingRate?symbol=BTCUSDT&limit=1`;
     try {
-        const data = await fetchWithTimeout(
-            `${CONFIG.apis.binanceFutures}/fapi/v1/fundingRate?symbol=BTCUSDT&limit=1`
-        );
+        let data;
+        try {
+            data = await fetchWithTimeout(url);
+        } catch (e) {
+            console.warn('Binance funding direct failed, trying CORS proxy...');
+            data = await fetchWithTimeout(`${CONFIG.apis.corsProxy}${encodeURIComponent(url)}`);
+        }
 
         if (data && data.length > 0) {
             state.fundingRate = parseFloat(data[0].fundingRate) * 100;
@@ -368,20 +392,23 @@ async function fetchFundingRate() {
         return true;
     } catch (error) {
         console.error('Error fetching funding rate:', error);
-        // Set a mock value for demo
-        state.fundingRate = -0.005;
+        state.fundingRate = 0.01;
         return false;
     }
 }
 
 async function fetchOpenInterest() {
+    const url = `${CONFIG.apis.binanceFutures}/fapi/v1/openInterest?symbol=BTCUSDT`;
     try {
-        const data = await fetchWithTimeout(
-            `${CONFIG.apis.binanceFutures}/fapi/v1/openInterest?symbol=BTCUSDT`
-        );
+        let data;
+        try {
+            data = await fetchWithTimeout(url);
+        } catch (e) {
+            console.warn('Binance OI direct failed, trying CORS proxy...');
+            data = await fetchWithTimeout(`${CONFIG.apis.corsProxy}${encodeURIComponent(url)}`);
+        }
 
         if (data) {
-            // state.price might not be set yet (parallel fetch), store raw value
             state.openInterestRaw = parseFloat(data.openInterest);
             if (state.price) {
                 state.openInterest = state.openInterestRaw * state.price;
@@ -395,10 +422,15 @@ async function fetchOpenInterest() {
 }
 
 async function fetchLongShortRatio() {
+    const url = `${CONFIG.apis.binanceFuturesData}/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1`;
     try {
-        const data = await fetchWithTimeout(
-            `${CONFIG.apis.binanceFuturesData}/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1`
-        );
+        let data;
+        try {
+            data = await fetchWithTimeout(url);
+        } catch (e) {
+            console.warn('Binance L/S direct failed, trying CORS proxy...');
+            data = await fetchWithTimeout(`${CONFIG.apis.corsProxy}${encodeURIComponent(url)}`);
+        }
 
         if (data && data.length > 0) {
             const ratio = parseFloat(data[0].longShortRatio);
@@ -411,7 +443,6 @@ async function fetchLongShortRatio() {
         return true;
     } catch (error) {
         console.error('Error fetching L/S ratio:', error);
-        // Mock data
         state.longShortRatio = { long: 48.5, short: 51.5 };
         return false;
     }
@@ -1118,31 +1149,38 @@ async function updateDashboard() {
             state.openInterest = state.openInterestRaw * state.price;
         }
 
-        // Guard: if price data failed, skip UI update
+        // If price failed, show error but don't block entire UI
         if (!state.price) {
-            console.warn('Price data unavailable - skipping UI update');
-            return;
+            console.warn('Price data unavailable');
+            document.getElementById('primarySignal').textContent = 'FEHLER';
+            document.getElementById('signalSummary').textContent =
+                'API-Daten konnten nicht geladen werden. Versuche es in 1 Minute erneut (Klick auf Refresh oder Taste R).';
+            document.getElementById('btcPrice').textContent = 'API Fehler';
+            updateLastUpdate();
+        } else {
+            // Calculate scores
+            calculateScores();
+
+            // Update all UI components
+            updatePriceCard();
+            updateFearGreedCard();
+            updateTechnicalCard();
+            updateDerivativesCard();
+            updateSentimentCard();
+            updateTradeSetup();
+            updateKeyLevels();
+            updateRiskFactors();
+            updateScoreCard();
+            updateSignalBanner();
+            updateLastUpdate();
+
+            console.log('Dashboard updated successfully');
         }
-
-        // Calculate scores
-        calculateScores();
-
-        // Update all UI components
-        updatePriceCard();
-        updateFearGreedCard();
-        updateTechnicalCard();
-        updateDerivativesCard();
-        updateSentimentCard();
-        updateTradeSetup();
-        updateKeyLevels();
-        updateRiskFactors();
-        updateScoreCard();
-        updateSignalBanner();
-        updateLastUpdate();
-
-        console.log('Dashboard updated successfully');
     } catch (error) {
         console.error('Error updating dashboard:', error);
+        document.getElementById('primarySignal').textContent = 'FEHLER';
+        document.getElementById('signalSummary').textContent =
+            'Ein Fehler ist aufgetreten. Versuche es in 1 Minute erneut.';
     } finally {
         refreshBtn.classList.remove('loading');
         resetCountdown();
