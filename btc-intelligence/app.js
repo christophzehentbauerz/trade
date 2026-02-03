@@ -9,11 +9,13 @@
 
 const CONFIG = {
     refreshInterval: 300000, // 5 minutes in ms
+    coinGeckoApiKey: 'CG-FnyBMq4qXipMTjBnbYbmiLBq',
     apis: {
         coinGecko: 'https://api.coingecko.com/api/v3',
         fearGreed: 'https://api.alternative.me/fng/',
         binance: 'https://api.binance.com/api/v3',
-        binanceFutures: 'https://fapi.binance.com/fapi/v1'
+        binanceFutures: 'https://fapi.binance.com',
+        binanceFuturesData: 'https://fapi.binance.com/futures/data'
     },
     weights: {
         technical: 0.35,
@@ -38,6 +40,7 @@ let state = {
     fearGreedHistory: [],
     fundingRate: null,
     openInterest: null,
+    openInterestRaw: null,
     longShortRatio: { long: 50, short: 50 },
     priceHistory: [],
     scores: {
@@ -285,12 +288,12 @@ const NotificationSystem = {
 // API Fetch Functions
 // =====================================================
 
-async function fetchWithTimeout(url, timeout = 10000) {
+async function fetchWithTimeout(url, timeout = 10000, headers = {}) {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
 
     try {
-        const response = await fetch(url, { signal: controller.signal });
+        const response = await fetch(url, { signal: controller.signal, headers });
         clearTimeout(id);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return await response.json();
@@ -303,7 +306,7 @@ async function fetchWithTimeout(url, timeout = 10000) {
 async function fetchPriceData() {
     try {
         const data = await fetchWithTimeout(
-            `${CONFIG.apis.coinGecko}/coins/bitcoin?localization=false&tickers=false&community_data=false&developer_data=false`
+            `${CONFIG.apis.coinGecko}/coins/bitcoin?localization=false&tickers=false&community_data=false&developer_data=false&x_cg_demo_api_key=${CONFIG.coinGeckoApiKey}`
         );
 
         state.price = data.market_data.current_price.usd;
@@ -323,7 +326,7 @@ async function fetchPriceData() {
 async function fetchPriceHistory() {
     try {
         const data = await fetchWithTimeout(
-            `${CONFIG.apis.coinGecko}/coins/bitcoin/market_chart?vs_currency=usd&days=14&interval=daily`
+            `${CONFIG.apis.coinGecko}/coins/bitcoin/market_chart?vs_currency=usd&days=14&interval=daily&x_cg_demo_api_key=${CONFIG.coinGeckoApiKey}`
         );
 
         state.priceHistory = data.prices.map(p => p[1]);
@@ -336,7 +339,7 @@ async function fetchPriceHistory() {
 
 async function fetchFearGreedIndex() {
     try {
-        const data = await fetchWithTimeout(`${CONFIG.apis.fearGreed}?limit=8`);
+        const data = await fetchWithTimeout(`${CONFIG.apis.fearGreed}?limit=8`, 10000);
 
         if (data.data && data.data.length > 0) {
             state.fearGreedIndex = parseInt(data.data[0].value);
@@ -356,7 +359,7 @@ async function fetchFearGreedIndex() {
 async function fetchFundingRate() {
     try {
         const data = await fetchWithTimeout(
-            `${CONFIG.apis.binanceFutures}/fundingRate?symbol=BTCUSDT&limit=1`
+            `${CONFIG.apis.binanceFutures}/fapi/v1/fundingRate?symbol=BTCUSDT&limit=1`
         );
 
         if (data && data.length > 0) {
@@ -374,11 +377,15 @@ async function fetchFundingRate() {
 async function fetchOpenInterest() {
     try {
         const data = await fetchWithTimeout(
-            `${CONFIG.apis.binanceFutures}/openInterest?symbol=BTCUSDT`
+            `${CONFIG.apis.binanceFutures}/fapi/v1/openInterest?symbol=BTCUSDT`
         );
 
         if (data) {
-            state.openInterest = parseFloat(data.openInterest) * state.price;
+            // state.price might not be set yet (parallel fetch), store raw value
+            state.openInterestRaw = parseFloat(data.openInterest);
+            if (state.price) {
+                state.openInterest = state.openInterestRaw * state.price;
+            }
         }
         return true;
     } catch (error) {
@@ -390,7 +397,7 @@ async function fetchOpenInterest() {
 async function fetchLongShortRatio() {
     try {
         const data = await fetchWithTimeout(
-            `${CONFIG.apis.binanceFutures}/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1`
+            `${CONFIG.apis.binanceFuturesData}/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1`
         );
 
         if (data && data.length > 0) {
@@ -1105,6 +1112,17 @@ async function updateDashboard() {
             fetchOpenInterest(),
             fetchLongShortRatio()
         ]);
+
+        // Recalculate OI with price now available (fixes race condition)
+        if (state.price && state.openInterestRaw && !state.openInterest) {
+            state.openInterest = state.openInterestRaw * state.price;
+        }
+
+        // Guard: if price data failed, skip UI update
+        if (!state.price) {
+            console.warn('Price data unavailable - skipping UI update');
+            return;
+        }
 
         // Calculate scores
         calculateScores();
