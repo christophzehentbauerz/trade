@@ -330,7 +330,8 @@ async function fetchPriceData() {
 }
 
 async function fetchPriceHistory() {
-    const url = `${CONFIG.apis.coinGecko}/coins/bitcoin/market_chart?vs_currency=usd&days=14&interval=daily`;
+    // Using hourly data for more accurate signals (7 days = ~168 hourly candles)
+    const url = `${CONFIG.apis.coinGecko}/coins/bitcoin/market_chart?vs_currency=usd&days=7&interval=hourly`;
     try {
         let data;
         try {

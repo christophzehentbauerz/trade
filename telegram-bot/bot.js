@@ -95,13 +95,14 @@ async function fetchPriceData() {
 
 async function fetchPriceHistory() {
     try {
+        // Using hourly data for more accurate signals (7 days = ~168 hourly candles)
         const data = await fetchJSON(
-            `${CONFIG.apis.coinGecko}/coins/bitcoin/market_chart?vs_currency=usd&days=14&interval=daily`
+            `${CONFIG.apis.coinGecko}/coins/bitcoin/market_chart?vs_currency=usd&days=7&interval=hourly`
         );
         state.priceHistory = data.prices.map(p => p[1]);
         state.ath = 109000; // Approximate ATH
         state.athChange = ((state.price - state.ath) / state.ath) * 100;
-        console.log(`✓ Price History: ${state.priceHistory.length} days`);
+        console.log(`✓ Price History: ${state.priceHistory.length} hours`);
     } catch (error) {
         console.error('Error fetching history:', error.message);
     }
@@ -384,14 +385,16 @@ function loadPreviousState() {
     } catch (e) {
         console.log('No previous state found');
     }
-    return { signal: 'NEUTRAL', lastNotified: null };
+    return { signal: 'NEUTRAL', lastNotified: null, earlyWarningShown: false };
 }
 
-function saveCurrentState() {
+function saveCurrentState(earlyWarningShown = false) {
     try {
         fs.writeFileSync(STATE_FILE, JSON.stringify({
             signal: state.signal,
-            lastNotified: new Date().toISOString()
+            lastNotified: new Date().toISOString(),
+            earlyWarningShown: earlyWarningShown,
+            lastPrice: state.price
         }));
     } catch (e) {
         console.error('Could not save state:', e.message);
@@ -435,7 +438,62 @@ async function main() {
         saveCurrentState();
     } else {
         console.log(`\n✓ Kein Signalwechsel (aktuell: ${state.signal})`);
-        saveCurrentState();
+
+        // EARLY WARNING: Notify when price approaches entry zone
+        if (isActiveSignal && !previousState.earlyWarningShown) {
+            const entryPrice = state.price; // Current analysis entry
+            const currentPrice = state.price;
+
+            // For LONG: warn when price is 1-2% below entry
+            // For SHORT: warn when price is 1-2% above entry
+            let shouldWarn = false;
+            let distancePercent = 0;
+
+            if (state.signal === 'LONG') {
+                // Entry at 90k, warn at 88.2k-89.1k (2% - 1% below)
+                const lowerBound = entryPrice * 0.98;  // 2% below
+                const upperBound = entryPrice * 0.99;  // 1% below
+
+                if (currentPrice >= lowerBound && currentPrice < upperBound) {
+                    shouldWarn = true;
+                    distancePercent = ((entryPrice - currentPrice) / entryPrice * 100);
+                }
+            } else if (state.signal === 'SHORT') {
+                // Entry at 90k, warn at 90.9k-91.8k (1% - 2% above)
+                const lowerBound = entryPrice * 1.01;  // 1% above
+                const upperBound = entryPrice * 1.02;  // 2% above
+
+                if (currentPrice > lowerBound && currentPrice <= upperBound) {
+                    shouldWarn = true;
+                    distancePercent = ((currentPrice - entryPrice) / entryPrice * 100);
+                }
+            }
+
+            if (shouldWarn) {
+                console.log(`\n⚡ EARLY WARNING: Preis nähert sich Entry Zone!`);
+
+                const emoji = state.signal === 'LONG' ? '🟢' : '🔴';
+                const direction = state.signal === 'LONG' ? 'LONG (Kaufen)' : 'SHORT (Verkaufen)';
+                const entrySetup = state.signal === 'LONG'
+                    ? `Entry bei ~$${(entryPrice * 1.00).toLocaleString()}`
+                    : `Entry bei ~$${(entryPrice * 1.00).toLocaleString()}`;
+                const stopLoss = state.signal === 'LONG'
+                    ? state.price * 0.97
+                    : state.price * 1.03;
+                const takeProfit = state.signal === 'LONG'
+                    ? state.price * 1.05
+                    : state.price * 0.95;
+
+                const warningMessage = `⚡ <b>EARLY WARNING</b> ⚡\n\n${emoji} <b>${state.signal} Signal aktiv!</b>\n\n💰 <b>Aktueller Preis:</b> $${currentPrice.toLocaleString()}\n📍 <b>Entry Zone:</b> $${entryPrice.toLocaleString()}\n📏 <b>Abstand:</b> ${distancePercent.toFixed(2)}%\n\n🎯 <b>${direction}</b>\n📊 <b>Score:</b> ${state.weightedScore.toFixed(1)}/10\n🎯 <b>Konfidenz:</b> ${state.confidence.toFixed(0)}%\n\n<b>📍 Trade Setup:</b>\n• ${entrySetup}\n• Stop Loss: $${stopLoss.toLocaleString()}\n• Take Profit: $${takeProfit.toLocaleString()}\n\n💡 <i>Bereite deinen Trade vor! Entry-Zone wird bald erreicht.</i>\n\n⏰ ${new Date().toLocaleString('de-DE')}`;
+
+                await sendTelegramMessage(warningMessage);
+                saveCurrentState(true); // Mark warning as shown
+            } else {
+                saveCurrentState(previousState.earlyWarningShown);
+            }
+        } else {
+            saveCurrentState(previousState.earlyWarningShown);
+        }
     }
 
     console.log('\n✅ Check completed!');
