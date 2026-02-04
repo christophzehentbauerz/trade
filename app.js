@@ -56,6 +56,7 @@ let state = {
     },
     signal: 'NEUTRAL',
     confidence: 50,
+    newsSentimentScore: 0,
     lastUpdate: null
 };
 
@@ -63,88 +64,6 @@ let state = {
 let countdownInterval = null;
 let remainingSeconds = 300;
 let previousSignal = 'NEUTRAL'; // Track signal changes for notifications
-
-// =====================================================
-// Helper Functions
-// =====================================================
-
-function formatNumber(num, decimals = 2) {
-    if (num === null || num === undefined) return '--';
-    return Number(num).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-}
-
-function formatCurrency(num) {
-    if (num === null || num === undefined) return '$--';
-    if (num >= 1e9) return '$' + (num / 1e9).toFixed(2) + 'B';
-    if (num >= 1e6) return '$' + (num / 1e6).toFixed(2) + 'M';
-    return '$' + Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function calculateRSI(prices, period = 14) {
-    if (!prices || prices.length < period + 1) return 50;
-
-    let gains = 0, losses = 0;
-
-    // First RSI calculation
-    for (let i = 1; i <= period; i++) {
-        const change = prices[i] - prices[i - 1];
-        if (change > 0) gains += change;
-        else losses -= change;
-    }
-
-    let avgGain = gains / period;
-    let avgLoss = losses / period;
-
-    // Smooth using subsequent data
-    // Simple implementation for now - just using last window
-    // In production, would use smoothed average
-
-    if (avgLoss === 0) return 100;
-    const rs = avgGain / avgLoss;
-    return 100 - (100 / (1 + rs));
-}
-
-function determineTrend(prices) {
-    if (!prices || prices.length < 20) return 'sideways';
-
-    // Compare MA7 vs MA25
-    const ma7 = prices.slice(-7).reduce((a, b) => a + b, 0) / 7;
-    const ma25 = prices.slice(-25).reduce((a, b) => a + b, 0) / 25;
-
-    const diff = ((ma7 - ma25) / ma25) * 100;
-
-    if (diff > 0.5) return 'up';
-    if (diff < -0.5) return 'down';
-    return 'sideways';
-}
-
-function calculateVolatility(prices) {
-    if (!prices || prices.length < 14) return 0;
-
-    // Calculate standard deviation of returns
-    const returns = [];
-    for (let i = 1; i < prices.length; i++) {
-        returns.push((prices[i] - prices[i - 1]) / prices[i - 1]);
-    }
-
-    const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
-    const variance = returns.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / returns.length;
-
-    return Math.sqrt(variance) * 100 * Math.sqrt(365); // Annualized approx
-}
-
-function calculateEMA(prices, period) {
-    if (!prices || prices.length < period) return prices[prices.length - 1];
-
-    const k = 2 / (period + 1);
-    let ema = prices[0];
-
-    for (let i = 1; i < prices.length; i++) {
-        ema = prices[i] * k + ema * (1 - k);
-    }
-    return ema;
-}
-
 
 // =====================================================
 // Notification System
@@ -650,9 +569,15 @@ function calculateScores() {
     if (state.longShortRatio.long > 60) sentimentScore -= 1; // More longs = bearish
     else if (state.longShortRatio.long < 40) sentimentScore += 1; // More shorts = bullish
 
+    // News Sentiment (from keyword analysis of crypto news)
+    if (state.newsSentimentScore >= 3) sentimentScore += 1.5;
+    else if (state.newsSentimentScore >= 1) sentimentScore += 0.5;
+    else if (state.newsSentimentScore <= -3) sentimentScore -= 1.5;
+    else if (state.newsSentimentScore <= -1) sentimentScore -= 0.5;
+
     state.scores.sentiment = Math.max(0, Math.min(10, sentimentScore));
 
-    // On-Chain Score (based on momentum)
+    // Preis-Momentum Score (24h price change)
     let onchainScore = 5;
     if (state.priceChange24h > 5) onchainScore += 2;
     else if (state.priceChange24h > 2) onchainScore += 1;
@@ -685,7 +610,11 @@ function calculateScores() {
         state.confidence = 60 + (3.5 - weightedScore) * 10;
     } else {
         state.signal = 'NEUTRAL';
-        state.confidence = 40 + Math.random() * 20;
+        // Confidence reflects how close we are to a trigger (no randomness)
+        const distToLong = Math.abs(6.5 - weightedScore);
+        const distToShort = Math.abs(weightedScore - 3.5);
+        const closestDist = Math.min(distToLong, distToShort);
+        state.confidence = 30 + closestDist * 10;
     }
 
     state.confidence = Math.min(85, Math.max(40, state.confidence));
@@ -1864,6 +1793,11 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             overallText = `⚪ Gemischt (${totalBullish}↑ ${totalBearish}↓)`;
         }
+
+        // Store news sentiment in state for score calculation
+        // Range: -6 to +6 (each of 6 news items contributes +1 or -1)
+        state.newsSentimentScore = totalBullish - totalBearish;
+        console.log(`📰 News Sentiment Score: ${state.newsSentimentScore} (${totalBullish} bullish, ${totalBearish} bearish)`);
 
         if (overallSentimentEl) {
             overallSentimentEl.textContent = overallText;

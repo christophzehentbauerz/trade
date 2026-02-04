@@ -1,359 +1,135 @@
 // =====================================================
 // Live Trading Analysis
+// Uses the SAME scoring as the main dashboard (app.js)
+// Same thresholds, same weights, same SL/TP levels
 // =====================================================
 
 async function generateLiveAnalysis() {
     console.log('🔬 Generiere Live-Analyse...');
 
-    // Get current market data
+    // Use the scores already calculated by the dashboard (single source of truth)
     const currentPrice = state.price;
+    const signal = state.signal;
+    const confidence = state.confidence;
+    const weightedScore = state.weightedScore || calculateWeightedScore();
     const rsi = calculateRSI(state.priceHistory);
     const trend = determineTrend(state.priceHistory);
     const fearGreed = state.fearGreedIndex;
-    const ath = state.ath;
 
-    // Calculate indicators (using last 30 days of price history)
-    const priceWindow = state.priceHistory.slice(-30);
-    const volatility = calculateVolatility(priceWindow);
+    // Entry/SL/TP — SAME as dashboard (app.js) and bot.js
+    // SL: 6%, TP1: 4%, TP2: 8%, TP3: 12%
+    let entry, stopLoss, tp1, tp2, tp3;
 
-    // Detect Support/Resistance
-    const sr = detectSupportResistance(priceWindow, currentPrice);
+    if (signal !== 'NEUTRAL') {
+        entry = currentPrice;
 
-    // Calculate Confluence Score (same logic as backtester)
-    const confluenceScore = calculateLiveConfluenceScore(
+        if (signal === 'LONG') {
+            stopLoss = currentPrice * 0.94;  // -6%
+            tp1 = currentPrice * 1.04;       // +4%
+            tp2 = currentPrice * 1.08;       // +8%
+            tp3 = currentPrice * 1.12;       // +12%
+        } else {
+            stopLoss = currentPrice * 1.06;  // +6%
+            tp1 = currentPrice * 0.96;       // -4%
+            tp2 = currentPrice * 0.92;       // -8%
+            tp3 = currentPrice * 0.88;       // -12%
+        }
+    }
+
+    // Generate reasons based on what drove the score
+    const reasons = [];
+
+    if (signal === 'LONG') {
+        if (rsi < 40) reasons.push(`RSI bei ${Math.round(rsi)} - ueberverkaufte Bedingungen`);
+        if (trend === 'up') reasons.push('Aufwaertstrend unterstuetzt LONG');
+        if (fearGreed < 35) reasons.push(`Fear & Greed bei ${fearGreed} - Angst als Kaufsignal (Kontraindikator)`);
+        if (state.fundingRate < 0) reasons.push('Negative Funding Rate - Shorts zahlen');
+        if (state.newsSentimentScore > 0) reasons.push('News-Sentiment ist bullish');
+    } else if (signal === 'SHORT') {
+        if (rsi > 60) reasons.push(`RSI bei ${Math.round(rsi)} - ueberkaufte Bedingungen`);
+        if (trend === 'down') reasons.push('Abwaertstrend unterstuetzt SHORT');
+        if (fearGreed > 65) reasons.push(`Fear & Greed bei ${fearGreed} - Gier als Verkaufssignal (Kontraindikator)`);
+        if (state.fundingRate > 0.03) reasons.push('Hohe Funding Rate - Longs zahlen');
+        if (state.newsSentimentScore < 0) reasons.push('News-Sentiment ist bearish');
+    } else {
+        reasons.push(`Score bei ${weightedScore.toFixed(1)}/10 - im neutralen Bereich (3.5-6.5)`);
+        if (rsi >= 40 && rsi <= 60) reasons.push(`RSI bei ${Math.round(rsi)} - neutral`);
+        if (fearGreed >= 35 && fearGreed <= 65) reasons.push(`Fear & Greed bei ${fearGreed} - keine Extreme`);
+    }
+
+    if (reasons.length < 2) {
+        reasons.push(`Gesamtscore: ${weightedScore.toFixed(1)}/10`);
+    }
+
+    return {
+        signal,
+        confidence,
+        weightedScore,
         currentPrice,
+        entry,
+        stopLoss,
+        tp1, tp2, tp3,
         rsi,
         trend,
         fearGreed,
-        ath,
-        sr,
-        volatility
-    );
-
-    // Determine signal
-    let signal = 'ABWARTEN';
-    let confidence = confluenceScore.total * 10; // Convert to percentage
-
-    // Store confluence score globally for display
-    window.lastConfluenceScore = confluenceScore;
-
-    if (confluenceScore.total >= 6 && confluenceScore.direction === 'LONG') {
-        signal = 'LONG';
-    } else if (confluenceScore.total >= 6 && confluenceScore.direction === 'SHORT') {
-        signal = 'SHORT';
-    }
-
-    // If confidence < 50%, force ABWARTEN
-    if (confidence < 50) {
-        signal = 'ABWARTEN';
-    }
-
-    // Calculate Entry/SL/TP
-    let entry, stopLoss, takeProfit, slPercent, tpPercent;
-
-    if (signal !== 'ABWARTEN') {
-        entry = currentPrice;
-
-        // Stop Loss: Max 3%
-        slPercent = Math.min(0.03, volatility * 1.5);
-
-        // Take Profit: Min 2x Stop Loss
-        tpPercent = slPercent * 2.5;
-
-        if (signal === 'LONG') {
-            stopLoss = entry * (1 - slPercent);
-            takeProfit = entry * (1 + tpPercent);
-        } else {
-            stopLoss = entry * (1 + slPercent);
-            takeProfit = entry * (1 - tpPercent);
-        }
-    }
-
-    // Generate reasons
-    const reasons = generateReasons(confluenceScore, rsi, trend, fearGreed, sr);
-
-    // Format output
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('de-DE', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-
-    let output = `
-🔴 BTC ANALYSE - ${dateStr}
-
-💰 Aktueller Preis: $${formatNumber(currentPrice, 0)}
-
-═══════════════════════════════════════
-
-📈 EMPFEHLUNG: ${signal}
-
-📊 KONFIDENZ: ${Math.round(confidence)}%
-
-═══════════════════════════════════════
-`;
-
-    if (signal !== 'ABWARTEN') {
-        output += `
-📍 Entry:       $${formatNumber(entry, 0)}
-🎯 Take Profit: $${formatNumber(takeProfit, 0)} (+${(tpPercent * 100).toFixed(1)}%)
-🛑 Stop Loss:   $${formatNumber(stopLoss, 0)} (-${(slPercent * 100).toFixed(1)}%)
-
-═══════════════════════════════════════
-`;
-    } else {
-        output += `
-⏸️ Aktuell keine klare Trading-Gelegenheit.
-Warte auf bessere Signale (Konfidenz >= 50%).
-
-═══════════════════════════════════════
-`;
-    }
-
-    output += `
-💡 WARUM?
-${reasons.map(r => `- ${r}`).join('\n')}
-
-═══════════════════════════════════════
-⚠️ Keine Finanzberatung. DYOR.
-`;
-
-    return output;
-}
-
-function detectSupportResistance(priceWindow, currentPrice) {
-    const levels = [];
-
-    // Find local peaks and troughs
-    for (let i = 2; i < priceWindow.length - 2; i++) {
-        // Resistance (peak)
-        if (priceWindow[i] > priceWindow[i - 1] && priceWindow[i] > priceWindow[i - 2] &&
-            priceWindow[i] > priceWindow[i + 1] && priceWindow[i] > priceWindow[i + 2]) {
-            levels.push({ price: priceWindow[i], type: 'resistance' });
-        }
-        // Support (trough)
-        if (priceWindow[i] < priceWindow[i - 1] && priceWindow[i] < priceWindow[i - 2] &&
-            priceWindow[i] < priceWindow[i + 1] && priceWindow[i] < priceWindow[i + 2]) {
-            levels.push({ price: priceWindow[i], type: 'support' });
-        }
-    }
-
-    // Find nearest support and resistance
-    const resistances = levels.filter(l => l.type === 'resistance' && l.price > currentPrice);
-    const supports = levels.filter(l => l.type === 'support' && l.price < currentPrice);
-
-    const nearestResistance = resistances.length > 0
-        ? resistances.reduce((a, b) => a.price < b.price ? a : b).price
-        : currentPrice * 1.05;
-
-    const nearestSupport = supports.length > 0
-        ? supports.reduce((a, b) => a.price > b.price ? a : b).price
-        : currentPrice * 0.95;
-
-    const distanceToResistance = ((nearestResistance - currentPrice) / currentPrice) * 100;
-    const distanceToSupport = ((currentPrice - nearestSupport) / currentPrice) * 100;
-
-    return {
-        nearestSupport,
-        nearestResistance,
-        distanceToSupport,
-        distanceToResistance,
-        atSupport: distanceToSupport < 2,
-        atResistance: distanceToResistance < 2
+        reasons: reasons.slice(0, 4),
+        scores: state.scores
     };
-}
-
-function calculateLiveConfluenceScore(price, rsi, trend, fearGreed, ath, sr, volatility) {
-    const scores = {
-        trend: 0,
-        momentum: 0,
-        srPosition: 0,
-        marketStructure: 0,
-        macro: 0
-    };
-
-    // Determine direction first
-    let direction = null;
-
-    // LONG conditions
-    if ((rsi < 45 && sr.distanceToSupport < 10) ||
-        (trend === 'up' && rsi > 40 && rsi < 65) ||
-        (fearGreed < 35)) {
-        direction = 'LONG';
-    }
-    // SHORT conditions
-    else if ((rsi > 55 && sr.distanceToResistance < 10) ||
-        (trend === 'down' && rsi > 35 && rsi < 60) ||
-        (fearGreed > 65)) {
-        direction = 'SHORT';
-    }
-
-    if (!direction) {
-        return { total: 0, breakdown: scores, direction: null };
-    }
-
-    // Score calculations (simplified from backtester)
-    // 1. Trend (0-2)
-    if (direction === 'LONG' && trend === 'up') scores.trend = 2;
-    else if (direction === 'LONG' && trend === 'sideways') scores.trend = 1;
-    else if (direction === 'SHORT' && trend === 'down') scores.trend = 2;
-    else if (direction === 'SHORT' && trend === 'sideways') scores.trend = 1;
-
-    // 2. Momentum (0-2)
-    if (direction === 'LONG' && rsi < 45) scores.momentum = 2;
-    else if (direction === 'LONG' && rsi < 55) scores.momentum = 1;
-    else if (direction === 'SHORT' && rsi > 55) scores.momentum = 2;
-    else if (direction === 'SHORT' && rsi > 45) scores.momentum = 1;
-
-    // 3. S/R Position (0-2)
-    if (direction === 'LONG' && sr.atSupport) scores.srPosition = 2;
-    else if (direction === 'LONG' && sr.distanceToSupport < 8) scores.srPosition = 1;
-    else if (direction === 'SHORT' && sr.atResistance) scores.srPosition = 2;
-    else if (direction === 'SHORT' && sr.distanceToResistance < 8) scores.srPosition = 1;
-
-    // 4. Market Structure (0-2)
-    if (direction === 'LONG' && fearGreed < 35) scores.marketStructure = 2;
-    else if (direction === 'LONG' && fearGreed < 50) scores.marketStructure = 1;
-    else if (direction === 'SHORT' && fearGreed > 65) scores.marketStructure = 2;
-    else if (direction === 'SHORT' && fearGreed > 50) scores.marketStructure = 1;
-
-    // 5. Macro (0-2)
-    if (volatility > 2 && volatility < 5) scores.macro = 2;
-    else if (volatility > 1.5 && volatility < 6) scores.macro = 1;
-
-    const total = Object.values(scores).reduce((a, b) => a + b, 0);
-
-    return {
-        total,
-        breakdown: scores,
-        direction
-    };
-}
-
-function generateReasons(confluenceScore, rsi, trend, fearGreed, sr) {
-    const reasons = [];
-
-    if (confluenceScore.breakdown.trend >= 1) {
-        const trendText = trend === 'up' ? 'Aufwärtstrend' : trend === 'down' ? 'Abwärtstrend' : 'Seitwärtsbewegung';
-        reasons.push(`Trend: ${trendText} unterstützt das Signal`);
-    }
-
-    if (confluenceScore.breakdown.momentum >= 1) {
-        if (confluenceScore.direction === 'LONG') {
-            reasons.push(`RSI bei ${Math.round(rsi)} zeigt Oversold-Bedingungen`);
-        } else {
-            reasons.push(`RSI bei ${Math.round(rsi)} zeigt Overbought-Bedingungen`);
-        }
-    }
-
-    if (confluenceScore.breakdown.srPosition >= 1) {
-        if (confluenceScore.direction === 'LONG') {
-            reasons.push(`Preis nahe Support bei $${formatNumber(sr.nearestSupport, 0)}`);
-        } else {
-            reasons.push(`Preis nahe Resistance bei $${formatNumber(sr.nearestResistance, 0)}`);
-        }
-    }
-
-    if (confluenceScore.breakdown.marketStructure >= 1) {
-        if (fearGreed < 35) {
-            reasons.push(`Fear & Greed bei ${fearGreed} (Extreme Fear → Kaufgelegenheit)`);
-        } else if (fearGreed > 65) {
-            reasons.push(`Fear & Greed bei ${fearGreed} (Extreme Greed → Verkaufsgelegenheit)`);
-        }
-    }
-
-    // If we don't have 3 reasons yet, add confluence score
-    if (reasons.length < 3) {
-        reasons.push(`Confluence Score: ${confluenceScore.total}/10`);
-    }
-
-    // Ensure max 3 reasons
-    return reasons.slice(0, 3);
 }
 
 // Display analysis in formatted card
 async function showLiveAnalysis() {
-    const analysis = await generateLiveAnalysis();
-    console.log(analysis);
+    const data = await generateLiveAnalysis();
+    console.log('Live Analysis:', data);
 
-    // Parse analysis data for formatted display
-    const lines = analysis.split('\n').filter(l => l.trim());
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('de-DE', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+    });
 
-    // Extract key information
-    const dateMatch = analysis.match(/BTC ANALYSE - (.+)/);
-    const priceMatch = analysis.match(/Aktueller Preis: \$(.+)/);
-    const recommendationMatch = analysis.match(/EMPFEHLUNG: (.+)/);
-    const confidenceMatch = analysis.match(/KONFIDENZ: (.+)/);
-    const entryMatch = analysis.match(/Entry:\s+\$(.+)/);
-    const tpMatch = analysis.match(/Take Profit: \$(.+?) \((.+?)\)/);
-    const slMatch = analysis.match(/Stop Loss:\s+\$(.+?) \((.+?)\)/);
+    const signalClass = data.signal === 'LONG' ? 'long' : data.signal === 'SHORT' ? 'short' : 'abwarten';
 
-    const date = dateMatch ? dateMatch[1] : '';
-    const price = priceMatch ? priceMatch[1] : '';
-    const recommendation = recommendationMatch ? recommendationMatch[1].trim() : 'ABWARTEN';
-    const confidence = confidenceMatch ? confidenceMatch[1].trim() : '0%';
-
-    // Extract reasons
-    const reasonsStart = analysis.indexOf('💡 WARUM?');
-    const reasonsEnd = analysis.indexOf('═══════════════════════════════════════', reasonsStart + 1);
-    let reasons = [];
-    if (reasonsStart > -1 && reasonsEnd > -1) {
-        const reasonsText = analysis.substring(reasonsStart, reasonsEnd);
-        reasons = reasonsText.split('\n')
-            .filter(l => l.trim().startsWith('-'))
-            .map(l => l.trim().substring(1).trim());
-    }
-
-    // Build HTML
     let html = `
         <div class="analysis-header">
-            <div class="analysis-timestamp">📅 ${date}</div>
-            <div class="analysis-price">💰 Aktueller Preis: <strong>$${price}</strong></div>
+            <div class="analysis-timestamp">📅 ${dateStr}</div>
+            <div class="analysis-price">💰 Aktueller Preis: <strong>$${formatNumber(data.currentPrice, 0)}</strong></div>
         </div>
-        
-        <div class="analysis-recommendation ${recommendation.toLowerCase()}">
+
+        <div class="analysis-recommendation ${signalClass}">
             <div class="recommendation-label">EMPFEHLUNG</div>
-            <div class="recommendation-value">${recommendation}</div>
+            <div class="recommendation-value">${data.signal === 'NEUTRAL' ? 'ABWARTEN' : data.signal}</div>
             <div class="confidence-bar">
-                <div class="confidence-fill" style="width: ${confidence}"></div>
+                <div class="confidence-fill" style="width: ${Math.round(data.confidence)}%"></div>
             </div>
-            <div class="confidence-label">Konfidenz: ${confidence}</div>
+            <div class="confidence-label">Konfidenz: ${Math.round(data.confidence)}% | Score: ${data.weightedScore.toFixed(1)}/10</div>
         </div>
     `;
 
-    if (recommendation !== 'ABWARTEN' && entryMatch) {
-        const entry = entryMatch[1];
-        const tp = tpMatch ? tpMatch[1] : '';
-        const tpPercent = tpMatch ? tpMatch[2] : '';
-        const sl = slMatch ? slMatch[1] : '';
-        const slPercent = slMatch ? slMatch[2] : '';
-
+    if (data.signal !== 'NEUTRAL' && data.entry) {
         html += `
             <div class="trade-levels-display">
                 <div class="level-item entry">
                     <div class="level-icon">📍</div>
                     <div class="level-info">
                         <div class="level-label">Entry</div>
-                        <div class="level-value">$${entry}</div>
-                    </div>
-                </div>
-                <div class="level-item tp">
-                    <div class="level-icon">🎯</div>
-                    <div class="level-info">
-                        <div class="level-label">Take Profit</div>
-                        <div class="level-value">$${tp}</div>
-                        <div class="level-percent text-bullish">${tpPercent}</div>
+                        <div class="level-value">$${formatNumber(data.entry, 0)}</div>
                     </div>
                 </div>
                 <div class="level-item sl">
                     <div class="level-icon">🛑</div>
                     <div class="level-info">
                         <div class="level-label">Stop Loss</div>
-                        <div class="level-value">$${sl}</div>
-                        <div class="level-percent text-bearish">${slPercent}</div>
+                        <div class="level-value">$${formatNumber(data.stopLoss, 0)}</div>
+                        <div class="level-percent text-bearish">(-6%)</div>
+                    </div>
+                </div>
+                <div class="level-item tp">
+                    <div class="level-icon">🎯</div>
+                    <div class="level-info">
+                        <div class="level-label">TP1 / TP2 / TP3</div>
+                        <div class="level-value">$${formatNumber(data.tp1, 0)} / $${formatNumber(data.tp2, 0)} / $${formatNumber(data.tp3, 0)}</div>
+                        <div class="level-percent text-bullish">(+4% / +8% / +12%)</div>
                     </div>
                 </div>
             </div>
@@ -363,57 +139,44 @@ async function showLiveAnalysis() {
             <div class="no-trade-message">
                 <div class="no-trade-icon">⏸️</div>
                 <div class="no-trade-text">Aktuell keine klare Trading-Gelegenheit.</div>
-                <div class="no-trade-subtext">Warte auf bessere Signale (Konfidenz ≥ 50%)</div>
+                <div class="no-trade-subtext">Score muss >= 6.5 (LONG) oder <= 3.5 (SHORT) sein.</div>
             </div>
         `;
     }
 
-    // Add Score Breakdown
-    if (window.lastConfluenceScore) {
-        const breakdown = window.lastConfluenceScore.breakdown;
-        html += `
-            <div class="score-breakdown-section">
-                <div class="breakdown-title">📊 Confluence Score Breakdown (${window.lastConfluenceScore.total}/10)</div>
-                <div class="breakdown-grid">
-                    <div class="breakdown-item">
-                        <span class="breakdown-label">Trend</span>
-                        <span class="breakdown-value">${breakdown.trend || 0}/2</span>
-                    </div>
-                    <div class="breakdown-item">
-                        <span class="breakdown-label">Momentum</span>
-                        <span class="breakdown-value">${breakdown.momentum || 0}/2</span>
-                    </div>
-                    <div class="breakdown-item">
-                        <span class="breakdown-label">S/R Position</span>
-                        <span class="breakdown-value">${breakdown.srPosition || 0}/2</span>
-                    </div>
-                    <div class="breakdown-item">
-                        <span class="breakdown-label">Market Structure</span>
-                        <span class="breakdown-value">${breakdown.marketStructure || 0}/2</span>
-                    </div>
-                    <div class="breakdown-item">
-                        <span class="breakdown-label">Macro</span>
-                        <span class="breakdown-value">${breakdown.macro || 0}/2</span>
-                    </div>
+    // Score Breakdown — same categories as dashboard
+    html += `
+        <div class="score-breakdown-section">
+            <div class="breakdown-title">📊 Score Breakdown (${data.weightedScore.toFixed(1)}/10)</div>
+            <div class="breakdown-grid">
+                <div class="breakdown-item">
+                    <span class="breakdown-label">Technisch (35%)</span>
+                    <span class="breakdown-value">${data.scores.technical.toFixed(1)}/10</span>
+                </div>
+                <div class="breakdown-item">
+                    <span class="breakdown-label">Momentum (25%)</span>
+                    <span class="breakdown-value">${data.scores.onchain.toFixed(1)}/10</span>
+                </div>
+                <div class="breakdown-item">
+                    <span class="breakdown-label">Sentiment (20%)</span>
+                    <span class="breakdown-value">${data.scores.sentiment.toFixed(1)}/10</span>
+                </div>
+                <div class="breakdown-item">
+                    <span class="breakdown-label">Makro (20%)</span>
+                    <span class="breakdown-value">${data.scores.macro.toFixed(1)}/10</span>
                 </div>
             </div>
-        `;
-    }
+        </div>
+    `;
 
-    // Add Risk Factors
+    // Risk factors
     const riskFactors = [];
-    const confInt = parseInt(confidence);
-    if (confInt < 60) {
-        riskFactors.push('Niedrige Konfidenz - erhöhtes Risiko');
+    if (data.confidence < 60) {
+        riskFactors.push('Niedrige Konfidenz - erhoehtes Risiko');
     }
-    if (slMatch) {
-        const slPct = parseFloat(slMatch[2].replace('%', '').replace('+', '').replace('-', ''));
-        if (slPct > 2) {
-            riskFactors.push(`Stop Loss bei ${slPct.toFixed(1)}% - größerer möglicher Verlust`);
-        }
-    }
-    if (recommendation !== 'ABWARTEN') {
-        riskFactors.push('Kryptowährungen sind hochvolatil - nur investieren, was du verlieren kannst');
+    if (data.signal !== 'NEUTRAL') {
+        riskFactors.push('Stop Loss bei 6% - maximaler Verlust pro Trade');
+        riskFactors.push('Kryptowaehrungen sind hochvolatil - nur investieren, was du verlieren kannst');
     }
 
     if (riskFactors.length > 0) {
@@ -427,12 +190,13 @@ async function showLiveAnalysis() {
         `;
     }
 
-    if (reasons.length > 0) {
+    // Reasons
+    if (data.reasons.length > 0) {
         html += `
             <div class="analysis-reasons">
-                <div class="reasons-title">💡 Begründung</div>
+                <div class="reasons-title">💡 Begruendung</div>
                 <ul class="reasons-list">
-                    ${reasons.map(r => `<li>${r}</li>`).join('')}
+                    ${data.reasons.map(r => `<li>${r}</li>`).join('')}
                 </ul>
             </div>
         `;
@@ -444,14 +208,11 @@ async function showLiveAnalysis() {
         </div>
     `;
 
-    // Display
     document.getElementById('analysisContent').innerHTML = html;
     document.getElementById('analysisCardContainer').style.display = 'block';
 
-    // Scroll to analysis
     document.getElementById('analysisCardContainer').scrollIntoView({
         behavior: 'smooth',
         block: 'center'
     });
 }
-

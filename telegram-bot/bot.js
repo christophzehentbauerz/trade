@@ -53,7 +53,8 @@ let state = {
         macro: 5
     },
     signal: 'NEUTRAL',
-    confidence: 50
+    confidence: 50,
+    newsSentimentScore: 0
 };
 
 // =====================================================
@@ -83,11 +84,13 @@ function fetchJSON(url) {
 async function fetchPriceData() {
     try {
         const data = await fetchJSON(
-            `${CONFIG.apis.coinGecko}/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true&include_market_cap=true`
+            `${CONFIG.apis.coinGecko}/coins/bitcoin?localization=false&tickers=false&community_data=false&developer_data=false`
         );
-        state.price = data.bitcoin.usd;
-        state.priceChange24h = data.bitcoin.usd_24h_change;
-        console.log(`✓ Price: $${state.price.toLocaleString()}`);
+        state.price = data.market_data.current_price.usd;
+        state.priceChange24h = data.market_data.price_change_percentage_24h;
+        state.ath = data.market_data.ath.usd;
+        state.athChange = data.market_data.ath_change_percentage.usd;
+        console.log(`✓ Price: $${state.price.toLocaleString()} | ATH: $${state.ath.toLocaleString()}`);
     } catch (error) {
         console.error('Error fetching price:', error.message);
     }
@@ -100,8 +103,11 @@ async function fetchPriceHistory() {
             `${CONFIG.apis.coinGecko}/coins/bitcoin/market_chart?vs_currency=usd&days=7&interval=hourly`
         );
         state.priceHistory = data.prices.map(p => p[1]);
-        state.ath = 109000; // Approximate ATH
-        state.athChange = ((state.price - state.ath) / state.ath) * 100;
+        // ATH is now fetched dynamically in fetchPriceData()
+        if (!state.ath) {
+            state.ath = Math.max(...state.priceHistory);
+            state.athChange = ((state.price - state.ath) / state.ath) * 100;
+        }
         console.log(`✓ Price History: ${state.priceHistory.length} hours`);
     } catch (error) {
         console.error('Error fetching history:', error.message);
@@ -212,7 +218,7 @@ function calculateScores() {
 
     state.scores.technical = Math.max(0, Math.min(10, technicalScore));
 
-    // On-chain Score (based on momentum)
+    // Preis-Momentum Score (24h price change)
     let onchainScore = 5;
     if (state.priceChange24h > 5) onchainScore += 2;
     else if (state.priceChange24h > 2) onchainScore += 1;
@@ -237,6 +243,12 @@ function calculateScores() {
     // Long/Short Ratio (contrarian)
     if (state.longShortRatio.long > 60) sentimentScore -= 1;
     else if (state.longShortRatio.long < 40) sentimentScore += 1;
+
+    // News Sentiment (from keyword analysis of crypto news)
+    if (state.newsSentimentScore >= 3) sentimentScore += 1.5;
+    else if (state.newsSentimentScore >= 1) sentimentScore += 0.5;
+    else if (state.newsSentimentScore <= -3) sentimentScore -= 1.5;
+    else if (state.newsSentimentScore <= -1) sentimentScore -= 0.5;
 
     state.scores.sentiment = Math.max(0, Math.min(10, sentimentScore));
 
@@ -264,13 +276,16 @@ function calculateScores() {
         state.confidence = 60 + (3.5 - weightedScore) * 10;
     } else {
         state.signal = 'NEUTRAL';
-        state.confidence = 40 + Math.random() * 20;
+        const distToLong = Math.abs(6.5 - weightedScore);
+        const distToShort = Math.abs(weightedScore - 3.5);
+        const closestDist = Math.min(distToLong, distToShort);
+        state.confidence = 30 + closestDist * 10;
     }
 
     state.confidence = Math.min(85, Math.max(40, state.confidence));
     state.weightedScore = weightedScore;
 
-    console.log(`\n📊 Scores: Tech=${state.scores.technical.toFixed(1)} On-Chain=${state.scores.onchain.toFixed(1)} Sentiment=${state.scores.sentiment.toFixed(1)} Macro=${state.scores.macro.toFixed(1)}`);
+    console.log(`\n📊 Scores: Tech=${state.scores.technical.toFixed(1)} Momentum=${state.scores.onchain.toFixed(1)} Sentiment=${state.scores.sentiment.toFixed(1)} Macro=${state.scores.macro.toFixed(1)}`);
     console.log(`📈 Weighted Score: ${weightedScore.toFixed(2)}/10`);
     console.log(`🎯 Signal: ${state.signal} (${state.confidence.toFixed(0)}% confidence)`);
 }
@@ -399,10 +414,9 @@ function formatDailyReport(additionalContent = '') {
     message += `📅 ${date}\n\n`;
 
     message += `<b>💰 Marktübersicht:</b>\n`;
-    message += `<b>💰 Marktübersicht:</b>\n`;
     const price = state.price || 0;
     const change = state.priceChange24h || 0;
-    message += `BTC Pries: <b>$${price.toLocaleString()}</b> (${change > 0 ? '+' : ''}${change.toFixed(2)}%)\n`;
+    message += `BTC Preis: <b>$${price.toLocaleString()}</b> (${change > 0 ? '+' : ''}${change.toFixed(2)}%)\n`;
     message += `Fear & Greed: <b>${state.fearGreedIndex}</b> (${state.fearGreedIndex < 35 ? 'Angst' : state.fearGreedIndex > 65 ? 'Gier' : 'Neutral'})\n`;
     message += `Score: <b>${state.weightedScore.toFixed(1)}/10</b>\n\n`;
 
@@ -411,7 +425,7 @@ function formatDailyReport(additionalContent = '') {
 
     message += `<b>📊 Die Faktoren heute:</b>\n`;
     message += `• Technik (${(CONFIG.weights.technical * 100).toFixed(0)}%): <b>${state.scores.technical.toFixed(1)}/10</b>\n`;
-    message += `• On-Chain (${(CONFIG.weights.onchain * 100).toFixed(0)}%): <b>${state.scores.onchain.toFixed(1)}/10</b>\n`;
+    message += `• Momentum (${(CONFIG.weights.onchain * 100).toFixed(0)}%): <b>${state.scores.onchain.toFixed(1)}/10</b>\n`;
     message += `• Sentiment (${(CONFIG.weights.sentiment * 100).toFixed(0)}%): <b>${state.scores.sentiment.toFixed(1)}/10</b>\n`;
     message += `• Macro (${(CONFIG.weights.macro * 100).toFixed(0)}%): <b>${state.scores.macro.toFixed(1)}/10</b>\n\n`;
 
@@ -454,6 +468,66 @@ async function fetchNews() {
         console.error('Error fetching news:', e.message);
     }
     return '';
+}
+
+// =====================================================
+// News Sentiment Analysis
+// =====================================================
+
+const SENTIMENT_KEYWORDS = {
+    bullish: ['surge', 'rally', 'bull', 'breakout', 'record', 'high', 'soar', 'gain',
+        'pump', 'moon', 'adoption', 'institutional', 'approval', 'etf approved',
+        'buy', 'accumulate', 'upgrade', 'growth', 'optimism', 'recovery',
+        'support', 'bounce', 'upward', 'boost', 'milestone', 'positive',
+        'bullish', 'outperform', 'all-time high', 'ath', 'inflow',
+        'anstieg', 'bullenmarkt', 'kaufen', 'durchbruch', 'rekord'],
+    bearish: ['crash', 'dump', 'bear', 'plunge', 'sell', 'decline', 'drop', 'fall',
+        'fear', 'panic', 'hack', 'ban', 'regulation', 'crackdown', 'fraud',
+        'scam', 'bubble', 'collapse', 'liquidation', 'bankrupt', 'warning',
+        'risk', 'concern', 'threat', 'bearish', 'outflow', 'sec', 'lawsuit',
+        'absturz', 'barenmarkt', 'verkaufen', 'verbot', 'warnung']
+};
+
+function analyzeNewsSentiment(title) {
+    const lower = title.toLowerCase();
+    let bullishCount = 0;
+    let bearishCount = 0;
+
+    SENTIMENT_KEYWORDS.bullish.forEach(kw => {
+        if (lower.includes(kw)) bullishCount++;
+    });
+    SENTIMENT_KEYWORDS.bearish.forEach(kw => {
+        if (lower.includes(kw)) bearishCount++;
+    });
+
+    if (bullishCount > bearishCount) return 'bullish';
+    if (bearishCount > bullishCount) return 'bearish';
+    return 'neutral';
+}
+
+async function fetchNewsAndAnalyzeSentiment() {
+    try {
+        const url = 'https://min-api.cryptocompare.com/data/v2/news/?lang=EN&categories=BTC,Market';
+        const response = await fetchJSON(url);
+
+        if (response && response.Data && response.Data.length > 0) {
+            const items = response.Data.slice(0, 6);
+            let bullish = 0;
+            let bearish = 0;
+
+            items.forEach(item => {
+                const sentiment = analyzeNewsSentiment(item.title);
+                if (sentiment === 'bullish') bullish++;
+                else if (sentiment === 'bearish') bearish++;
+            });
+
+            state.newsSentimentScore = bullish - bearish;
+            console.log(`✓ News Sentiment: ${state.newsSentimentScore} (${bullish} bullish, ${bearish} bearish)`);
+        }
+    } catch (e) {
+        console.error('Error analyzing news sentiment:', e.message);
+        state.newsSentimentScore = 0;
+    }
 }
 
 // =====================================================
@@ -503,8 +577,9 @@ async function main() {
     await fetchFundingRate();
     await fetchOpenInterest();
     await fetchLongShortRatio();
+    await fetchNewsAndAnalyzeSentiment();
 
-    // Calculate scores
+    // Calculate scores (includes news sentiment)
     calculateScores();
 
     console.log('\n' + '='.repeat(50));
