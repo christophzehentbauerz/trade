@@ -532,9 +532,9 @@ function calculateScores() {
 
     // RSI scoring
     if (rsi < 30) techScore += 2.5; // Oversold = bullish
+    else if (rsi < 40) techScore += 1.5;
     else if (rsi > 70) techScore -= 2.5; // Overbought = bearish
-    else if (rsi < 40) techScore += 1;
-    else if (rsi > 60) techScore -= 1;
+    else if (rsi > 60) techScore -= 1.5;
 
     // Trend scoring
     const trend = determineTrend(state.priceHistory);
@@ -561,32 +561,25 @@ function calculateScores() {
     else if (state.fundingRate > 0.05) sentimentScore -= 1.5; // High positive = bearish
 
     // Long/Short ratio (contrarian)
-    if (state.longShortRatio.short > 55) sentimentScore += 1; // More shorts = bullish
-    else if (state.longShortRatio.long > 55) sentimentScore -= 1; // More longs = bearish
+    if (state.longShortRatio.long > 60) sentimentScore -= 1; // More longs = bearish
+    else if (state.longShortRatio.long < 40) sentimentScore += 1; // More shorts = bullish
 
     state.scores.sentiment = Math.max(0, Math.min(10, sentimentScore));
 
-    // On-Chain Score (simplified without real on-chain data)
-    // Using price momentum and volume as proxy
+    // On-Chain Score (based on momentum)
     let onchainScore = 5;
-
-    if (state.priceChange24h > 5) onchainScore += 1;
-    else if (state.priceChange24h < -5) onchainScore -= 1;
-
-    // Volume analysis (higher volume on up days is bullish)
-    if (state.priceChange24h > 0 && state.volume24h > state.marketCap * 0.03) {
-        onchainScore += 0.5;
-    }
+    if (state.priceChange24h > 5) onchainScore += 2;
+    else if (state.priceChange24h > 2) onchainScore += 1;
+    else if (state.priceChange24h < -5) onchainScore -= 2;
+    else if (state.priceChange24h < -2) onchainScore -= 1;
 
     state.scores.onchain = Math.max(0, Math.min(10, onchainScore));
 
-    // Macro Score (simplified)
+    // Macro Score (contrarian - far from ATH is opportunity)
     let macroScore = 5;
-
-    // Price relative to ATH
-    if (state.athChange > -15) macroScore += 1;
-    else if (state.athChange < -50) macroScore -= 1.5;
-    else if (state.athChange < -30) macroScore -= 0.5;
+    if (state.athChange < -30) macroScore += 2; // Far from ATH = buy opportunity
+    else if (state.athChange < -15) macroScore += 1;
+    else if (state.athChange > -5) macroScore -= 1; // Near ATH = sell pressure
 
     state.scores.macro = Math.max(0, Math.min(10, macroScore));
 
@@ -600,14 +593,17 @@ function calculateScores() {
     // Determine signal and confidence
     if (weightedScore >= 6.5) {
         state.signal = 'LONG';
-        state.confidence = Math.min(85, 50 + (weightedScore - 5) * 7);
+        state.confidence = 60 + (weightedScore - 6.5) * 10;
     } else if (weightedScore <= 3.5) {
         state.signal = 'SHORT';
-        state.confidence = Math.min(85, 50 + (5 - weightedScore) * 7);
+        state.confidence = 60 + (3.5 - weightedScore) * 10;
     } else {
         state.signal = 'NEUTRAL';
         state.confidence = 40 + Math.random() * 20;
     }
+
+    state.confidence = Math.min(85, Math.max(40, state.confidence));
+    state.weightedScore = weightedScore;
 
     return weightedScore;
 }
