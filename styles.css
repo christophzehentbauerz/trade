@@ -2853,3 +2853,282 @@ body::before {
 .news-footer { margin-top: 16px; text-align: right; color: var(--text-muted); opacity: 0.7; }
 .news-placeholder { height: 300px; background: rgba(255, 255, 255, 0.02); border-radius: var(--radius-md); animation: pulse 1.5s infinite; display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
 @media (max-width: 768px) { .news-grid { grid-template-columns: 1fr; } .news-image { height: 200px; } }
+
+/* =====================================================
+   Prominent News & Sentiment Section
+   ===================================================== */
+
+.news-sentiment-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    margin-top: 24px;
+    margin-bottom: 20px;
+}
+
+.news-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.news-header h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.news-sentiment-summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.sentiment-label {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.sentiment-value {
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: var(--radius-sm);
+}
+
+.sentiment-value.bullish {
+    background: var(--bullish-bg);
+    color: var(--bullish);
+}
+
+.sentiment-value.bearish {
+    background: var(--bearish-bg);
+    color: var(--bearish);
+}
+
+.sentiment-value.neutral {
+    background: var(--neutral-bg);
+    color: var(--neutral);
+}
+
+.news-grid-main {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+.news-loading {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+    gap: 16px;
+}
+
+.news-loading .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* News Card - Main Section */
+.news-card-main {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+}
+
+.news-card-main:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+    border-color: var(--accent-primary);
+}
+
+.news-card-main.bullish-news {
+    border-left: 4px solid var(--bullish);
+}
+
+.news-card-main.bearish-news {
+    border-left: 4px solid var(--bearish);
+}
+
+.news-card-main.neutral-news {
+    border-left: 4px solid var(--neutral);
+}
+
+.news-card-image {
+    height: 180px;
+    background-size: cover;
+    background-position: center;
+    background-color: rgba(255, 255, 255, 0.03);
+    position: relative;
+}
+
+.news-sentiment-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    backdrop-filter: blur(8px);
+}
+
+.news-sentiment-badge.bullish {
+    background: rgba(16, 185, 129, 0.9);
+    color: white;
+}
+
+.news-sentiment-badge.bearish {
+    background: rgba(239, 68, 68, 0.9);
+    color: white;
+}
+
+.news-sentiment-badge.neutral {
+    background: rgba(245, 158, 11, 0.9);
+    color: white;
+}
+
+.news-card-content {
+    padding: 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.news-card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+}
+
+.news-card-source {
+    color: var(--accent-primary);
+    font-weight: 600;
+}
+
+.news-card-time {
+    color: var(--text-muted);
+}
+
+.news-card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--text-primary);
+    margin: 0 0 12px 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.news-card-body {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin: 0 0 auto 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.news-card-sentiment-info {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.news-card-sentiment-info .sentiment-icon {
+    font-size: 1rem;
+}
+
+.news-card-sentiment-info .sentiment-reason {
+    flex: 1;
+}
+
+.news-meta-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.news-update-time {
+    opacity: 0.7;
+}
+
+.news-source-info {
+    opacity: 0.5;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .news-sentiment-section {
+        padding: 16px;
+        margin-top: 16px;
+    }
+
+    .news-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .news-sentiment-summary {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .news-grid-main {
+        grid-template-columns: 1fr;
+    }
+
+    .news-card-image {
+        height: 160px;
+    }
+
+    .news-card-title {
+        font-size: 1rem;
+    }
+}
+

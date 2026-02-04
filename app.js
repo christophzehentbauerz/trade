@@ -1583,24 +1583,119 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =====================================================
-    // News Integration
+    // News Integration with Sentiment Analysis
     // =====================================================
 
-    async function fetchNews() {
+    // Sentiment keywords for analysis
+    const SENTIMENT_KEYWORDS = {
+        bullish: [
+            // English
+            'surge', 'surges', 'soar', 'soars', 'rally', 'rallies', 'bullish', 'breakout',
+            'all-time high', 'ath', 'record high', 'gain', 'gains', 'pump', 'pumping',
+            'adoption', 'institutional', 'etf approval', 'etf approved', 'spot etf',
+            'buy signal', 'accumulation', 'accumulating', 'whales buying', 'inflow', 'inflows',
+            'upgrade', 'upgraded', 'growth', 'growing', 'moon', 'mooning', 'explode', 'explodes',
+            'milestone', 'breakthrough', 'partnership', 'integration', 'launch', 'launches',
+            'recovery', 'recovers', 'rebounds', 'rebound', 'positive', 'optimistic', 'confident',
+            'support', 'supporting', 'backed', 'backs', 'endorses', 'endorsement',
+            'bitcoin reserve', 'strategic reserve', 'nation adopts', 'country adopts',
+            // German
+            'steigt', 'anstieg', 'rallye', 'durchbruch', 'allzeithoch', 'rekord',
+            'kursgewinne', 'aufwärts', 'bullenmarkt', 'kaufsignal', 'zuflüsse'
+        ],
+        bearish: [
+            // English
+            'crash', 'crashes', 'plunge', 'plunges', 'dump', 'dumps', 'dumping',
+            'bearish', 'breakdown', 'sell-off', 'selloff', 'selling', 'capitulation',
+            'fear', 'panic', 'collapse', 'collapses', 'drop', 'drops', 'fall', 'falls',
+            'decline', 'declines', 'loss', 'losses', 'risk', 'risky', 'warning',
+            'ban', 'bans', 'banned', 'regulation', 'crackdown', 'lawsuit', 'sue', 'sued',
+            'hack', 'hacked', 'exploit', 'vulnerability', 'scam', 'fraud', 'ponzi',
+            'bankruptcy', 'bankrupt', 'insolvent', 'liquidation', 'liquidated',
+            'outflow', 'outflows', 'withdraw', 'withdrawals', 'flee', 'fleeing',
+            'bearish', 'correction', 'bubble', 'overvalued', 'concern', 'concerns',
+            'fud', 'uncertainty', 'doubt', 'skeptic', 'skeptical',
+            // German
+            'absturz', 'einbruch', 'verlust', 'fällt', 'sinkt', 'bärenmarkt',
+            'verkaufsdruck', 'panik', 'warnung', 'verbot', 'regulierung'
+        ]
+    };
+
+    function analyzeSentiment(text) {
+        if (!text) return { sentiment: 'neutral', score: 0, keywords: [] };
+
+        const lowerText = text.toLowerCase();
+        let bullishScore = 0;
+        let bearishScore = 0;
+        const foundKeywords = [];
+
+        // Check for bullish keywords
+        SENTIMENT_KEYWORDS.bullish.forEach(keyword => {
+            if (lowerText.includes(keyword.toLowerCase())) {
+                bullishScore++;
+                foundKeywords.push({ word: keyword, type: 'bullish' });
+            }
+        });
+
+        // Check for bearish keywords
+        SENTIMENT_KEYWORDS.bearish.forEach(keyword => {
+            if (lowerText.includes(keyword.toLowerCase())) {
+                bearishScore++;
+                foundKeywords.push({ word: keyword, type: 'bearish' });
+            }
+        });
+
+        // Determine overall sentiment
+        const netScore = bullishScore - bearishScore;
+        let sentiment = 'neutral';
+
+        if (netScore >= 2) {
+            sentiment = 'bullish';
+        } else if (netScore <= -2) {
+            sentiment = 'bearish';
+        } else if (netScore === 1) {
+            sentiment = 'bullish';
+        } else if (netScore === -1) {
+            sentiment = 'bearish';
+        }
+
+        return {
+            sentiment,
+            score: netScore,
+            bullishCount: bullishScore,
+            bearishCount: bearishScore,
+            keywords: foundKeywords
+        };
+    }
+
+    function getSentimentIcon(sentiment) {
+        switch (sentiment) {
+            case 'bullish': return '🟢';
+            case 'bearish': return '🔴';
+            default: return '⚪';
+        }
+    }
+
+    function getSentimentLabel(sentiment) {
+        switch (sentiment) {
+            case 'bullish': return 'Bullish';
+            case 'bearish': return 'Bearish';
+            default: return 'Neutral';
+        }
+    }
+
+    async function fetchNewsWithSentiment() {
         try {
             const url = CONFIG.apis.news;
-
-            console.log('Fetching news...');
+            console.log('Fetching news with sentiment analysis...');
             let data;
 
             try {
-                // Try direct fetch first
                 const response = await fetch(url);
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 data = await response.json();
             } catch (e) {
                 console.warn('Direct news fetch failed, trying proxy...', e);
-                // Try proxy
                 const proxyUrl = `${CONFIG.apis.corsProxy}${encodeURIComponent(url)}`;
                 const response = await fetch(proxyUrl);
                 if (!response.ok) throw new Error(`Proxy error! status: ${response.status}`);
@@ -1608,23 +1703,131 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (data && data.Data && data.Data.length > 0) {
-                console.log(`News fetched: ${data.Data.length} items`); // Debug log
-                renderNews(data.Data.slice(0, 4)); // Show top 4 news
+                const newsWithSentiment = data.Data.slice(0, 6).map(item => {
+                    const combinedText = `${item.title} ${item.body}`;
+                    const sentiment = analyzeSentiment(combinedText);
+                    return { ...item, sentiment };
+                });
+
+                console.log(`News fetched with sentiment: ${newsWithSentiment.length} items`);
+                renderNewsWithSentiment(newsWithSentiment);
+
+                // Also update the old news grid if it exists
+                renderNews(data.Data.slice(0, 4));
             } else {
                 console.warn('No news data found in response:', data);
+                showNewsError('Keine Nachrichten verfügbar');
             }
         } catch (error) {
             console.error('Error fetching news:', error);
-            const newsGrid = document.getElementById('news-grid');
-            if (newsGrid) {
-                newsGrid.innerHTML = `
-                    <div class="error-message" style="grid-column: 1/-1; padding: 20px; color: #ff6b6b; text-align: center; background: rgba(255,107,107,0.1); border-radius: 8px;">
-                        ⚠️ News konnten nicht geladen werden.<br>
-                        <small style="opacity: 0.7; margin-top: 5px; display: block;">${error.message}</small>
-                    </div>
-                `;
-            }
+            showNewsError(error.message);
         }
+    }
+
+    function showNewsError(message) {
+        const newsGridMain = document.getElementById('news-grid-main');
+        if (newsGridMain) {
+            newsGridMain.innerHTML = `
+                <div class="error-message" style="grid-column: 1/-1; padding: 40px; color: #ff6b6b; text-align: center; background: rgba(255,107,107,0.1); border-radius: 12px;">
+                    ⚠️ News konnten nicht geladen werden.<br>
+                    <small style="opacity: 0.7; margin-top: 8px; display: block;">${message}</small>
+                    <button onclick="fetchNewsWithSentiment()" style="margin-top: 16px; padding: 8px 20px; background: var(--accent-primary); border: none; border-radius: 6px; color: white; cursor: pointer;">
+                        🔄 Erneut versuchen
+                    </button>
+                </div>
+            `;
+        }
+
+        // Also handle old grid
+        const newsGrid = document.getElementById('news-grid');
+        if (newsGrid) {
+            newsGrid.innerHTML = `
+                <div class="error-message" style="grid-column: 1/-1; padding: 20px; color: #ff6b6b; text-align: center; background: rgba(255,107,107,0.1); border-radius: 8px;">
+                    ⚠️ News konnten nicht geladen werden.
+                </div>
+            `;
+        }
+    }
+
+    function renderNewsWithSentiment(newsItems) {
+        const newsContainer = document.getElementById('news-grid-main');
+        const overallSentimentEl = document.getElementById('overallNewsSentiment');
+        const newsUpdateTimeEl = document.getElementById('newsUpdateTime');
+
+        if (!newsContainer) return;
+
+        // Calculate overall sentiment
+        let totalBullish = 0;
+        let totalBearish = 0;
+        newsItems.forEach(item => {
+            if (item.sentiment.sentiment === 'bullish') totalBullish++;
+            else if (item.sentiment.sentiment === 'bearish') totalBearish++;
+        });
+
+        let overallSentiment = 'neutral';
+        let overallText = '⚪ Neutral';
+        let overallClass = 'neutral';
+
+        if (totalBullish > totalBearish + 1) {
+            overallSentiment = 'bullish';
+            overallText = `🟢 Bullish (${totalBullish}/${newsItems.length})`;
+            overallClass = 'bullish';
+        } else if (totalBearish > totalBullish + 1) {
+            overallSentiment = 'bearish';
+            overallText = `🔴 Bearish (${totalBearish}/${newsItems.length})`;
+            overallClass = 'bearish';
+        } else {
+            overallText = `⚪ Gemischt (${totalBullish}↑ ${totalBearish}↓)`;
+        }
+
+        if (overallSentimentEl) {
+            overallSentimentEl.textContent = overallText;
+            overallSentimentEl.className = `sentiment-value ${overallClass}`;
+        }
+
+        // Update timestamp
+        if (newsUpdateTimeEl) {
+            newsUpdateTimeEl.textContent = `Letztes Update: ${new Date().toLocaleTimeString('de-DE')}`;
+        }
+
+        // Render news cards
+        newsContainer.innerHTML = newsItems.map(item => {
+            const date = new Date(item.published_on * 1000).toLocaleDateString('de-DE', {
+                day: '2-digit',
+                month: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            const sentimentIcon = getSentimentIcon(item.sentiment.sentiment);
+            const sentimentLabel = getSentimentLabel(item.sentiment.sentiment);
+            const sentimentClass = item.sentiment.sentiment;
+
+            // Get first found keyword for display
+            const keywordInfo = item.sentiment.keywords.length > 0
+                ? `Erkannt: "${item.sentiment.keywords[0].word}"`
+                : 'Keine klaren Signale';
+
+            return `
+                <div class="news-card-main ${sentimentClass}-news" onclick="window.open('${item.url}', '_blank')">
+                    <div class="news-card-image" style="background-image: url('${item.imageurl}')">
+                        <span class="news-sentiment-badge ${sentimentClass}">${sentimentIcon} ${sentimentLabel}</span>
+                    </div>
+                    <div class="news-card-content">
+                        <div class="news-card-meta">
+                            <span class="news-card-source">${item.source_info.name}</span>
+                            <span class="news-card-time">${date}</span>
+                        </div>
+                        <h4 class="news-card-title">${item.title}</h4>
+                        <p class="news-card-body">${item.body.substring(0, 150)}...</p>
+                        <div class="news-card-sentiment-info">
+                            <span class="sentiment-icon">${sentimentIcon}</span>
+                            <span class="sentiment-reason">${keywordInfo}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 
     function renderNews(newsItems) {
@@ -1653,11 +1856,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
     }
 
-    // Initial news fetch
-    fetchNews();
+    // Make fetchNewsWithSentiment globally available for retry button
+    window.fetchNewsWithSentiment = fetchNewsWithSentiment;
+
+    // Initial news fetch with sentiment
+    fetchNewsWithSentiment();
 
     // Refresh news every 30 minutes
-    setInterval(fetchNews, 1800000);
+    setInterval(fetchNewsWithSentiment, 1800000);
 });
 
 // Handle visibility change (refresh when tab becomes visible)
