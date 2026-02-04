@@ -438,7 +438,7 @@ function formatDailyReport(additionalContent = '') {
 async function fetchNews() {
     try {
         const url = 'https://min-api.cryptocompare.com/data/v2/news/?lang=EN&categories=BTC,Market';
-        const response = await fetchWithTimeout(url);
+        const response = await fetchJSON(url);
 
         if (response && response.Data && response.Data.length > 0) {
             const headlines = response.Data.slice(0, 3).map(item => {

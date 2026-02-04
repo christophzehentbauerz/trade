@@ -1595,14 +1595,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 // Try direct fetch first
-                data = await fetchJSON(url);
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                data = await response.json();
             } catch (e) {
-                console.warn('Direct news fetch failed, trying proxy...');
-                data = await fetchJSON(`${CONFIG.apis.corsProxy}${encodeURIComponent(url)}`);
+                console.warn('Direct news fetch failed, trying proxy...', e);
+                // Try proxy
+                const proxyUrl = `${CONFIG.apis.corsProxy}${encodeURIComponent(url)}`;
+                const response = await fetch(proxyUrl);
+                if (!response.ok) throw new Error(`Proxy error! status: ${response.status}`);
+                data = await response.json();
             }
 
             if (data && data.Data && data.Data.length > 0) {
+                console.log(`News fetched: ${data.Data.length} items`); // Debug log
                 renderNews(data.Data.slice(0, 4)); // Show top 4 news
+            } else {
+                console.warn('No news data found in response:', data);
             }
         } catch (error) {
             console.error('Error fetching news:', error);
