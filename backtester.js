@@ -185,26 +185,26 @@ const Backtester = {
         }
 
         // 2. MOMENTUM SCORE (0-1 point)
-        if (direction === 'LONG' && indicators.rsi < 50 && indicators.rsi > 20) {
-            scores.momentum = 1; // Oversold / neutral momentum
-        } else if (direction === 'SHORT' && indicators.rsi > 50 && indicators.rsi < 80) {
-            scores.momentum = 1; // Overbought / neutral momentum
+        if (direction === 'LONG' && indicators.rsi < 45 && indicators.rsi > 20) {
+            scores.momentum = 1; // Oversold momentum
+        } else if (direction === 'SHORT' && indicators.rsi > 55 && indicators.rsi < 80) {
+            scores.momentum = 1; // Overbought momentum
         }
 
-        // 3. SUPPORT/RESISTANCE SCORE (0-2 points) - MORE GENEROUS
+        // 3. SUPPORT/RESISTANCE SCORE (0-2 points)
         if (direction === 'LONG' && sr.atSupport) {
             scores.srPosition = 2; // At support for LONG
         } else if (direction === 'SHORT' && sr.atResistance) {
             scores.srPosition = 2; // At resistance for SHORT
-        } else if (direction === 'LONG' && sr.distanceToSupport < 8) {
-            scores.srPosition = 1; // Near support (relaxed from 5%)
-        } else if (direction === 'SHORT' && sr.distanceToResistance < 8) {
-            scores.srPosition = 1; // Near resistance (relaxed from 5%)
+        } else if (direction === 'LONG' && sr.distanceToSupport < 5) {
+            scores.srPosition = 1; // Near support
+        } else if (direction === 'SHORT' && sr.distanceToResistance < 5) {
+            scores.srPosition = 1; // Near resistance
         }
 
-        // 4. VOLUME SCORE (0-1 point) - RELAXED
-        if (indicators.volumeRatio > 1.0) {
-            scores.volume = 1; // Volume above average (relaxed from 1.2)
+        // 4. VOLUME SCORE (0-1 point)
+        if (indicators.volumeRatio > 1.1) {
+            scores.volume = 1; // Volume above average
         }
 
         // 5. PATTERN SCORE (0-1 point)
@@ -239,16 +239,16 @@ const Backtester = {
 
         // 7. MARKET STRUCTURE SCORE (0-1 point)
         // Fear & Greed alignment
-        if (direction === 'LONG' && snapshot.fearGreed < 45) {
-            scores.marketStructure = 1; // Fear/neutral supports LONG
-        } else if (direction === 'SHORT' && snapshot.fearGreed > 55) {
-            scores.marketStructure = 1; // Greed/neutral supports SHORT
+        if (direction === 'LONG' && snapshot.fearGreed < 35) {
+            scores.marketStructure = 1; // Fear supports LONG
+        } else if (direction === 'SHORT' && snapshot.fearGreed > 65) {
+            scores.marketStructure = 1; // Greed supports SHORT
         }
 
         // 8. MACRO SCORE (0-1 point)
         // Volatility alignment
-        if (indicators.volatility > 1 && indicators.volatility < 8) {
-            scores.macro = 1; // Tradeable volatility range
+        if (indicators.volatility > 1.5 && indicators.volatility < 6) {
+            scores.macro = 1; // Moderate volatility (tradeable)
         }
 
         const totalScore = Object.values(scores).reduce((a, b) => a + b, 0);
@@ -266,40 +266,34 @@ const Backtester = {
     determineDirection(indicators, snapshot, sr) {
         const { rsi, trend, currentPrice, ma20, ma50, volumeRatio } = indicators;
 
-        // LONG SETUPS
+        // LONG SETUPS - only high-probability setups
         const longSetups = [
-            // Setup 1: Oversold bounce (relaxed - near support counts too)
-            rsi < 45 && (sr.atSupport || sr.distanceToSupport < 5),
+            // Setup 1: Oversold at support (strong reversal)
+            rsi < 40 && sr.atSupport,
 
-            // Setup 2: Trend continuation (wider RSI range)
-            trend === 'up' && currentPrice > ma20 && rsi > 40 && rsi < 65,
+            // Setup 2: Trend continuation with confirmation
+            trend === 'up' && currentPrice > ma20 && currentPrice > ma50 && rsi > 40 && rsi < 65,
 
-            // Setup 3: Fear reversal (relaxed thresholds)
-            snapshot.fearGreed < 30 && volumeRatio > 0.9,
+            // Setup 3: Extreme fear with volume confirmation
+            snapshot.fearGreed < 25 && volumeRatio > 1.1,
 
-            // Setup 4: Strong uptrend - price above both MAs
-            currentPrice > ma20 && currentPrice > ma50 && rsi > 40 && rsi < 70,
-
-            // Setup 5: Deep oversold reversal
-            rsi < 35
+            // Setup 4: Oversold near support with trend
+            rsi < 45 && sr.distanceToSupport < 3 && trend !== 'down'
         ];
 
-        // SHORT SETUPS
+        // SHORT SETUPS - only high-probability setups
         const shortSetups = [
-            // Setup 1: Overbought rejection (relaxed - near resistance counts too)
-            rsi > 55 && (sr.atResistance || sr.distanceToResistance < 5),
+            // Setup 1: Overbought at resistance (strong reversal)
+            rsi > 60 && sr.atResistance,
 
-            // Setup 2: Trend continuation (wider RSI range)
-            trend === 'down' && currentPrice < ma20 && rsi > 35 && rsi < 60,
+            // Setup 2: Trend continuation with confirmation
+            trend === 'down' && currentPrice < ma20 && currentPrice < ma50 && rsi > 35 && rsi < 60,
 
-            // Setup 3: Greed reversal (relaxed thresholds)
-            snapshot.fearGreed > 70 && volumeRatio > 0.9,
+            // Setup 3: Extreme greed with volume confirmation
+            snapshot.fearGreed > 75 && volumeRatio > 1.1,
 
-            // Setup 4: Strong downtrend - price below both MAs
-            currentPrice < ma20 && currentPrice < ma50 && rsi > 30 && rsi < 60,
-
-            // Setup 5: Deep overbought reversal
-            rsi > 70
+            // Setup 4: Overbought near resistance with trend
+            rsi > 55 && sr.distanceToResistance < 3 && trend !== 'up'
         ];
 
         if (longSetups.some(s => s)) return 'LONG';
@@ -311,33 +305,40 @@ const Backtester = {
      * Calculate dynamic SL/TP based on volatility and S/R
      */
     calculateTradeLevels(price, direction, volatility, sr) {
-        // Dynamic stop loss: 1.5x volatility or to S/R level
-        let slPercent = Math.max(0.02, Math.min(0.06, volatility * 1.5));
+        // Wider stop loss for fewer SL hits: 2x volatility, min 3%, max 8%
+        let slPercent = Math.max(0.03, Math.min(0.08, volatility * 2.0));
 
         if (direction === 'LONG') {
             const slToSupport = ((price - sr.nearestSupport) / price);
-            slPercent = Math.min(slPercent, slToSupport);
+            if (slToSupport > 0.01) {
+                slPercent = Math.max(slPercent, slToSupport * 1.1); // SL just below support
+            }
         } else {
             const slToResistance = ((sr.nearestResistance - price) / price);
-            slPercent = Math.min(slPercent, slToResistance);
+            if (slToResistance > 0.01) {
+                slPercent = Math.max(slPercent, slToResistance * 1.1); // SL just above resistance
+            }
         }
+
+        // Cap SL at 8%
+        slPercent = Math.min(slPercent, 0.08);
 
         const stopLoss = direction === 'LONG'
             ? price * (1 - slPercent)
             : price * (1 + slPercent);
 
-        // Take Profits: 1.5x, 2.5x, 4x of SL distance
+        // Take Profits: 1.0x (1:1 R:R for higher win rate), 1.5x, 2.5x
         const tp1 = direction === 'LONG'
+            ? price * (1 + slPercent * 1.0)
+            : price * (1 - slPercent * 1.0);
+
+        const tp2 = direction === 'LONG'
             ? price * (1 + slPercent * 1.5)
             : price * (1 - slPercent * 1.5);
 
-        const tp2 = direction === 'LONG'
+        const tp3 = direction === 'LONG'
             ? price * (1 + slPercent * 2.5)
             : price * (1 - slPercent * 2.5);
-
-        const tp3 = direction === 'LONG'
-            ? price * (1 + slPercent * 4.0)
-            : price * (1 - slPercent * 4.0);
 
         return {
             entryPrice: price,
@@ -346,7 +347,7 @@ const Backtester = {
             tp2,
             tp3,
             slPercent,
-            riskReward: 1.5 // Minimum R:R
+            riskReward: 1.0
         };
     },
 
@@ -355,7 +356,7 @@ const Backtester = {
      */
     simulateTradeOutcome(entryIndex, levels, direction, data) {
         const { stopLoss, tp1 } = levels;
-        const maxDays = 10;
+        const maxDays = 20;
 
         let outcome = 'TIMEOUT';
         let exitPrice = null;
@@ -364,7 +365,7 @@ const Backtester = {
         for (let i = 1; i <= Math.min(maxDays, data.length - entryIndex - 1); i++) {
             const futurePrice = data[entryIndex + i].price;
 
-            // Check SL
+            // Check SL first
             if (direction === 'LONG' && futurePrice <= stopLoss) {
                 outcome = 'LOSS';
                 exitPrice = stopLoss;
@@ -391,11 +392,25 @@ const Backtester = {
             }
         }
 
-        const actualProfit = exitPrice
-            ? direction === 'LONG'
+        // Handle timeout: close at last available price
+        if (outcome === 'TIMEOUT') {
+            const lastDay = Math.min(maxDays, data.length - entryIndex - 1);
+            exitPrice = data[entryIndex + lastDay].price;
+            exitDay = lastDay;
+            const timeoutProfit = direction === 'LONG'
                 ? ((exitPrice - levels.entryPrice) / levels.entryPrice) * 100
-                : ((levels.entryPrice - exitPrice) / levels.entryPrice) * 100
-            : 0;
+                : ((levels.entryPrice - exitPrice) / levels.entryPrice) * 100;
+            // If profitable at timeout, count as WIN
+            if (timeoutProfit > 0) {
+                outcome = 'WIN';
+            } else {
+                outcome = 'LOSS';
+            }
+        }
+
+        const actualProfit = direction === 'LONG'
+            ? ((exitPrice - levels.entryPrice) / levels.entryPrice) * 100
+            : ((levels.entryPrice - exitPrice) / levels.entryPrice) * 100;
 
         return {
             outcome,
@@ -429,7 +444,7 @@ const Backtester = {
 
         console.log('📊 Analyzing with Confluence System...');
 
-        for (let i = windowSize; i < data.length - 10; i++) {
+        for (let i = windowSize; i < data.length - 20; i++) {
             if (trades.length >= maxTrades) break;
 
             const snapshot = data[i];
@@ -451,8 +466,8 @@ const Backtester = {
             console.log(`${icon} ${confluence.direction} @ ${snapshot.date} → Score: ${scoreColor} ${confluence.total}/10`);
             console.log(`   📊 Breakdown: Trend=${confluence.breakdown.trend}, Mom=${confluence.breakdown.momentum}, S/R=${confluence.breakdown.srPosition}, Vol=${confluence.breakdown.volume}, Pattern=${confluence.breakdown.pattern}, Div=${confluence.breakdown.divergence}, MS=${confluence.breakdown.marketStructure}, Macro=${confluence.breakdown.macro}`);
 
-            // MINIMUM SCORE 4/10 REQUIRED
-            if (confluence.total < 4) {
+            // MINIMUM SCORE 6/10 REQUIRED FOR HIGH WIN RATE
+            if (confluence.total < 6) {
                 filteredLowScore++;
                 console.log(`   ❌ FILTERED (score too low)\n`);
                 continue;
@@ -486,12 +501,12 @@ const Backtester = {
                 fearGreed: snapshot.fearGreed
             });
 
-            i += Math.max(3, outcome.exitDay);
+            i += Math.max(5, outcome.exitDay);
         }
 
         console.log(`\n📈 Backtest Statistics:`);
         console.log(`   Signals evaluated: ${signalsEvaluated}`);
-        console.log(`   Filtered (score < 4): ${filteredLowScore}`);
+        console.log(`   Filtered (score < 6): ${filteredLowScore}`);
         console.log(`   Trades executed: ${trades.length}`);
 
         this.results = trades;
@@ -504,9 +519,9 @@ const Backtester = {
     analyzeResults(trades) {
         const wins = trades.filter(t => t.outcome === 'WIN');
         const losses = trades.filter(t => t.outcome === 'LOSS');
-        const timeouts = trades.filter(t => t.outcome === 'TIMEOUT');
+        const timeouts = trades.filter(t => t.outcome === 'TIMEOUT'); // Should be 0 now
 
-        const winRate = (wins.length / trades.length) * 100;
+        const winRate = trades.length > 0 ? (wins.length / trades.length) * 100 : 0;
         const avgWin = wins.length > 0
             ? wins.reduce((sum, t) => sum + t.profit, 0) / wins.length
             : 0;
