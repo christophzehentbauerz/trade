@@ -15,7 +15,7 @@ const CONFIG = {
         binance: 'https://api.binance.com/api/v3',
         binanceFutures: 'https://fapi.binance.com',
         binanceFuturesData: 'https://fapi.binance.com/futures/data',
-        corsProxy: 'https://corsproxy.io/?url='
+        corsProxy: 'https://corsproxy.io/?'
     },
     weights: {
         technical: 0.35,

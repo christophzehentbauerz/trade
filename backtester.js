@@ -12,13 +12,22 @@ const Backtester = {
      */
     async fetchHistoricalData(days = 180) {
         try {
-            const priceData = await fetchWithTimeout(
-                `${CONFIG.apis.coinGecko}/coins/bitcoin/market_chart?vs_currency=usd&days=${days}&interval=daily`
-            );
+            const priceUrl = `${CONFIG.apis.coinGecko}/coins/bitcoin/market_chart?vs_currency=usd&days=${days}&interval=daily`;
+            const fgUrl = `${CONFIG.apis.fearGreed}?limit=${Math.min(days, 60)}`;
 
-            const fgData = await fetchWithTimeout(
-                `${CONFIG.apis.fearGreed}?limit=${Math.min(days, 60)}`, 10000
-            );
+            let priceData, fgData;
+            try {
+                priceData = await fetchWithTimeout(priceUrl);
+            } catch (e) {
+                console.warn('Backtester: CoinGecko direct failed, trying CORS proxy...');
+                priceData = await fetchWithTimeout(`${CONFIG.apis.corsProxy}${encodeURIComponent(priceUrl)}`);
+            }
+            try {
+                fgData = await fetchWithTimeout(fgUrl, 10000);
+            } catch (e) {
+                console.warn('Backtester: Fear & Greed direct failed, trying CORS proxy...');
+                fgData = await fetchWithTimeout(`${CONFIG.apis.corsProxy}${encodeURIComponent(fgUrl)}`, 10000);
+            }
 
             const dailyData = [];
 
