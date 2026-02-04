@@ -59,9 +59,92 @@ let state = {
     lastUpdate: null
 };
 
+
 let countdownInterval = null;
 let remainingSeconds = 300;
 let previousSignal = 'NEUTRAL'; // Track signal changes for notifications
+
+// =====================================================
+// Helper Functions
+// =====================================================
+
+function formatNumber(num, decimals = 2) {
+    if (num === null || num === undefined) return '--';
+    return Number(num).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+function formatCurrency(num) {
+    if (num === null || num === undefined) return '$--';
+    if (num >= 1e9) return '$' + (num / 1e9).toFixed(2) + 'B';
+    if (num >= 1e6) return '$' + (num / 1e6).toFixed(2) + 'M';
+    return '$' + Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function calculateRSI(prices, period = 14) {
+    if (!prices || prices.length < period + 1) return 50;
+
+    let gains = 0, losses = 0;
+
+    // First RSI calculation
+    for (let i = 1; i <= period; i++) {
+        const change = prices[i] - prices[i - 1];
+        if (change > 0) gains += change;
+        else losses -= change;
+    }
+
+    let avgGain = gains / period;
+    let avgLoss = losses / period;
+
+    // Smooth using subsequent data
+    // Simple implementation for now - just using last window
+    // In production, would use smoothed average
+
+    if (avgLoss === 0) return 100;
+    const rs = avgGain / avgLoss;
+    return 100 - (100 / (1 + rs));
+}
+
+function determineTrend(prices) {
+    if (!prices || prices.length < 20) return 'sideways';
+
+    // Compare MA7 vs MA25
+    const ma7 = prices.slice(-7).reduce((a, b) => a + b, 0) / 7;
+    const ma25 = prices.slice(-25).reduce((a, b) => a + b, 0) / 25;
+
+    const diff = ((ma7 - ma25) / ma25) * 100;
+
+    if (diff > 0.5) return 'up';
+    if (diff < -0.5) return 'down';
+    return 'sideways';
+}
+
+function calculateVolatility(prices) {
+    if (!prices || prices.length < 14) return 0;
+
+    // Calculate standard deviation of returns
+    const returns = [];
+    for (let i = 1; i < prices.length; i++) {
+        returns.push((prices[i] - prices[i - 1]) / prices[i - 1]);
+    }
+
+    const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
+    const variance = returns.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / returns.length;
+
+    return Math.sqrt(variance) * 100 * Math.sqrt(365); // Annualized approx
+}
+
+function calculateEMA(prices, period) {
+    if (!prices || prices.length < period) return prices[prices.length - 1];
+
+    const k = 2 / (period + 1);
+    let ema = prices[0];
+
+    for (let i = 1; i < prices.length; i++) {
+        ema = prices[i] * k + ema * (1 - k);
+    }
+    return ema;
+}
+
 
 // =====================================================
 // Notification System
@@ -69,8 +152,8 @@ let previousSignal = 'NEUTRAL'; // Track signal changes for notifications
 
 const NotificationSystem = {
     audioContext: null,
-    notificationsEnabled: false,
-    soundEnabled: true,
+    notificationsEnabled: false, // Notifications off by default
+    soundEnabled: true, // Sound ON by default
 
     // Initialize notification permissions
     async init() {
@@ -78,17 +161,19 @@ const NotificationSystem = {
         if ('Notification' in window) {
             if (Notification.permission === 'granted') {
                 this.notificationsEnabled = true;
-            } else if (Notification.permission !== 'denied') {
-                // Will request permission when user clicks the button
             }
         }
 
-        // Load saved preferences
+        // Load saved preferences - sound enabled by default if not set
         const savedPrefs = localStorage.getItem('btc-notification-prefs');
         if (savedPrefs) {
             const prefs = JSON.parse(savedPrefs);
-            this.soundEnabled = prefs.soundEnabled !== false;
+            this.soundEnabled = prefs.soundEnabled !== false; // default true
             this.notificationsEnabled = prefs.notificationsEnabled && Notification.permission === 'granted';
+        } else {
+            // No saved prefs - ensure sound is on by default
+            this.soundEnabled = true;
+            this.notificationsEnabled = false;
         }
 
         this.updateUI();
@@ -666,9 +751,9 @@ function updateFearGreedCard() {
     valueEl.style.color = color;
     valueEl.style.textShadow = '0 0 15px rgba(0, 0, 0, 0.9), 0 0 30px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.6), 0 0 3px rgba(255, 255, 255, 0.3)';
 
-    // Update gauge
-    const rotation = (value / 100) * 180;
-    document.getElementById('gaugeFill').style.transform = `rotate(${rotation}deg)`;
+    // Update gauge needle - rotates from -90deg (value=0) to +90deg (value=100)
+    const rotation = ((value / 100) * 180) - 90;
+    document.getElementById('gaugeFill').style.transform = `translateX(-50%) rotate(${rotation}deg)`;
 
     // Update history
     const historyContainer = document.getElementById('fearGreedHistory');
@@ -1864,6 +1949,64 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Refresh news every 30 minutes
     setInterval(fetchNewsWithSentiment, 1800000);
+
+    // =====================================================
+    // Click-Only Tooltips for Info Badges
+    // =====================================================
+
+    function initClickTooltips() {
+        // Convert all title attributes to data-tooltip for info-badges
+        const infoBadges = document.querySelectorAll('.info-badge[title]');
+        infoBadges.forEach(badge => {
+            const tooltipText = badge.getAttribute('title');
+            badge.setAttribute('data-tooltip', tooltipText);
+            badge.removeAttribute('title'); // Remove native tooltip
+
+            badge.addEventListener('click', (e) => {
+                e.stopPropagation();
+
+                // Remove any existing tooltip
+                const existingTooltip = document.querySelector('.tooltip-popup');
+                if (existingTooltip) {
+                    existingTooltip.remove();
+                }
+
+                // Create tooltip popup
+                const tooltip = document.createElement('div');
+                tooltip.className = 'tooltip-popup';
+                tooltip.innerHTML = `
+                    <div class="tooltip-content">${tooltipText}</div>
+                    <button class="tooltip-close">✕</button>
+                `;
+
+                // Position tooltip
+                const rect = badge.getBoundingClientRect();
+                tooltip.style.position = 'fixed';
+                tooltip.style.top = `${rect.bottom + 10}px`;
+                tooltip.style.left = `${Math.max(10, rect.left - 100)}px`;
+                tooltip.style.zIndex = '10000';
+
+                document.body.appendChild(tooltip);
+
+                // Close button
+                tooltip.querySelector('.tooltip-close').addEventListener('click', () => {
+                    tooltip.remove();
+                });
+
+                // Close on click outside
+                setTimeout(() => {
+                    document.addEventListener('click', function closeTooltip(event) {
+                        if (!tooltip.contains(event.target) && event.target !== badge) {
+                            tooltip.remove();
+                            document.removeEventListener('click', closeTooltip);
+                        }
+                    });
+                }, 100);
+            });
+        });
+    }
+
+    initClickTooltips();
 });
 
 // Handle visibility change (refresh when tab becomes visible)
