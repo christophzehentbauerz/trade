@@ -1234,8 +1234,8 @@ async function runBacktestAndDisplay() {
     btnEl.textContent = '⏳ Läuft...';
 
     try {
-        // Run backtest with 30 trades
-        const results = await Backtester.runBacktest(30);
+        // Run backtest with 60 trades over 1 year
+        const results = await Backtester.runBacktest(60);
 
         if (!results) {
             throw new Error('Backtest failed');

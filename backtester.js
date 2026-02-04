@@ -10,10 +10,10 @@ const Backtester = {
     /**
      * Fetch historical price and Fear & Greed data
      */
-    async fetchHistoricalData(days = 180) {
+    async fetchHistoricalData(days = 365) {
         try {
             const priceUrl = `${CONFIG.apis.coinGecko}/coins/bitcoin/market_chart?vs_currency=usd&days=${days}&interval=daily`;
-            const fgUrl = `${CONFIG.apis.fearGreed}?limit=${Math.min(days, 60)}`;
+            const fgUrl = `${CONFIG.apis.fearGreed}?limit=${Math.min(days, 365)}`;
 
             let priceData, fgData;
             try {
@@ -400,7 +400,7 @@ const Backtester = {
         console.log('🔬 Starting Confluence-Based Backtest...');
 
         if (!this.cachedHistoricalData) {
-            await this.fetchHistoricalData(180);
+            await this.fetchHistoricalData(365);
         }
 
         if (!this.cachedHistoricalData || this.cachedHistoricalData.length < 30) {
