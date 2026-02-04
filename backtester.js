@@ -10,10 +10,10 @@ const Backtester = {
     /**
      * Fetch historical price and Fear & Greed data
      */
-    async fetchHistoricalData(days = 180) {
+    async fetchHistoricalData(days = 365) {
         try {
             const priceUrl = `${CONFIG.apis.coinGecko}/coins/bitcoin/market_chart?vs_currency=usd&days=${days}&interval=daily`;
-            const fgUrl = `${CONFIG.apis.fearGreed}?limit=${Math.min(days, 60)}`;
+            const fgUrl = `${CONFIG.apis.fearGreed}?limit=${Math.min(days, 365)}`;
 
             let priceData, fgData;
             try {
@@ -184,11 +184,11 @@ const Backtester = {
             }
         }
 
-        // 2. MOMENTUM SCORE (0-1 point) - RELAXED
-        if (direction === 'LONG' && indicators.rsi < 45 && indicators.rsi > 25) {
-            scores.momentum = 1; // Oversold (relaxed from 40)
-        } else if (direction === 'SHORT' && indicators.rsi > 55 && indicators.rsi < 75) {
-            scores.momentum = 1; // Overbought (relaxed from 60)
+        // 2. MOMENTUM SCORE (0-1 point)
+        if (direction === 'LONG' && indicators.rsi < 50 && indicators.rsi > 20) {
+            scores.momentum = 1; // Oversold / neutral momentum
+        } else if (direction === 'SHORT' && indicators.rsi > 50 && indicators.rsi < 80) {
+            scores.momentum = 1; // Overbought / neutral momentum
         }
 
         // 3. SUPPORT/RESISTANCE SCORE (0-2 points) - MORE GENEROUS
@@ -239,16 +239,16 @@ const Backtester = {
 
         // 7. MARKET STRUCTURE SCORE (0-1 point)
         // Fear & Greed alignment
-        if (direction === 'LONG' && snapshot.fearGreed < 35) {
-            scores.marketStructure = 1; // Fear supports LONG
-        } else if (direction === 'SHORT' && snapshot.fearGreed > 65) {
-            scores.marketStructure = 1; // Greed supports SHORT
+        if (direction === 'LONG' && snapshot.fearGreed < 45) {
+            scores.marketStructure = 1; // Fear/neutral supports LONG
+        } else if (direction === 'SHORT' && snapshot.fearGreed > 55) {
+            scores.marketStructure = 1; // Greed/neutral supports SHORT
         }
 
         // 8. MACRO SCORE (0-1 point)
         // Volatility alignment
-        if (indicators.volatility > 2 && indicators.volatility < 5) {
-            scores.macro = 1; // Moderate volatility (tradeable)
+        if (indicators.volatility > 1 && indicators.volatility < 8) {
+            scores.macro = 1; // Tradeable volatility range
         }
 
         const totalScore = Object.values(scores).reduce((a, b) => a + b, 0);
@@ -264,30 +264,42 @@ const Backtester = {
      * Determine trade direction based on setups
      */
     determineDirection(indicators, snapshot, sr) {
-        const { rsi, trend, currentPrice, ma20, volumeRatio } = indicators;
+        const { rsi, trend, currentPrice, ma20, ma50, volumeRatio } = indicators;
 
         // LONG SETUPS
         const longSetups = [
-            // Setup 1: Oversold bounce
-            rsi < 40 && sr.atSupport,
+            // Setup 1: Oversold bounce (relaxed - near support counts too)
+            rsi < 45 && (sr.atSupport || sr.distanceToSupport < 5),
 
-            // Setup 2: Trend continuation
-            trend === 'up' && currentPrice > ma20 && rsi > 45 && rsi < 60,
+            // Setup 2: Trend continuation (wider RSI range)
+            trend === 'up' && currentPrice > ma20 && rsi > 40 && rsi < 65,
 
-            // Setup 3: Extreme fear reversal
-            snapshot.fearGreed < 25 && volumeRatio > 1.1
+            // Setup 3: Fear reversal (relaxed thresholds)
+            snapshot.fearGreed < 30 && volumeRatio > 0.9,
+
+            // Setup 4: Strong uptrend - price above both MAs
+            currentPrice > ma20 && currentPrice > ma50 && rsi > 40 && rsi < 70,
+
+            // Setup 5: Deep oversold reversal
+            rsi < 35
         ];
 
         // SHORT SETUPS
         const shortSetups = [
-            // Setup 1: Overbought rejection
-            rsi > 60 && sr.atResistance,
+            // Setup 1: Overbought rejection (relaxed - near resistance counts too)
+            rsi > 55 && (sr.atResistance || sr.distanceToResistance < 5),
 
-            // Setup 2: Trend continuation
-            trend === 'down' && currentPrice < ma20 && rsi > 40 && rsi < 55,
+            // Setup 2: Trend continuation (wider RSI range)
+            trend === 'down' && currentPrice < ma20 && rsi > 35 && rsi < 60,
 
-            // Setup 3: Extreme greed reversal
-            snapshot.fearGreed > 75 && volumeRatio > 1.1
+            // Setup 3: Greed reversal (relaxed thresholds)
+            snapshot.fearGreed > 70 && volumeRatio > 0.9,
+
+            // Setup 4: Strong downtrend - price below both MAs
+            currentPrice < ma20 && currentPrice < ma50 && rsi > 30 && rsi < 60,
+
+            // Setup 5: Deep overbought reversal
+            rsi > 70
         ];
 
         if (longSetups.some(s => s)) return 'LONG';
@@ -396,11 +408,11 @@ const Backtester = {
     /**
      * Run backtest with confluence system
      */
-    async runBacktest(maxTrades = 30) {
+    async runBacktest(maxTrades = 60) {
         console.log('🔬 Starting Confluence-Based Backtest...');
 
         if (!this.cachedHistoricalData) {
-            await this.fetchHistoricalData(180);
+            await this.fetchHistoricalData(365);
         }
 
         if (!this.cachedHistoricalData || this.cachedHistoricalData.length < 30) {
@@ -439,8 +451,8 @@ const Backtester = {
             console.log(`${icon} ${confluence.direction} @ ${snapshot.date} → Score: ${scoreColor} ${confluence.total}/10`);
             console.log(`   📊 Breakdown: Trend=${confluence.breakdown.trend}, Mom=${confluence.breakdown.momentum}, S/R=${confluence.breakdown.srPosition}, Vol=${confluence.breakdown.volume}, Pattern=${confluence.breakdown.pattern}, Div=${confluence.breakdown.divergence}, MS=${confluence.breakdown.marketStructure}, Macro=${confluence.breakdown.macro}`);
 
-            // MINIMUM SCORE 5/10 REQUIRED (lowered from 6)
-            if (confluence.total < 5) {
+            // MINIMUM SCORE 4/10 REQUIRED
+            if (confluence.total < 4) {
                 filteredLowScore++;
                 console.log(`   ❌ FILTERED (score too low)\n`);
                 continue;
@@ -474,12 +486,12 @@ const Backtester = {
                 fearGreed: snapshot.fearGreed
             });
 
-            i += Math.max(5, outcome.exitDay);
+            i += Math.max(3, outcome.exitDay);
         }
 
         console.log(`\n📈 Backtest Statistics:`);
         console.log(`   Signals evaluated: ${signalsEvaluated}`);
-        console.log(`   Filtered (score < 7): ${filteredLowScore}`);
+        console.log(`   Filtered (score < 4): ${filteredLowScore}`);
         console.log(`   Trades executed: ${trades.length}`);
 
         this.results = trades;

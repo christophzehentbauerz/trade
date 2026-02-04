@@ -335,3 +335,102 @@
     color: #f87171;
     font-weight: bold;
 }
+
+/* =====================================================
+   Analysis Card - Mobile Responsive
+   ===================================================== */
+
+@media (max-width: 768px) {
+    .analysis-card-container {
+        margin: 12px 0;
+    }
+
+    .analysis-header {
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px;
+        text-align: center;
+    }
+
+    .analysis-recommendation {
+        padding: 16px;
+    }
+
+    .recommendation-value {
+        font-size: 1.8rem;
+    }
+
+    .trade-levels-display {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .level-item {
+        padding: 12px;
+        gap: 10px;
+    }
+
+    .level-icon {
+        font-size: 1.4rem;
+    }
+
+    .level-value {
+        font-size: 1rem;
+    }
+
+    .analysis-reasons {
+        padding: 14px;
+    }
+
+    .breakdown-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    .breakdown-item {
+        padding: 8px 10px;
+    }
+
+    .score-breakdown-section {
+        padding: 14px;
+    }
+
+    .risk-factors-section {
+        padding: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .recommendation-value {
+        font-size: 1.5rem;
+    }
+
+    .analysis-timestamp {
+        font-size: 0.8rem;
+    }
+
+    .analysis-price strong {
+        font-size: 0.95rem;
+    }
+
+    .breakdown-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .no-trade-icon {
+        font-size: 2rem;
+    }
+
+    .no-trade-text {
+        font-size: 1rem;
+    }
+
+    .no-trade-subtext {
+        font-size: 0.8rem;
+    }
+
+    .analysis-disclaimer {
+        font-size: 0.75rem;
+        padding: 10px;
+    }
+}

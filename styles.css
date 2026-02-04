@@ -2438,3 +2438,397 @@ body::before {
     min-width: 50px;
     text-align: right;
 }
+
+/* =====================================================
+   Mobile Responsive - Tablet (max 768px)
+   Extended styles (base 768px rules are above)
+   ===================================================== */
+
+@media (max-width: 768px) {
+    /* Header extras */
+    .header-left {
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+    }
+
+    .header-right {
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+    }
+
+    .trade-analysis-btn {
+        padding: 8px 14px;
+        font-size: 0.8rem;
+    }
+
+    .logo-text {
+        font-size: 1rem;
+    }
+
+    .logo-icon {
+        font-size: 1.5rem;
+    }
+
+    .last-update {
+        font-size: 0.75rem;
+    }
+
+    .auto-refresh {
+        padding: 6px 10px;
+    }
+
+    .countdown {
+        font-size: 0.75rem;
+    }
+
+    /* Signal Banner */
+    .signal-banner {
+        padding: 16px;
+    }
+
+    .signal-confidence {
+        justify-content: center;
+    }
+
+    .confidence-bar {
+        width: 100px;
+    }
+
+    /* Cards */
+    .card-body {
+        padding: 14px;
+    }
+
+    .card-header {
+        padding: 12px 14px;
+    }
+
+    /* Price Card */
+    .price-currency {
+        font-size: 1.1rem;
+        margin-top: 4px;
+    }
+
+    /* Backtest Card */
+    .backtest-card {
+        grid-column: span 1;
+    }
+
+    .backtest-summary {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        padding: 14px;
+    }
+
+    .win-rate-item {
+        grid-column: span 2;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 12px;
+    }
+
+    .summary-value {
+        font-size: 1.2rem;
+    }
+
+    .backtest-breakdown {
+        grid-template-columns: 1fr;
+    }
+
+    .failure-stats {
+        flex-direction: column;
+    }
+
+    /* Trade List */
+    .trade-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 10px;
+    }
+
+    .trade-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+        width: 100%;
+    }
+
+    .trade-main {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .trade-result {
+        flex-wrap: wrap;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .trade-levels {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px !important;
+    }
+
+    .trade-levels span {
+        margin-left: 0 !important;
+    }
+
+    .trade-profit {
+        min-width: auto;
+    }
+
+    .trade-days {
+        min-width: auto;
+    }
+
+    /* Gauge */
+    .gauge {
+        width: 150px;
+        height: 75px;
+    }
+
+    .gauge::before {
+        width: 150px;
+        height: 150px;
+    }
+
+    .gauge-fill {
+        width: 150px;
+        height: 150px;
+    }
+
+    .gauge-value {
+        font-size: 2rem;
+    }
+
+    .gauge-scale {
+        max-width: 150px;
+    }
+
+    /* Fear & Greed History */
+    .fear-greed-history {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .history-item {
+        min-width: 0;
+        padding: 6px 2px;
+    }
+
+    .history-day {
+        font-size: 0.6rem;
+    }
+
+    .history-value {
+        font-size: 0.75rem;
+    }
+}
+
+/* =====================================================
+   Mobile Responsive - Small Phone (max 480px)
+   ===================================================== */
+
+@media (max-width: 480px) {
+    .app {
+        padding: 8px;
+    }
+
+    /* Header stacks fully */
+    .header {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 10px;
+        gap: 8px;
+    }
+
+    .header-left {
+        justify-content: center;
+    }
+
+    .header-right {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .trade-analysis-btn {
+        width: 100%;
+        text-align: center;
+        padding: 10px;
+        font-size: 0.85rem;
+    }
+
+    .refresh-btn {
+        width: 36px;
+        height: 36px;
+    }
+
+    /* Signal Banner */
+    .signal-banner {
+        padding: 12px;
+        margin-bottom: 12px;
+    }
+
+    .signal-value {
+        font-size: 1.25rem;
+    }
+
+    .confidence-value {
+        font-size: 1rem;
+    }
+
+    /* Grid */
+    .dashboard-grid {
+        gap: 12px;
+    }
+
+    /* Price */
+    .price-value {
+        font-size: 1.75rem;
+    }
+
+    .price-change {
+        padding: 4px 8px;
+    }
+
+    .change-value {
+        font-size: 0.85rem;
+    }
+
+    .price-meta {
+        gap: 8px;
+    }
+
+    .meta-value {
+        font-size: 0.85rem;
+    }
+
+    /* Cards */
+    .card-body {
+        padding: 12px;
+    }
+
+    .card-header {
+        padding: 10px 12px;
+    }
+
+    .card-header h2 {
+        font-size: 0.9rem;
+    }
+
+    /* Indicator Grid */
+    .indicator-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .indicator-value {
+        font-size: 1rem;
+    }
+
+    /* Derivatives */
+    .derivatives-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .derivative-value {
+        font-size: 1rem;
+    }
+
+    /* Backtest */
+    .backtest-summary {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 12px;
+    }
+
+    .win-rate-item {
+        grid-column: span 1;
+    }
+
+    .summary-value {
+        font-size: 1rem;
+    }
+
+    .summary-label {
+        font-size: 0.7rem;
+    }
+
+    .backtest-run-btn {
+        font-size: 0.8rem;
+        padding: 6px 12px;
+    }
+
+    /* Trade List */
+    .trade-list {
+        max-height: 300px;
+    }
+
+    .trade-number {
+        font-size: 0.75rem;
+        min-width: 24px;
+    }
+
+    .trade-direction {
+        font-size: 0.65rem;
+        padding: 3px 8px;
+    }
+
+    .trade-date {
+        font-size: 0.75rem;
+    }
+
+    .trade-profit {
+        font-size: 0.85rem;
+    }
+
+    /* Score Breakdown */
+    .score-item {
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
+
+    /* Notification bar */
+    .notification-settings-content {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .notification-buttons {
+        width: 100%;
+    }
+
+    .notif-btn {
+        flex: 1;
+        font-size: 0.7rem;
+        padding: 6px 8px;
+    }
+
+    /* Signal Alert */
+    .signal-alert {
+        left: 10px;
+        right: 10px;
+        transform: none;
+    }
+
+    .signal-alert .alert-content {
+        padding: 10px 12px;
+        gap: 10px;
+    }
+
+    .signal-alert .alert-icon {
+        font-size: 1.5rem;
+    }
+
+    .signal-alert .alert-title {
+        font-size: 0.9rem;
+    }
+
+    .signal-alert .alert-details {
+        font-size: 0.75rem;
+    }
+}
