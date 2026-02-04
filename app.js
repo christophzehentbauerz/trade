@@ -22,6 +22,10 @@ const CONFIG = {
         onchain: 0.25,
         sentiment: 0.20,
         macro: 0.20
+    },
+    telegram: {
+        botToken: '8373288870:AAFjnJdqdXGrMgyjVJjPNFT0YBtC7sz4lMA',
+        chatId: '8237692575'
     }
 };
 
@@ -1376,6 +1380,55 @@ document.addEventListener('DOMContentLoaded', () => {
         testBtn.addEventListener('click', () => {
             NotificationSystem.playSound('long');
             NotificationSystem.showInPageAlert('long', 75, state.price || 100000);
+        });
+    }
+
+    // Telegram Test button
+    const telegramTestBtn = document.getElementById('testTelegram');
+    if (telegramTestBtn) {
+        telegramTestBtn.addEventListener('click', async () => {
+            telegramTestBtn.disabled = true;
+            telegramTestBtn.innerHTML = '⏳ Sende...';
+
+            try {
+                const lastUpdate = document.getElementById('lastUpdate')?.textContent || 'Unbekannt';
+                const signalEmoji = state.signal === 'LONG' ? '🟢' : state.signal === 'SHORT' ? '🔴' : '⚪';
+                const price = state.price ? `$${state.price.toLocaleString()}` : 'Laden...';
+                const score = state.weightedScore ? state.weightedScore.toFixed(1) : '?';
+                const confidence = state.confidence ? state.confidence.toFixed(0) : '?';
+                const fearGreed = state.fearGreedIndex || '?';
+
+                const message = `✅ <b>Telegram Test erfolgreich!</b>\n\n📊 <b>Aktueller Status:</b>\n💰 Preis: ${price}\n${signalEmoji} Signal: ${state.signal || 'NEUTRAL'}\n📈 Score: ${score}/10\n🎯 Konfidenz: ${confidence}%\n😱 Fear & Greed: ${fearGreed}\n\n⏰ <b>Letztes Update:</b> ${lastUpdate}\n🌐 <b>Gesendet von:</b> Dashboard\n\n✅ Bot verbunden und funktioniert!`;
+
+                const response = await fetch(`https://api.telegram.org/bot${CONFIG.telegram.botToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: CONFIG.telegram.chatId,
+                        text: message,
+                        parse_mode: 'HTML'
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.ok) {
+                    telegramTestBtn.innerHTML = '✅ Gesendet!';
+                    setTimeout(() => {
+                        telegramTestBtn.innerHTML = '📱 Telegram Test';
+                        telegramTestBtn.disabled = false;
+                    }, 2000);
+                } else {
+                    throw new Error(result.description || 'Telegram API Fehler');
+                }
+            } catch (error) {
+                console.error('Telegram test failed:', error);
+                telegramTestBtn.innerHTML = '❌ Fehler';
+                setTimeout(() => {
+                    telegramTestBtn.innerHTML = '📱 Telegram Test';
+                    telegramTestBtn.disabled = false;
+                }, 2000);
+            }
         });
     }
 
