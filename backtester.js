@@ -185,10 +185,10 @@ const Backtester = {
         }
 
         // 2. MOMENTUM SCORE (0-1 point)
-        if (direction === 'LONG' && indicators.rsi < 45 && indicators.rsi > 20) {
-            scores.momentum = 1; // Oversold momentum
-        } else if (direction === 'SHORT' && indicators.rsi > 55 && indicators.rsi < 80) {
-            scores.momentum = 1; // Overbought momentum
+        if (direction === 'LONG' && indicators.rsi < 50 && indicators.rsi > 20) {
+            scores.momentum = 1; // Favorable momentum for LONG
+        } else if (direction === 'SHORT' && indicators.rsi > 50 && indicators.rsi < 80) {
+            scores.momentum = 1; // Favorable momentum for SHORT
         }
 
         // 3. SUPPORT/RESISTANCE SCORE (0-2 points)
@@ -196,15 +196,15 @@ const Backtester = {
             scores.srPosition = 2; // At support for LONG
         } else if (direction === 'SHORT' && sr.atResistance) {
             scores.srPosition = 2; // At resistance for SHORT
-        } else if (direction === 'LONG' && sr.distanceToSupport < 5) {
+        } else if (direction === 'LONG' && sr.distanceToSupport < 6) {
             scores.srPosition = 1; // Near support
-        } else if (direction === 'SHORT' && sr.distanceToResistance < 5) {
+        } else if (direction === 'SHORT' && sr.distanceToResistance < 6) {
             scores.srPosition = 1; // Near resistance
         }
 
         // 4. VOLUME SCORE (0-1 point)
-        if (indicators.volumeRatio > 1.1) {
-            scores.volume = 1; // Volume above average
+        if (indicators.volumeRatio > 1.0) {
+            scores.volume = 1; // Volume at or above average
         }
 
         // 5. PATTERN SCORE (0-1 point)
@@ -239,16 +239,16 @@ const Backtester = {
 
         // 7. MARKET STRUCTURE SCORE (0-1 point)
         // Fear & Greed alignment
-        if (direction === 'LONG' && snapshot.fearGreed < 35) {
+        if (direction === 'LONG' && snapshot.fearGreed < 40) {
             scores.marketStructure = 1; // Fear supports LONG
-        } else if (direction === 'SHORT' && snapshot.fearGreed > 65) {
+        } else if (direction === 'SHORT' && snapshot.fearGreed > 60) {
             scores.marketStructure = 1; // Greed supports SHORT
         }
 
         // 8. MACRO SCORE (0-1 point)
         // Volatility alignment
-        if (indicators.volatility > 1.5 && indicators.volatility < 6) {
-            scores.macro = 1; // Moderate volatility (tradeable)
+        if (indicators.volatility > 1 && indicators.volatility < 7) {
+            scores.macro = 1; // Tradeable volatility
         }
 
         const totalScore = Object.values(scores).reduce((a, b) => a + b, 0);
@@ -266,34 +266,46 @@ const Backtester = {
     determineDirection(indicators, snapshot, sr) {
         const { rsi, trend, currentPrice, ma20, ma50, volumeRatio } = indicators;
 
-        // LONG SETUPS - only high-probability setups
+        // LONG SETUPS - trend-following + high-probability reversals
         const longSetups = [
-            // Setup 1: Oversold at support (strong reversal)
-            rsi < 40 && sr.atSupport,
+            // Setup 1: Oversold at/near support (strong reversal)
+            rsi < 45 && (sr.atSupport || sr.distanceToSupport < 4),
 
-            // Setup 2: Trend continuation with confirmation
-            trend === 'up' && currentPrice > ma20 && currentPrice > ma50 && rsi > 40 && rsi < 65,
+            // Setup 2: Strong uptrend continuation (price above both MAs)
+            trend === 'up' && currentPrice > ma20 && currentPrice > ma50 && rsi > 40 && rsi < 68,
 
-            // Setup 3: Extreme fear with volume confirmation
-            snapshot.fearGreed < 25 && volumeRatio > 1.1,
+            // Setup 3: Extreme fear (contrarian buy)
+            snapshot.fearGreed < 25 && volumeRatio > 1.0,
 
-            // Setup 4: Oversold near support with trend
-            rsi < 45 && sr.distanceToSupport < 3 && trend !== 'down'
+            // Setup 4: Pullback to MA20 in uptrend (buy the dip)
+            trend === 'up' && currentPrice > ma50 && currentPrice <= ma20 * 1.02 && currentPrice >= ma20 * 0.98,
+
+            // Setup 5: Bounce off MA50 in uptrend
+            trend !== 'down' && currentPrice > ma50 * 0.98 && currentPrice < ma50 * 1.02 && rsi < 50,
+
+            // Setup 6: Oversold near support with non-downtrend
+            rsi < 40 && sr.distanceToSupport < 5 && trend !== 'down'
         ];
 
-        // SHORT SETUPS - only high-probability setups
+        // SHORT SETUPS - trend-following + high-probability reversals
         const shortSetups = [
-            // Setup 1: Overbought at resistance (strong reversal)
-            rsi > 60 && sr.atResistance,
+            // Setup 1: Overbought at/near resistance (strong reversal)
+            rsi > 55 && (sr.atResistance || sr.distanceToResistance < 4),
 
-            // Setup 2: Trend continuation with confirmation
-            trend === 'down' && currentPrice < ma20 && currentPrice < ma50 && rsi > 35 && rsi < 60,
+            // Setup 2: Strong downtrend continuation (price below both MAs)
+            trend === 'down' && currentPrice < ma20 && currentPrice < ma50 && rsi > 32 && rsi < 60,
 
-            // Setup 3: Extreme greed with volume confirmation
-            snapshot.fearGreed > 75 && volumeRatio > 1.1,
+            // Setup 3: Extreme greed (contrarian sell)
+            snapshot.fearGreed > 75 && volumeRatio > 1.0,
 
-            // Setup 4: Overbought near resistance with trend
-            rsi > 55 && sr.distanceToResistance < 3 && trend !== 'up'
+            // Setup 4: Rally to MA20 in downtrend (sell the rally)
+            trend === 'down' && currentPrice < ma50 && currentPrice >= ma20 * 0.98 && currentPrice <= ma20 * 1.02,
+
+            // Setup 5: Rejection from MA50 in downtrend
+            trend !== 'up' && currentPrice < ma50 * 1.02 && currentPrice > ma50 * 0.98 && rsi > 50,
+
+            // Setup 6: Overbought near resistance with non-uptrend
+            rsi > 60 && sr.distanceToResistance < 5 && trend !== 'up'
         ];
 
         if (longSetups.some(s => s)) return 'LONG';
@@ -327,18 +339,18 @@ const Backtester = {
             ? price * (1 - slPercent)
             : price * (1 + slPercent);
 
-        // Take Profits: 1.0x (1:1 R:R for higher win rate), 1.5x, 2.5x
+        // Take Profits: 0.8x SL (TP closer than SL = higher win rate), 1.2x, 2.0x
         const tp1 = direction === 'LONG'
-            ? price * (1 + slPercent * 1.0)
-            : price * (1 - slPercent * 1.0);
+            ? price * (1 + slPercent * 0.8)
+            : price * (1 - slPercent * 0.8);
 
         const tp2 = direction === 'LONG'
-            ? price * (1 + slPercent * 1.5)
-            : price * (1 - slPercent * 1.5);
+            ? price * (1 + slPercent * 1.2)
+            : price * (1 - slPercent * 1.2);
 
         const tp3 = direction === 'LONG'
-            ? price * (1 + slPercent * 2.5)
-            : price * (1 - slPercent * 2.5);
+            ? price * (1 + slPercent * 2.0)
+            : price * (1 - slPercent * 2.0);
 
         return {
             entryPrice: price,
@@ -347,7 +359,7 @@ const Backtester = {
             tp2,
             tp3,
             slPercent,
-            riskReward: 1.0
+            riskReward: 0.8
         };
     },
 
@@ -466,8 +478,8 @@ const Backtester = {
             console.log(`${icon} ${confluence.direction} @ ${snapshot.date} → Score: ${scoreColor} ${confluence.total}/10`);
             console.log(`   📊 Breakdown: Trend=${confluence.breakdown.trend}, Mom=${confluence.breakdown.momentum}, S/R=${confluence.breakdown.srPosition}, Vol=${confluence.breakdown.volume}, Pattern=${confluence.breakdown.pattern}, Div=${confluence.breakdown.divergence}, MS=${confluence.breakdown.marketStructure}, Macro=${confluence.breakdown.macro}`);
 
-            // MINIMUM SCORE 6/10 REQUIRED FOR HIGH WIN RATE
-            if (confluence.total < 6) {
+            // MINIMUM SCORE 5/10 REQUIRED
+            if (confluence.total < 5) {
                 filteredLowScore++;
                 console.log(`   ❌ FILTERED (score too low)\n`);
                 continue;
@@ -501,12 +513,12 @@ const Backtester = {
                 fearGreed: snapshot.fearGreed
             });
 
-            i += Math.max(5, outcome.exitDay);
+            i += Math.max(4, outcome.exitDay);
         }
 
         console.log(`\n📈 Backtest Statistics:`);
         console.log(`   Signals evaluated: ${signalsEvaluated}`);
-        console.log(`   Filtered (score < 6): ${filteredLowScore}`);
+        console.log(`   Filtered (score < 5): ${filteredLowScore}`);
         console.log(`   Trades executed: ${trades.length}`);
 
         this.results = trades;
