@@ -399,7 +399,10 @@ function formatDailyReport(additionalContent = '') {
     message += `📅 ${date}\n\n`;
 
     message += `<b>💰 Marktübersicht:</b>\n`;
-    message += `BTC Pries: <b>$${state.price.toLocaleString()}</b> (${state.priceChange24h > 0 ? '+' : ''}${state.priceChange24h.toFixed(2)}%)\n`;
+    message += `<b>💰 Marktübersicht:</b>\n`;
+    const price = state.price || 0;
+    const change = state.priceChange24h || 0;
+    message += `BTC Pries: <b>$${price.toLocaleString()}</b> (${change > 0 ? '+' : ''}${change.toFixed(2)}%)\n`;
     message += `Fear & Greed: <b>${state.fearGreedIndex}</b> (${state.fearGreedIndex < 35 ? 'Angst' : state.fearGreedIndex > 65 ? 'Gier' : 'Neutral'})\n`;
     message += `Score: <b>${state.weightedScore.toFixed(1)}/10</b>\n\n`;
 

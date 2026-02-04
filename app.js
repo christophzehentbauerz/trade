@@ -1616,7 +1616,14 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error fetching news:', error);
             const newsGrid = document.getElementById('news-grid');
-            if (newsGrid) newsGrid.innerHTML = '<div class="error-message">News konnten nicht geladen werden.</div>';
+            if (newsGrid) {
+                newsGrid.innerHTML = `
+                    <div class="error-message" style="grid-column: 1/-1; padding: 20px; color: #ff6b6b; text-align: center; background: rgba(255,107,107,0.1); border-radius: 8px;">
+                        ⚠️ News konnten nicht geladen werden.<br>
+                        <small style="opacity: 0.7; margin-top: 5px; display: block;">${error.message}</small>
+                    </div>
+                `;
+            }
         }
     }
 
