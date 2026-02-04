@@ -1432,6 +1432,126 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Daily Report button
+    const dailyReportBtn = document.getElementById('sendDailyReport');
+    if (dailyReportBtn) {
+        dailyReportBtn.addEventListener('click', async () => {
+            dailyReportBtn.disabled = true;
+            dailyReportBtn.innerHTML = '⏳ Generiere...';
+
+            try {
+                // Helpers for report generation (local scope)
+                const calcRSI = (prices) => {
+                    if (!prices || prices.length < 14) return 50;
+                    let gains = 0, losses = 0;
+                    for (let i = 1; i < 14; i++) {
+                        const change = prices[i] - prices[i - 1];
+                        if (change > 0) gains += change;
+                        else losses -= change;
+                    }
+                    const avgGain = gains / 14;
+                    const avgLoss = losses / 14;
+                    if (avgLoss === 0) return 100;
+                    const rs = avgGain / avgLoss;
+                    return 100 - (100 / (1 + rs));
+                };
+
+                const getTrend = (prices) => {
+                    if (!prices || prices.length < 7) return 'sideways';
+                    const recent = prices.slice(-7);
+                    const older = prices.slice(-14, -7);
+                    const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+                    const olderAvg = older.reduce((a, b) => a + b, 0) / older.length;
+                    const change = ((recentAvg - olderAvg) / olderAvg) * 100;
+                    if (change > 3) return 'bullish';
+                    if (change < -3) return 'bearish';
+                    return 'sideways';
+                };
+
+                // Generate Report
+                const rsi = calcRSI(state.priceHistory);
+                const trend = getTrend(state.priceHistory);
+                const date = new Date().toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+                let sentimentText = "";
+                const fg = state.fearGreedIndex || 50;
+                if (fg < 25) sentimentText = "Extreme Angst herrscht im Markt. Historisch oft gute Kaufgelegenheiten, aber Vorsicht ist geboten.";
+                else if (fg < 45) sentimentText = "Der Markt ist ängstlich. Investoren sind zurückhaltend.";
+                else if (fg > 75) sentimentText = "Extreme Gier dominiert. Der Markt könnte überhitzt sein (Korrekturgefahr).";
+                else sentimentText = "Die Marktstimmung ist neutral ausgeglichen.";
+
+                let technicalAnalysis = "";
+                if (trend === 'bullish') technicalAnalysis = "Der Trend ist aufwärts gerichtet (Bullish).";
+                else if (trend === 'bearish') technicalAnalysis = "Der Trend ist abwärts gerichtet (Bearish).";
+                else technicalAnalysis = "Der Markt bewegt sich seitwärts ohne klare Richtung.";
+
+                if (rsi < 30) technicalAnalysis += " Der RSI deutet auf einen überverkauften Zustand hin (Rebound möglich).";
+                else if (rsi > 70) technicalAnalysis += " Der RSI signalisiert einen überkauften Markt (Rücksetzer möglich).";
+
+                let message = `🌅 <b>Manuelles BTC Update</b>\n`;
+                message += `📅 ${date}\n\n`;
+
+                message += `<b>💰 Marktübersicht:</b>\n`;
+                message += `BTC Pries: <b>$${(state.price || 0).toLocaleString()}</b> (${(state.priceChange24h || 0) > 0 ? '+' : ''}${(state.priceChange24h || 0).toFixed(2)}%)\n`;
+                message += `Fear & Greed: <b>${fg}</b> (${fg < 35 ? 'Angst' : fg > 65 ? 'Gier' : 'Neutral'})\n`;
+                message += `Score: <b>${(state.weightedScore || 0).toFixed(1)}/10</b>\n\n`;
+
+                message += `<b>🔬 Analyse & Bewertung:</b>\n`;
+                message += `<i>"${sentimentText} ${technicalAnalysis}"</i>\n\n`;
+
+                message += `<b>📊 Die Faktoren heute:</b>\n`;
+                message += `• Technik (${(CONFIG.weights.technical * 100).toFixed(0)}%): <b>${(state.scores.technical || 5).toFixed(1)}/10</b>\n`;
+                message += `• On-Chain (${(CONFIG.weights.onchain * 100).toFixed(0)}%): <b>${(state.scores.onchain || 5).toFixed(1)}/10</b>\n`;
+                message += `• Sentiment (${(CONFIG.weights.sentiment * 100).toFixed(0)}%): <b>${(state.scores.sentiment || 5).toFixed(1)}/10</b>\n`;
+                message += `• Macro (${(CONFIG.weights.macro * 100).toFixed(0)}%): <b>${(state.scores.macro || 5).toFixed(1)}/10</b>\n\n`;
+
+                message += `<b>🎯 Tages-Fazit:</b>\n`;
+                if (state.signal === 'LONG') {
+                    message += `🟢 <b>Guter Tag für Longs!</b>\n`;
+                    message += `Die Indikatoren sprechen für steigende Kurse. Der Markt zeigt Stärke. Suche nach Entries bei Rücksetzern.\n`;
+                } else if (state.signal === 'SHORT') {
+                    message += `🔴 <b>Vorsicht - Eher Short!</b>\n`;
+                    message += `Der Trend ist schwach und Risiken überwiegen. Es könnten weitere Abverkäufe drohen.\n`;
+                } else {
+                    message += `⚪ <b>Neutral - Abwarten.</b>\n`;
+                    message += `Keine klare Richtung erkennbar. Kapital schützen und auf besseres Signal warten.\n`;
+                }
+
+                message += `\n<i>Manueller Report vom Dashboard</i> 📡`;
+
+                // Send to Telegram
+                const response = await fetch(`https://api.telegram.org/bot${CONFIG.telegram.botToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: CONFIG.telegram.chatId,
+                        text: message,
+                        parse_mode: 'HTML'
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.ok) {
+                    dailyReportBtn.innerHTML = '✅ Gesendet!';
+                    setTimeout(() => {
+                        dailyReportBtn.innerHTML = '📰 Daily Report';
+                        dailyReportBtn.disabled = false;
+                    }, 2000);
+                } else {
+                    throw new Error(result.description || 'Telegram API Fehler');
+                }
+            } catch (error) {
+                console.error('Report generation failed:', error);
+                dailyReportBtn.innerHTML = '❌ Fehler';
+                setTimeout(() => {
+                    dailyReportBtn.innerHTML = '📰 Daily Report';
+                    dailyReportBtn.disabled = false;
+                }, 2000);
+            }
+        });
+    }
+
     // Trade Analysis button
     const tradeAnalysisBtn = document.getElementById('tradeAnalysisBtn');
     if (tradeAnalysisBtn) {

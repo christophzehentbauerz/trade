@@ -2832,3 +2832,8 @@ body::before {
         font-size: 0.75rem;
     }
 }
+/* Telegram & Report Buttons */
+.telegram-btn { border-color: rgba(34, 158, 217, 0.5); color: #229ED9; }
+.telegram-btn:hover { background: rgba(34, 158, 217, 0.1); transform: translateY(-1px); }
+.report-btn { border-color: rgba(139, 92, 246, 0.5); color: #8B5CF6; }
+.report-btn:hover { background: rgba(139, 92, 246, 0.1); transform: translateY(-1px); }
