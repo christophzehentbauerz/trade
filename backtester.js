@@ -315,30 +315,28 @@ const Backtester = {
 
     /**
      * Calculate dynamic SL/TP based on volatility and S/R
+     * ALIGNED WITH LIVE SYSTEM (app.js / bot.js)
      */
     calculateTradeLevels(price, direction, volatility, sr) {
-        // FIXED TP at 2.5% — small target that gets hit often
-        const tpPercent = 0.025;
-
-        // Wide SL: 5-8% based on volatility — hard to get stopped out
-        let slPercent = Math.max(0.05, Math.min(0.08, volatility * 2.5));
+        // FIXED SL at 6% — aligned with live system
+        const slPercent = 0.06;
 
         const stopLoss = direction === 'LONG'
             ? price * (1 - slPercent)
             : price * (1 + slPercent);
 
-        // TP1 = 2.5% (main target), TP2 = 4%, TP3 = 6%
+        // TP1 = 4%, TP2 = 8%, TP3 = 12% — aligned with live system
         const tp1 = direction === 'LONG'
-            ? price * (1 + tpPercent)
-            : price * (1 - tpPercent);
+            ? price * 1.04
+            : price * 0.96;
 
         const tp2 = direction === 'LONG'
-            ? price * (1 + 0.04)
-            : price * (1 - 0.04);
+            ? price * 1.08
+            : price * 0.92;
 
         const tp3 = direction === 'LONG'
-            ? price * (1 + 0.06)
-            : price * (1 - 0.06);
+            ? price * 1.12
+            : price * 0.88;
 
         return {
             entryPrice: price,
@@ -347,7 +345,7 @@ const Backtester = {
             tp2,
             tp3,
             slPercent,
-            riskReward: tpPercent / slPercent
+            riskReward: 0.04 / slPercent
         };
     },
 
