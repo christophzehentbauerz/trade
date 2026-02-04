@@ -602,17 +602,17 @@ function calculateScores() {
         state.scores.macro * CONFIG.weights.macro;
 
     // Determine signal and confidence
-    if (weightedScore >= 6.5) {
+    if (weightedScore >= 5.8) {
         state.signal = 'LONG';
-        state.confidence = 60 + (weightedScore - 6.5) * 10;
-    } else if (weightedScore <= 3.5) {
+        state.confidence = 60 + (weightedScore - 5.8) * 12;
+    } else if (weightedScore <= 4.2) {
         state.signal = 'SHORT';
-        state.confidence = 60 + (3.5 - weightedScore) * 10;
+        state.confidence = 60 + (4.2 - weightedScore) * 12;
     } else {
         state.signal = 'NEUTRAL';
         // Confidence reflects how close we are to a trigger (no randomness)
-        const distToLong = Math.abs(6.5 - weightedScore);
-        const distToShort = Math.abs(weightedScore - 3.5);
+        const distToLong = Math.abs(5.8 - weightedScore);
+        const distToShort = Math.abs(weightedScore - 4.2);
         const closestDist = Math.min(distToLong, distToShort);
         state.confidence = 30 + closestDist * 10;
     }

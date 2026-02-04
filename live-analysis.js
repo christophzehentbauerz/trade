@@ -52,7 +52,7 @@ async function generateLiveAnalysis() {
         if (state.fundingRate > 0.03) reasons.push('Hohe Funding Rate - Longs zahlen');
         if (state.newsSentimentScore < 0) reasons.push('News-Sentiment ist bearish');
     } else {
-        reasons.push(`Score bei ${weightedScore.toFixed(1)}/10 - im neutralen Bereich (3.5-6.5)`);
+        reasons.push(`Score bei ${weightedScore.toFixed(1)}/10 - im neutralen Bereich (4.2-5.8)`);
         if (rsi >= 40 && rsi <= 60) reasons.push(`RSI bei ${Math.round(rsi)} - neutral`);
         if (fearGreed >= 35 && fearGreed <= 65) reasons.push(`Fear & Greed bei ${fearGreed} - keine Extreme`);
     }
@@ -139,7 +139,7 @@ async function showLiveAnalysis() {
             <div class="no-trade-message">
                 <div class="no-trade-icon">⏸️</div>
                 <div class="no-trade-text">Aktuell keine klare Trading-Gelegenheit.</div>
-                <div class="no-trade-subtext">Score muss >= 6.5 (LONG) oder <= 3.5 (SHORT) sein.</div>
+                <div class="no-trade-subtext">Score muss >= 5.8 (LONG) oder <= 4.2 (SHORT) sein.</div>
             </div>
         `;
     }

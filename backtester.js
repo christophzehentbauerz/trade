@@ -146,8 +146,8 @@ const Backtester = {
 
         // Determine signal — same thresholds as app.js
         let signal = 'NEUTRAL';
-        if (weightedScore >= 6.5) signal = 'LONG';
-        else if (weightedScore <= 3.5) signal = 'SHORT';
+        if (weightedScore >= 5.8) signal = 'LONG';
+        else if (weightedScore <= 4.2) signal = 'SHORT';
 
         return {
             weightedScore,
@@ -259,7 +259,7 @@ const Backtester = {
     async runBacktest(maxTrades = 60) {
         console.log('🔬 Starting Weighted-Score Backtest (aligned with live system)...');
         console.log('   Scoring: Technical 35%, Momentum 25%, Sentiment 20%, Macro 20%');
-        console.log('   Thresholds: LONG >= 6.5, SHORT <= 3.5');
+        console.log('   Thresholds: LONG >= 5.8, SHORT <= 4.2');
         console.log('   Trade Levels: SL 6%, TP1 4%, TP2 8%, TP3 12%\n');
 
         if (!this.cachedHistoricalData) {
