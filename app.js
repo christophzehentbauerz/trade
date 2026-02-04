@@ -15,6 +15,7 @@ const CONFIG = {
         binance: 'https://api.binance.com/api/v3',
         binanceFutures: 'https://fapi.binance.com',
         binanceFuturesData: 'https://fapi.binance.com/futures/data',
+        news: 'https://min-api.cryptocompare.com/data/v2/news/?lang=EN&categories=BTC,Market',
         corsProxy: 'https://corsproxy.io/?'
     },
     weights: {
@@ -1580,6 +1581,67 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+
+    // =====================================================
+    // News Integration
+    // =====================================================
+
+    async function fetchNews() {
+        try {
+            const url = CONFIG.apis.news;
+
+            console.log('Fetching news...');
+            let data;
+
+            try {
+                // Try direct fetch first
+                data = await fetchJSON(url);
+            } catch (e) {
+                console.warn('Direct news fetch failed, trying proxy...');
+                data = await fetchJSON(`${CONFIG.apis.corsProxy}${encodeURIComponent(url)}`);
+            }
+
+            if (data && data.Data && data.Data.length > 0) {
+                renderNews(data.Data.slice(0, 4)); // Show top 4 news
+            }
+        } catch (error) {
+            console.error('Error fetching news:', error);
+            const newsGrid = document.getElementById('news-grid');
+            if (newsGrid) newsGrid.innerHTML = '<div class="error-message">News konnten nicht geladen werden.</div>';
+        }
+    }
+
+    function renderNews(newsItems) {
+        const newsContainer = document.getElementById('news-grid');
+        if (!newsContainer) return;
+
+        newsContainer.innerHTML = newsItems.map(item => {
+            const date = new Date(item.published_on * 1000).toLocaleDateString('de-DE', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            return `
+                <div class="news-card" onclick="window.open('${item.url}', '_blank')">
+                    <div class="news-image" style="background-image: url('${item.imageurl}')"></div>
+                    <div class="news-content">
+                        <div class="news-meta">
+                            <span class="news-source">${item.source_info.name}</span>
+                            <span class="news-time">${date}</span>
+                        </div>
+                        <h4 class="news-title">${item.title}</h4>
+                        <p class="news-body">${item.body.substring(0, 100)}...</p>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Initial news fetch
+    fetchNews();
+
+    // Refresh news every 30 minutes
+    setInterval(fetchNews, 1800000);
 });
 
 // Handle visibility change (refresh when tab becomes visible)

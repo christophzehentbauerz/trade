@@ -376,7 +376,7 @@ function formatSignalMessage() {
     return message;
 }
 
-function formatDailyReport() {
+function formatDailyReport(additionalContent = '') {
     const rsi = calculateRSI(state.priceHistory);
     const trend = determineTrend(state.priceHistory);
     const date = new Date().toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -425,7 +425,32 @@ function formatDailyReport() {
     }
 
     message += `\n<i>Viel Erfolg heute!</i> ☕`;
+
+    // Add additional content (News) if provided
+    if (additionalContent) {
+        message += `\n\n${additionalContent}`;
+    }
+
     return message;
+}
+
+// Fetch Crypto News (Top 3)
+async function fetchNews() {
+    try {
+        const url = 'https://min-api.cryptocompare.com/data/v2/news/?lang=EN&categories=BTC,Market';
+        const response = await fetchWithTimeout(url);
+
+        if (response && response.Data && response.Data.length > 0) {
+            const headlines = response.Data.slice(0, 3).map(item => {
+                return `• <a href="${item.url}">${item.title}</a> (${item.source_info.name})`;
+            }).join('\n');
+
+            return `📰 <b>Crypto News:</b>\n${headlines}`;
+        }
+    } catch (e) {
+        console.error('Error fetching news:', e.message);
+    }
+    return '';
 }
 
 // =====================================================
@@ -485,9 +510,14 @@ async function main() {
     const previousState = loadPreviousState();
 
     // DAILY REPORT MODE
+    // DAILY REPORT MODE
     if (process.env.REPORT_MODE === 'true') {
         console.log('📰 Sende Daily Morning Report...');
-        const dailyReport = formatDailyReport();
+
+        // Fetch news first
+        const newsContent = await fetchNews();
+
+        const dailyReport = formatDailyReport(newsContent);
         await sendTelegramMessage(dailyReport);
         console.log('✅ Daily Report gesendet!');
         return;
