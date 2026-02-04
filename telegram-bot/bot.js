@@ -369,6 +369,58 @@ function formatSignalMessage() {
     return message;
 }
 
+function formatDailyReport() {
+    const rsi = calculateRSI(state.priceHistory);
+    const trend = determineTrend(state.priceHistory);
+    const date = new Date().toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    let sentimentText = "";
+    if (state.fearGreedIndex < 25) sentimentText = "Extreme Angst herrscht im Markt. Historisch oft gute Kaufgelegenheiten, aber Vorsicht ist geboten.";
+    else if (state.fearGreedIndex < 45) sentimentText = "Der Markt ist ängstlich. Investoren sind zurückhaltend.";
+    else if (state.fearGreedIndex > 75) sentimentText = "Extreme Gier dominiert. Der Markt könnte überhitzt sein (Korrekturgefahr).";
+    else sentimentText = "Die Marktstimmung ist neutral ausgeglichen.";
+
+    let technicalAnalysis = "";
+    if (trend === 'bullish') technicalAnalysis = "Der Trend ist aufwärts gerichtet (Bullish).";
+    else if (trend === 'bearish') technicalAnalysis = "Der Trend ist abwärts gerichtet (Bearish).";
+    else technicalAnalysis = "Der Markt bewegt sich seitwärts ohne klare Richtung.";
+
+    if (rsi < 30) technicalAnalysis += " Der RSI deutet auf einen überverkauften Zustand hin (Rebound möglich).";
+    else if (rsi > 70) technicalAnalysis += " Der RSI signalisiert einen überkauften Markt (Rücksetzer möglich).";
+
+    let message = `🌅 <b>Guten Morgen! Dein BTC Update</b>\n`;
+    message += `📅 ${date}\n\n`;
+
+    message += `<b>💰 Marktübersicht:</b>\n`;
+    message += `BTC Pries: <b>$${state.price.toLocaleString()}</b> (${state.priceChange24h > 0 ? '+' : ''}${state.priceChange24h.toFixed(2)}%)\n`;
+    message += `Fear & Greed: <b>${state.fearGreedIndex}</b> (${state.fearGreedIndex < 35 ? 'Angst' : state.fearGreedIndex > 65 ? 'Gier' : 'Neutral'})\n`;
+    message += `Score: <b>${state.weightedScore.toFixed(1)}/10</b>\n\n`;
+
+    message += `<b>🔬 Analyse & Bewertung:</b>\n`;
+    message += `<i>"${sentimentText} ${technicalAnalysis}"</i>\n\n`;
+
+    message += `<b>📊 Die Faktoren heute:</b>\n`;
+    message += `• Technik (${(CONFIG.weights.technical * 100).toFixed(0)}%): <b>${state.scores.technical.toFixed(1)}/10</b>\n`;
+    message += `• On-Chain (${(CONFIG.weights.onchain * 100).toFixed(0)}%): <b>${state.scores.onchain.toFixed(1)}/10</b>\n`;
+    message += `• Sentiment (${(CONFIG.weights.sentiment * 100).toFixed(0)}%): <b>${state.scores.sentiment.toFixed(1)}/10</b>\n`;
+    message += `• Macro (${(CONFIG.weights.macro * 100).toFixed(0)}%): <b>${state.scores.macro.toFixed(1)}/10</b>\n\n`;
+
+    message += `<b>🎯 Tages-Fazit:</b>\n`;
+    if (state.signal === 'LONG') {
+        message += `🟢 <b>Guter Tag für Longs!</b>\n`;
+        message += `Die Indikatoren sprechen für steigende Kurse. Der Markt zeigt Stärke. Suche nach Entries bei Rücksetzern.\n`;
+    } else if (state.signal === 'SHORT') {
+        message += `🔴 <b>Vorsicht - Eher Short!</b>\n`;
+        message += `Der Trend ist schwach und Risiken überwiegen. Es könnten weitere Abverkäufe drohen.\n`;
+    } else {
+        message += `⚪ <b>Neutral - Abwarten.</b>\n`;
+        message += `Keine klare Richtung erkennbar. Kapital schützen und auf besseres Signal warten.\n`;
+    }
+
+    message += `\n<i>Viel Erfolg heute!</i> ☕`;
+    return message;
+}
+
 // =====================================================
 // State Persistence (using file)
 // =====================================================
@@ -424,6 +476,16 @@ async function main() {
 
     // Check if we should send notification
     const previousState = loadPreviousState();
+
+    // DAILY REPORT MODE
+    if (process.env.REPORT_MODE === 'true') {
+        console.log('📰 Sende Daily Morning Report...');
+        const dailyReport = formatDailyReport();
+        await sendTelegramMessage(dailyReport);
+        console.log('✅ Daily Report gesendet!');
+        return;
+    }
+
     const signalChanged = previousState.signal !== state.signal;
     const isActiveSignal = state.signal === 'LONG' || state.signal === 'SHORT';
 
