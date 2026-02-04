@@ -351,17 +351,24 @@ function formatSignalMessage() {
     message += `<b>🎯 Empfehlung:</b> ${direction}\n\n`;
 
     if (state.signal !== 'NEUTRAL') {
-        const stopLoss = state.signal === 'LONG'
-            ? state.price * 0.97
-            : state.price * 1.03;
-        const takeProfit = state.signal === 'LONG'
-            ? state.price * 1.05
-            : state.price * 0.95;
+        // Entry Zone
+        const entryLow = state.signal === 'LONG' ? state.price * 0.98 : state.price * 1.00;
+        const entryHigh = state.signal === 'LONG' ? state.price * 1.00 : state.price * 1.02;
+
+        // Stop Loss (6% statt 3%)
+        const stopLoss = state.signal === 'LONG' ? state.price * 0.94 : state.price * 1.06;
+
+        // Take Profit Targets (3 Stufen)
+        const tp1 = state.signal === 'LONG' ? state.price * 1.04 : state.price * 0.96;
+        const tp2 = state.signal === 'LONG' ? state.price * 1.08 : state.price * 0.92;
+        const tp3 = state.signal === 'LONG' ? state.price * 1.12 : state.price * 0.88;
 
         message += `<b>📍 Trade Setup:</b>\n`;
-        message += `• Entry: ~$${state.price.toLocaleString()}\n`;
+        message += `• Entry Zone: $${entryLow.toLocaleString()} - $${entryHigh.toLocaleString()}\n`;
         message += `• Stop Loss: $${stopLoss.toLocaleString()}\n`;
-        message += `• Take Profit: $${takeProfit.toLocaleString()}\n`;
+        message += `• TP1 (R:R 1:1): $${tp1.toLocaleString()}\n`;
+        message += `• TP2 (R:R 1:2): $${tp2.toLocaleString()}\n`;
+        message += `• TP3 (R:R 1:3): $${tp3.toLocaleString()}\n`;
     }
 
     message += `\n⏰ ${new Date().toLocaleString('de-DE')}`;
@@ -536,17 +543,20 @@ async function main() {
 
                 const emoji = state.signal === 'LONG' ? '🟢' : '🔴';
                 const direction = state.signal === 'LONG' ? 'LONG (Kaufen)' : 'SHORT (Verkaufen)';
-                const entrySetup = state.signal === 'LONG'
-                    ? `Entry bei ~$${(entryPrice * 1.00).toLocaleString()}`
-                    : `Entry bei ~$${(entryPrice * 1.00).toLocaleString()}`;
-                const stopLoss = state.signal === 'LONG'
-                    ? state.price * 0.97
-                    : state.price * 1.03;
-                const takeProfit = state.signal === 'LONG'
-                    ? state.price * 1.05
-                    : state.price * 0.95;
 
-                const warningMessage = `⚡ <b>EARLY WARNING</b> ⚡\n\n${emoji} <b>${state.signal} Signal aktiv!</b>\n\n💰 <b>Aktueller Preis:</b> $${currentPrice.toLocaleString()}\n📍 <b>Entry Zone:</b> $${entryPrice.toLocaleString()}\n📏 <b>Abstand:</b> ${distancePercent.toFixed(2)}%\n\n🎯 <b>${direction}</b>\n📊 <b>Score:</b> ${state.weightedScore.toFixed(1)}/10\n🎯 <b>Konfidenz:</b> ${state.confidence.toFixed(0)}%\n\n<b>📍 Trade Setup:</b>\n• ${entrySetup}\n• Stop Loss: $${stopLoss.toLocaleString()}\n• Take Profit: $${takeProfit.toLocaleString()}\n\n💡 <i>Bereite deinen Trade vor! Entry-Zone wird bald erreicht.</i>\n\n⏰ ${new Date().toLocaleString('de-DE')}`;
+                // Entry Zone (gleich wie in formatSignalMessage)
+                const entryLow = state.signal === 'LONG' ? entryPrice * 0.98 : entryPrice * 1.00;
+                const entryHigh = state.signal === 'LONG' ? entryPrice * 1.00 : entryPrice * 1.02;
+
+                // Stop Loss (6% statt 3%)
+                const stopLoss = state.signal === 'LONG' ? state.price * 0.94 : state.price * 1.06;
+
+                // Take Profit Targets (3 Stufen)
+                const tp1 = state.signal === 'LONG' ? state.price * 1.04 : state.price * 0.96;
+                const tp2 = state.signal === 'LONG' ? state.price * 1.08 : state.price * 0.92;
+                const tp3 = state.signal === 'LONG' ? state.price * 1.12 : state.price * 0.88;
+
+                const warningMessage = `⚡ <b>EARLY WARNING</b> ⚡\n\n${emoji} <b>${state.signal} Signal aktiv!</b>\n\n💰 <b>Aktueller Preis:</b> $${currentPrice.toLocaleString()}\n📍 <b>Entry Zone:</b> $${entryLow.toLocaleString()} - $${entryHigh.toLocaleString()}\n📏 <b>Abstand:</b> ${distancePercent.toFixed(2)}%\n\n🎯 <b>${direction}</b>\n📊 <b>Score:</b> ${state.weightedScore.toFixed(1)}/10\n🎯 <b>Konfidenz:</b> ${state.confidence.toFixed(0)}%\n\n<b>📍 Trade Setup:</b>\n• Entry Zone: $${entryLow.toLocaleString()} - $${entryHigh.toLocaleString()}\n• Stop Loss: $${stopLoss.toLocaleString()}\n• TP1 (R:R 1:1): $${tp1.toLocaleString()}\n• TP2 (R:R 1:2): $${tp2.toLocaleString()}\n• TP3 (R:R 1:3): $${tp3.toLocaleString()}\n\n💡 <i>Bereite deinen Trade vor! Entry-Zone wird bald erreicht.</i>\n\n⏰ ${new Date().toLocaleString('de-DE')}`;
 
                 await sendTelegramMessage(warningMessage);
                 saveCurrentState(true); // Mark warning as shown
