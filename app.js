@@ -1305,9 +1305,9 @@ function displayBacktestResults(results) {
     document.getElementById('failureStopLoss').textContent = results.failureReasons.stopLossHit;
     document.getElementById('failureTimeout').textContent = results.failureReasons.timeout;
 
-    // Trade list (chronologically sorted - oldest first)
+    // Trade list (newest first - #1 is the most recent trade)
     const tradeListEl = document.getElementById('backtestTradeList');
-    const sortedTrades = [...results.trades].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const sortedTrades = [...results.trades].sort((a, b) => new Date(b.date) - new Date(a.date));
 
     tradeListEl.innerHTML = sortedTrades.map((trade, i) => {
         const profitClass = trade.profit > 0 ? 'text-bullish' : 'text-bearish';
@@ -1315,16 +1315,13 @@ function displayBacktestResults(results) {
         const confScore = trade.confluenceScore || 0;
         const confClass = confScore >= 7 ? 'text-bullish' : confScore >= 5 ? 'text-secondary' : 'text-muted';
 
-        // Format time from timestamp
-        const tradeTime = trade.timestamp ? new Date(trade.timestamp).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-
         return `
             <div class="trade-item">
                 <div class="trade-number">#${i + 1}</div>
                 <div class="trade-info">
                     <div class="trade-main">
                         <span class="trade-direction ${trade.direction.toLowerCase()}">${trade.direction}</span>
-                        <span class="trade-date">${trade.date} ${tradeTime}</span>
+                        <span class="trade-date">${trade.date}</span>
                         <span class="${confClass}" style="font-size: 0.7rem; font-weight: 600;">⭐${confScore}/10</span>
                     </div>
                     <div class="trade-levels" style="font-size: 0.75rem; color: var(--text-secondary); margin: 4px 0;">
