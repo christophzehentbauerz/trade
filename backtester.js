@@ -317,40 +317,28 @@ const Backtester = {
      * Calculate dynamic SL/TP based on volatility and S/R
      */
     calculateTradeLevels(price, direction, volatility, sr) {
-        // Wider stop loss for fewer SL hits: 2x volatility, min 3%, max 8%
-        let slPercent = Math.max(0.03, Math.min(0.08, volatility * 2.0));
+        // FIXED TP at 2.5% — small target that gets hit often
+        const tpPercent = 0.025;
 
-        if (direction === 'LONG') {
-            const slToSupport = ((price - sr.nearestSupport) / price);
-            if (slToSupport > 0.01) {
-                slPercent = Math.max(slPercent, slToSupport * 1.1); // SL just below support
-            }
-        } else {
-            const slToResistance = ((sr.nearestResistance - price) / price);
-            if (slToResistance > 0.01) {
-                slPercent = Math.max(slPercent, slToResistance * 1.1); // SL just above resistance
-            }
-        }
-
-        // Cap SL at 8%
-        slPercent = Math.min(slPercent, 0.08);
+        // Wide SL: 5-8% based on volatility — hard to get stopped out
+        let slPercent = Math.max(0.05, Math.min(0.08, volatility * 2.5));
 
         const stopLoss = direction === 'LONG'
             ? price * (1 - slPercent)
             : price * (1 + slPercent);
 
-        // Take Profits: 0.8x SL (TP closer than SL = higher win rate), 1.2x, 2.0x
+        // TP1 = 2.5% (main target), TP2 = 4%, TP3 = 6%
         const tp1 = direction === 'LONG'
-            ? price * (1 + slPercent * 0.8)
-            : price * (1 - slPercent * 0.8);
+            ? price * (1 + tpPercent)
+            : price * (1 - tpPercent);
 
         const tp2 = direction === 'LONG'
-            ? price * (1 + slPercent * 1.2)
-            : price * (1 - slPercent * 1.2);
+            ? price * (1 + 0.04)
+            : price * (1 - 0.04);
 
         const tp3 = direction === 'LONG'
-            ? price * (1 + slPercent * 2.0)
-            : price * (1 - slPercent * 2.0);
+            ? price * (1 + 0.06)
+            : price * (1 - 0.06);
 
         return {
             entryPrice: price,
@@ -359,7 +347,7 @@ const Backtester = {
             tp2,
             tp3,
             slPercent,
-            riskReward: 0.8
+            riskReward: tpPercent / slPercent
         };
     },
 
@@ -470,6 +458,11 @@ const Backtester = {
 
             if (!confluence || !confluence.direction) continue;
 
+            // TREND FILTER: only trade WITH the major trend
+            // LONG only when price > MA50 (uptrend), SHORT only when price < MA50 (downtrend)
+            if (confluence.direction === 'LONG' && indicators.currentPrice < indicators.ma50) continue;
+            if (confluence.direction === 'SHORT' && indicators.currentPrice > indicators.ma50) continue;
+
             signalsEvaluated++;
 
             const icon = confluence.direction === 'LONG' ? '🟢' : '🔴';
@@ -478,8 +471,8 @@ const Backtester = {
             console.log(`${icon} ${confluence.direction} @ ${snapshot.date} → Score: ${scoreColor} ${confluence.total}/10`);
             console.log(`   📊 Breakdown: Trend=${confluence.breakdown.trend}, Mom=${confluence.breakdown.momentum}, S/R=${confluence.breakdown.srPosition}, Vol=${confluence.breakdown.volume}, Pattern=${confluence.breakdown.pattern}, Div=${confluence.breakdown.divergence}, MS=${confluence.breakdown.marketStructure}, Macro=${confluence.breakdown.macro}`);
 
-            // MINIMUM SCORE 5/10 REQUIRED
-            if (confluence.total < 5) {
+            // MINIMUM SCORE 6/10 REQUIRED
+            if (confluence.total < 6) {
                 filteredLowScore++;
                 console.log(`   ❌ FILTERED (score too low)\n`);
                 continue;
@@ -518,7 +511,7 @@ const Backtester = {
 
         console.log(`\n📈 Backtest Statistics:`);
         console.log(`   Signals evaluated: ${signalsEvaluated}`);
-        console.log(`   Filtered (score < 5): ${filteredLowScore}`);
+        console.log(`   Filtered (score < 6): ${filteredLowScore}`);
         console.log(`   Trades executed: ${trades.length}`);
 
         this.results = trades;
