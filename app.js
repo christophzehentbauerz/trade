@@ -1305,9 +1305,9 @@ function displayBacktestResults(results) {
     document.getElementById('failureStopLoss').textContent = results.failureReasons.stopLossHit;
     document.getElementById('failureTimeout').textContent = results.failureReasons.timeout;
 
-    // Trade list (chronologically sorted - oldest first)
+    // Trade list (newest first - #1 is the most recent trade)
     const tradeListEl = document.getElementById('backtestTradeList');
-    const sortedTrades = [...results.trades].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const sortedTrades = [...results.trades].sort((a, b) => new Date(b.date) - new Date(a.date));
 
     tradeListEl.innerHTML = sortedTrades.map((trade, i) => {
         const profitClass = trade.profit > 0 ? 'text-bullish' : 'text-bearish';
