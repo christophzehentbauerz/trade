@@ -492,6 +492,7 @@ const Backtester = {
 
             trades.push({
                 date: snapshot.date,
+                timestamp: snapshot.timestamp,
                 direction: confluence.direction,
                 confluenceScore: confluence.total,
                 breakdown: confluence.breakdown,
