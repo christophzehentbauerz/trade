@@ -1403,27 +1403,77 @@ body::before {
 
 @media (max-width: 768px) {
     .app {
-        padding: 12px;
+        padding: 8px;
     }
 
     .header {
         flex-direction: column;
-        gap: 12px;
-        padding: 12px 16px;
+        gap: 10px;
+        padding: 12px 14px;
+    }
+
+    .header-left {
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+        align-items: center;
+    }
+
+    .header-right {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .trade-analysis-btn {
+        width: 100%;
+        text-align: center;
+        padding: 10px 16px;
+        font-size: 0.85rem;
+    }
+
+    .last-update {
+        font-size: 0.75rem;
     }
 
     .dashboard-grid {
         grid-template-columns: 1fr;
+        gap: 12px;
     }
 
+    /* Price Card */
     .price-value {
-        font-size: 2.25rem;
+        font-size: 1.75rem;
+    }
+
+    .price-currency {
+        font-size: 1.1rem;
+        margin-top: 4px;
+    }
+
+    .card-body {
+        padding: 14px;
+    }
+
+    .card-header {
+        padding: 12px 14px;
+    }
+
+    /* Signal Banner */
+    .signal-banner {
+        padding: 16px;
     }
 
     .signal-value {
         font-size: 1.5rem;
     }
 
+    .signal-summary {
+        font-size: 0.85rem;
+    }
+
+    /* Grids become single column */
     .derivatives-grid,
     .indicator-grid,
     .levels-container,
@@ -1435,13 +1485,155 @@ body::before {
         grid-column: span 1;
     }
 
+    .liq-zones {
+        flex-direction: column;
+    }
+
+    /* Score */
     .score-item {
+        grid-template-columns: 90px 1fr 50px;
+        gap: 8px;
+    }
+
+    .score-name {
+        font-size: 0.75rem;
+    }
+
+    .total-score {
+        padding: 12px;
+    }
+
+    .total-value {
+        font-size: 1.25rem;
+    }
+
+    /* Fear & Greed */
+    .gauge {
+        width: 140px;
+        height: 70px;
+    }
+
+    .gauge::before,
+    .gauge-fill {
+        width: 140px;
+        height: 140px;
+    }
+
+    .gauge-value {
+        font-size: 2rem;
+    }
+
+    .gauge-scale {
+        max-width: 140px;
+    }
+
+    .fear-greed-history {
+        flex-wrap: wrap;
+    }
+
+    .history-item {
+        min-width: calc(33% - 6px);
+    }
+
+    /* Disclaimer */
+    .disclaimer {
+        padding: 12px 14px;
+    }
+
+    .disclaimer p {
+        font-size: 0.7rem;
+    }
+
+    /* Backtest */
+    .backtest-card {
+        grid-column: span 1;
+    }
+
+    .backtest-summary {
+        grid-template-columns: repeat(2, 1fr);
+        padding: 12px;
+        gap: 10px;
+    }
+
+    .win-rate-item {
+        grid-column: span 2;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 12px;
+    }
+
+    .summary-value {
+        font-size: 1.2rem;
+    }
+
+    .backtest-breakdown {
         grid-template-columns: 1fr;
+    }
+
+    .failure-stats {
+        flex-direction: column;
+    }
+
+    /* Trade Items */
+    .trade-item {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 10px;
+    }
+
+    .trade-info {
+        flex-direction: column;
         gap: 6px;
     }
 
-    .score-bar {
-        order: 2;
+    .trade-main {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .trade-result {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+
+/* Extra small screens (iPhone SE etc.) */
+@media (max-width: 380px) {
+    .app {
+        padding: 6px;
+    }
+
+    .price-value {
+        font-size: 1.5rem;
+    }
+
+    .signal-value {
+        font-size: 1.25rem;
+    }
+
+    .card-body {
+        padding: 10px;
+    }
+
+    .card-header {
+        padding: 10px 12px;
+    }
+
+    .card-header h2 {
+        font-size: 0.85rem;
+    }
+
+    .backtest-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .win-rate-item {
+        grid-column: span 1;
+    }
+
+    .score-item {
+        grid-template-columns: 1fr;
+        gap: 4px;
     }
 
     .score-value {
@@ -1905,16 +2097,65 @@ body::before {
 
 @media (max-width: 768px) {
     .how-it-works-content {
-        padding: 16px;
+        padding: 12px;
+        gap: 16px;
+    }
+
+    .how-it-works-toggle {
+        padding: 12px 16px;
+        font-size: 0.9rem;
+    }
+
+    .info-section {
+        padding: 14px;
+    }
+
+    .info-section h3 {
+        font-size: 0.95rem;
+    }
+
+    .info-section p {
+        font-size: 0.85rem;
     }
 
     .factors-table {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
     }
 
     .factors-table th,
     .factors-table td {
-        padding: 8px;
+        padding: 6px 8px;
+    }
+
+    .rule-box {
+        padding: 12px;
+    }
+
+    .rule-condition {
+        font-size: 1rem;
+    }
+
+    .rule-desc {
+        font-size: 0.7rem;
+    }
+
+    .no-trade-warning {
+        flex-direction: column;
+        padding: 14px;
+        gap: 12px;
+        text-align: center;
+    }
+
+    .warning-icon {
+        font-size: 2rem;
+    }
+
+    .warning-content h3 {
+        font-size: 0.95rem;
+    }
+
+    .warning-content li {
+        font-size: 0.8rem;
     }
 }
 
@@ -2762,11 +3003,47 @@ body::before {
 
     .strategy-performance {
         grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    .perf-item {
+        padding: 10px 8px;
+    }
+
+    .perf-value {
+        font-size: 1.1rem;
+    }
+
+    .perf-label {
+        font-size: 0.65rem;
     }
 
     .comparison-row {
         grid-template-columns: 1.5fr 1fr 1fr 1fr;
-        font-size: 0.75rem;
+        font-size: 0.7rem;
+        padding: 8px 10px;
+    }
+
+    .strategy-philosophy {
+        font-size: 1rem;
+    }
+
+    .strategy-meta {
+        gap: 6px;
+    }
+
+    .meta-tag {
+        font-size: 0.65rem;
+        padding: 3px 8px;
+    }
+
+    .dist-item {
+        grid-template-columns: 24px 80px 1fr 32px;
+        gap: 8px;
+    }
+
+    .dist-label {
+        font-size: 0.7rem;
     }
 }
 
@@ -3095,13 +3372,102 @@ body::before {
 @media (max-width: 768px) {
     .sm-signal-header {
         flex-direction: column;
-        gap: 12px;
+        gap: 10px;
         text-align: center;
+        padding: 12px 14px;
+    }
+
+    .sm-title h2 {
+        font-size: 1rem;
+    }
+
+    .sm-signal-body {
+        padding: 14px;
+        gap: 14px;
     }
 
     .sm-main-signal {
         flex-direction: column;
         text-align: center;
+        padding: 14px;
+    }
+
+    .sm-signal {
+        font-size: 1.5rem;
+        padding: 10px;
+    }
+
+    .sm-conditions {
+        padding: 14px;
+    }
+
+    .sm-conditions h3 {
+        font-size: 0.85rem;
+    }
+
+    .condition-item {
+        padding: 10px;
+        gap: 10px;
+    }
+
+    .condition-name {
+        font-size: 0.85rem;
+    }
+
+    .condition-status {
+        font-size: 0.8rem;
+    }
+
+    .condition-explanation {
+        font-size: 0.7rem;
+    }
+
+    .sm-trade-levels {
+        padding: 14px;
+    }
+
+    .sm-level-item {
+        padding: 10px;
+    }
+
+    .sm-level-value {
+        font-size: 0.9rem;
+    }
+
+    .sm-update-info {
+        flex-wrap: wrap;
+        justify-content: center;
+        font-size: 0.75rem;
+    }
+
+    /* Telegram Preview */
+    .telegram-preview-modal {
+        width: 95%;
+        max-width: none;
+        margin: 10px;
+    }
+
+    .telegram-preview-header {
+        padding: 12px 14px;
+    }
+
+    .telegram-preview-header span {
+        font-size: 0.95rem;
+    }
+
+    #telegramPreviewContent {
+        padding: 16px;
+        font-size: 0.85rem;
+        max-height: 50vh;
+    }
+
+    .telegram-preview-footer {
+        padding: 12px 14px;
+    }
+
+    .telegram-test-btn {
+        font-size: 0.75rem;
+        padding: 6px 12px;
     }
 }
 

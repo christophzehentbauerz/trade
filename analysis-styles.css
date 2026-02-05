@@ -419,3 +419,134 @@
     color: var(--bearish);
     text-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
 }
+
+/* =====================================================
+   Mobile Responsive
+   ===================================================== */
+
+@media (max-width: 768px) {
+    .analysis-header {
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px 14px;
+        text-align: center;
+    }
+
+    .analysis-recommendation {
+        padding: 16px;
+    }
+
+    .recommendation-value {
+        font-size: 1.75rem;
+    }
+
+    .trade-levels-display {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .level-item {
+        padding: 12px;
+    }
+
+    .level-icon {
+        font-size: 1.4rem;
+    }
+
+    .level-value {
+        font-size: 1rem;
+    }
+
+    .analysis-reasons {
+        padding: 14px;
+    }
+
+    .reasons-title {
+        font-size: 0.9rem;
+    }
+
+    .reasons-list li {
+        font-size: 0.85rem;
+    }
+
+    .score-breakdown-section {
+        padding: 14px;
+    }
+
+    .breakdown-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    .breakdown-item {
+        padding: 8px 10px;
+    }
+
+    .breakdown-label {
+        font-size: 0.75rem;
+    }
+
+    .breakdown-value {
+        font-size: 0.9rem;
+    }
+
+    .risk-factors-section {
+        padding: 14px;
+    }
+
+    .risk-list li {
+        font-size: 0.8rem;
+    }
+
+    .smart-money-analysis-section {
+        padding: 14px;
+    }
+
+    .sm-analysis-item {
+        padding: 10px;
+        gap: 10px;
+    }
+
+    .sm-analysis-name {
+        font-size: 0.85rem;
+    }
+
+    .sm-analysis-values {
+        font-size: 0.8rem;
+    }
+
+    .analysis-disclaimer {
+        font-size: 0.75rem;
+        padding: 10px;
+    }
+
+    .no-trade-message {
+        padding: 20px;
+    }
+
+    .no-trade-icon {
+        font-size: 2.5rem;
+    }
+
+    .no-trade-text {
+        font-size: 1rem;
+    }
+
+    .no-trade-subtext {
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 380px) {
+    .recommendation-value {
+        font-size: 1.5rem;
+    }
+
+    .breakdown-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .level-value {
+        font-size: 0.9rem;
+    }
+}
