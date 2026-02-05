@@ -486,7 +486,39 @@ const SmartMoneySignal = {
         return message;
     },
 
-    // Initialize Telegram preview buttons
+    // Send message to Telegram API
+    async sendTelegramMessage(text) {
+        // Try to get credentials from localStorage
+        let token = localStorage.getItem('telegram_bot_token');
+        let chatId = localStorage.getItem('telegram_chat_id');
+
+        // If missing, ask user (we will handle this in UI, but safety check here)
+        if (!token || !chatId) {
+            return { success: false, error: 'credentials_missing' };
+        }
+
+        try {
+            const url = `https://api.telegram.org/bot${token}/sendMessage`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: text,
+                    parse_mode: 'Markdown'
+                })
+            });
+
+            const data = await response.json();
+            return { success: data.ok, error: data.description };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    },
+
+    // Initialize Telegram preview buttons with "Send" functionality
     initTelegramPreview() {
         const signalBtn = document.getElementById('testSignalCheck');
         const dailyBtn = document.getElementById('testDailyUpdate');
@@ -494,23 +526,107 @@ const SmartMoneySignal = {
         const content = document.getElementById('telegramPreviewContent');
         const closeBtn = document.getElementById('closeTelegramPreview');
 
+        // Add Send Button and Config Form to Modal if not exists
+        let footer = preview.querySelector('.telegram-preview-footer');
+        if (!footer) {
+            footer = document.createElement('div');
+            footer.className = 'telegram-preview-footer';
+            footer.innerHTML = `
+                <div id="telegramConfigForm" style="display: none; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 4px;">
+                    <input type="password" id="tgTokenInput" placeholder="Bot Token (123:ABC...)" style="width: 100%; margin-bottom: 5px; padding: 5px;">
+                    <input type="text" id="tgChatIdInput" placeholder="Chat ID (-123...)" style="width: 100%; margin-bottom: 5px; padding: 5px;">
+                    <button id="tgSaveCreds" style="width: 100%; padding: 5px; background: #10b981; border: none; color: white; cursor: pointer;">Speichern & Senden</button>
+                    <div style="font-size: 0.8rem; color: #aaa; margin-top: 5px;">Daten werden nur lokale im Browser gespeichert.</div>
+                </div>
+                <div class="qt-actions">
+                    <span id="tgStatusMsg" style="margin-right: 10px; font-size: 0.9rem;"></span>
+                    <button id="sendToTelegramBtn" class="telegram-btn">🚀 Senden</button>
+                </div>
+            `;
+            preview.querySelector('.telegram-preview-modal').appendChild(footer);
+        }
+
+        const sendBtn = document.getElementById('sendToTelegramBtn');
+        const configForm = document.getElementById('telegramConfigForm');
+        const saveBtn = document.getElementById('tgSaveCreds');
+        const statusMsg = document.getElementById('tgStatusMsg');
+
+        let currentMessage = '';
+
+        const openPreview = (msg) => {
+            currentMessage = msg;
+            content.textContent = msg;
+            preview.style.display = 'flex'; // Overlay uses flex
+            statusMsg.textContent = '';
+            configForm.style.display = 'none';
+        };
+
         if (signalBtn) {
             signalBtn.addEventListener('click', () => {
-                content.textContent = this.generateSignalCheckMessage();
-                preview.style.display = 'block';
+                openPreview(this.generateSignalCheckMessage());
             });
         }
 
         if (dailyBtn) {
             dailyBtn.addEventListener('click', () => {
-                content.textContent = this.generateDailyUpdateMessage();
-                preview.style.display = 'block';
+                openPreview(this.generateDailyUpdateMessage());
             });
         }
 
         if (closeBtn) {
             closeBtn.addEventListener('click', () => {
                 preview.style.display = 'none';
+            });
+        }
+
+        // Send Button Logic
+        if (sendBtn) {
+            sendBtn.addEventListener('click', async () => {
+                const token = localStorage.getItem('telegram_bot_token');
+                if (!token) {
+                    configForm.style.display = 'block';
+                    return;
+                }
+
+                statusMsg.textContent = '⏳ Sende...';
+                const res = await this.sendTelegramMessage(currentMessage);
+                if (res.success) {
+                    statusMsg.textContent = '✅ Gesendet!';
+                    statusMsg.style.color = '#10b981';
+                } else {
+                    if (res.error === 'credentials_missing') {
+                        configForm.style.display = 'block';
+                        statusMsg.textContent = '';
+                    } else {
+                        statusMsg.textContent = '❌ Fehler: ' + res.error;
+                        statusMsg.style.color = '#ef4444';
+                    }
+                }
+            });
+        }
+
+        // Save Credentials Logic
+        if (saveBtn) {
+            saveBtn.addEventListener('click', async () => {
+                const token = document.getElementById('tgTokenInput').value.trim();
+                const chatId = document.getElementById('tgChatIdInput').value.trim();
+
+                if (token && chatId) {
+                    localStorage.setItem('telegram_bot_token', token);
+                    localStorage.setItem('telegram_chat_id', chatId);
+                    configForm.style.display = 'none';
+
+                    // Retry sending
+                    statusMsg.textContent = '⏳ Sende...';
+                    const res = await this.sendTelegramMessage(currentMessage);
+                    if (res.success) {
+                        statusMsg.textContent = '✅ Gesendet!';
+                        statusMsg.style.color = '#10b981';
+                    } else {
+                        statusMsg.textContent = '❌ Fehler: ' + res.error;
+                        statusMsg.style.color = '#ef4444';
+                    }
+                }
             });
         }
     }
