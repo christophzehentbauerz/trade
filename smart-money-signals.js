@@ -543,16 +543,34 @@ const SmartMoneySignal = {
         return message;
     },
 
+    // Get Telegram credentials from config file or localStorage
+    getTelegramCredentials() {
+        // Priority 1: config file (telegram-config.js)
+        if (window.TELEGRAM_CONFIG) {
+            const cfg = window.TELEGRAM_CONFIG;
+            if (cfg.botToken && cfg.chatId) {
+                return { token: cfg.botToken, chatId: cfg.chatId, source: 'config' };
+            }
+        }
+        // Priority 2: localStorage
+        const token = localStorage.getItem('telegram_bot_token');
+        const chatId = localStorage.getItem('telegram_chat_id');
+        if (token && chatId) {
+            return { token, chatId, source: 'localStorage' };
+        }
+        return null;
+    },
+
     // Send message to Telegram API
     async sendTelegramMessage(text) {
-        // Try to get credentials from localStorage
-        let token = localStorage.getItem('telegram_bot_token');
-        let chatId = localStorage.getItem('telegram_chat_id');
+        const creds = this.getTelegramCredentials();
 
-        // If missing, ask user (we will handle this in UI, but safety check here)
-        if (!token || !chatId) {
+        if (!creds) {
             return { success: false, error: 'credentials_missing' };
         }
+
+        const token = creds.token;
+        const chatId = creds.chatId;
 
         try {
             const url = `https://api.telegram.org/bot${token}/sendMessage`;
@@ -594,7 +612,7 @@ const SmartMoneySignal = {
                     <input type="password" id="tgTokenInput" placeholder="Bot Token (123:ABC...)" style="width: 100%; margin-bottom: 5px; padding: 5px;">
                     <input type="text" id="tgChatIdInput" placeholder="Chat ID (-123...)" style="width: 100%; margin-bottom: 5px; padding: 5px;">
                     <button id="tgSaveCreds" style="width: 100%; padding: 5px; background: #10b981; border: none; color: white; cursor: pointer;">Speichern & Senden</button>
-                    <div style="font-size: 0.8rem; color: #aaa; margin-top: 5px;">Daten werden nur lokale im Browser gespeichert.</div>
+                    <div style="font-size: 0.8rem; color: #aaa; margin-top: 5px;">Tipp: Erstelle eine <strong>telegram-config.js</strong> Datei (siehe telegram-config.example.js) um die Eingabe dauerhaft zu speichern.</div>
                 </div>
                 <div class="qt-actions">
                     <span id="tgStatusMsg" style="margin-right: 10px; font-size: 0.9rem;"></span>
@@ -647,11 +665,23 @@ const SmartMoneySignal = {
             });
         }
 
+        // Helper: pre-fill inputs from saved credentials
+        const prefillInputs = () => {
+            const tokenInput = document.getElementById('tgTokenInput');
+            const chatIdInput = document.getElementById('tgChatIdInput');
+            const creds = this.getTelegramCredentials();
+            if (creds && tokenInput && chatIdInput) {
+                tokenInput.value = creds.token;
+                chatIdInput.value = creds.chatId;
+            }
+        };
+
         // Send Button Logic
         if (sendBtn) {
             sendBtn.addEventListener('click', async () => {
-                const token = localStorage.getItem('telegram_bot_token');
-                if (!token) {
+                const creds = this.getTelegramCredentials();
+                if (!creds) {
+                    prefillInputs();
                     configForm.style.display = 'block';
                     return;
                 }
@@ -663,6 +693,7 @@ const SmartMoneySignal = {
                     statusMsg.style.color = '#10b981';
                 } else {
                     if (res.error === 'credentials_missing') {
+                        prefillInputs();
                         configForm.style.display = 'block';
                         statusMsg.textContent = '';
                     } else {
