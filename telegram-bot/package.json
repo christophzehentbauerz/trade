@@ -1,0 +1,13 @@
+{
+  "name": "btc-telegram-bot",
+  "version": "1.0.0",
+  "description": "BTC Market Intelligence Telegram Bot",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "test": "node bot.js"
+  },
+  "keywords": ["bitcoin", "telegram", "trading", "signals"],
+  "author": "",
+  "license": "MIT"
+}
