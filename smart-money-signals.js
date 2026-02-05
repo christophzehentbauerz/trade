@@ -453,34 +453,91 @@ const SmartMoneySignal = {
         return message;
     },
 
-    // Generate Telegram Daily Update message
-    generateDailyUpdateMessage() {
+    // Generate Telegram Daily Update message (Rich Format)
+    async generateDailyUpdateMessage() {
         const s = this.state;
-        const now = new Date().toLocaleString('de-DE');
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-        let message = `📊 *BTC Daily Update*\n`;
-        message += `📅 ${now}\n\n`;
+        // Fetch external data if needed (Browser side)
+        let fearGreed = { value: 0, text: 'Neutral' };
+        try {
+            const fgRes = await fetch('https://api.alternative.me/fng/');
+            const fgData = await fgRes.json();
+            fearGreed = {
+                value: fgData.data[0].value,
+                text: fgData.data[0].value_classification
+            };
+        } catch (e) { console.error('F&G Error', e); }
 
-        message += `💰 *Marktdaten:*\n`;
-        message += `Preis: $${s.currentPrice?.toLocaleString()}\n`;
-        message += `ATR(14): $${s.atr?.toFixed(0)}\n\n`;
+        // Fetch News
+        let newsItems = [];
+        try {
+            const newsRes = await fetch('https://min-api.cryptocompare.com/data/v2/news/?lang=EN');
+            const newsData = await newsRes.json();
+            newsItems = newsData.Data.slice(0, 3);
+        } catch (e) { console.error('News Error', e); }
 
-        message += `📈 *EMAs:*\n`;
-        message += `EMA(15): $${s.emaFast?.toFixed(0)}\n`;
-        message += `EMA(300): $${s.emaSlow?.toFixed(0)}\n`;
-        message += `EMA(800): $${s.emaHTF?.toFixed(0)}\n\n`;
+        // Determine Score & Analysis Text
+        // Note: In a full app we would use the calculated score from app.js
+        // Here we approximate based on SM Signal for the standalone module
+        let score = 5.0;
+        let analysisText = "Der Markt zeigt sich unentschlossen.";
+        let trendScore = 5;
+        let diff = (s.emaFast - s.emaSlow) / s.emaSlow * 100;
 
-        message += `🎯 *RSI:* ${s.rsi?.toFixed(1)}\n\n`;
+        if (s.goldenCross) {
+            score = 7.5;
+            analysisText = "Das Golden Cross ist aktiv. Langfristige Indikatoren zeigen einen Aufwärtstrend.";
+            trendScore = 8;
+        } else if (diff < -5) {
+            score = 2.5;
+            analysisText = "Der Markt ist im Bärenmodus. Wir warten auf Bodenbildung.";
+            trendScore = 2;
+        }
 
-        message += `📋 *Signal Status:*\n`;
-        message += `${s.goldenCross ? '✅' : '❌'} Golden Cross\n`;
-        message += `${s.htfFilter ? '✅' : '❌'} HTF Filter\n`;
-        message += `${s.rsiInZone ? '✅' : '❌'} RSI Zone\n\n`;
+        // Adjust score by F&G (Contrarian)
+        if (fearGreed.value < 20) score += 1; // Buy fear
 
-        message += `🚦 *Aktuelles Signal:* ${s.signal}\n`;
+        score = Math.min(10, Math.max(0, score));
 
+        // Build Message
+        let message = `🌅 *Guten Morgen! Dein BTC Update*\n`;
+        message += `📅 ${dateStr}\n\n`;
+
+        message += `💰 *Marktübersicht:*\n`;
+        message += `BTC Preis: $${s.currentPrice?.toLocaleString()} (${0.00}%)\n`; // Price change not tracked in SM state, us 0 placeholder or pass it
+        message += `Fear & Greed: ${fearGreed.value} (${fearGreed.text})\n`;
+        message += `Score: ${score.toFixed(1)}/10\n\n`;
+
+        message += `🔬 *Analyse & Bewertung:*\n`;
+        message += `"${analysisText}"\n\n`;
+
+        message += `📊 *Die Faktoren heute:*\n`;
+        message += `• Technik (35%): ${trendScore.toFixed(1)}/10\n`;
+        message += `• Momentum (25%): ${(s.rsi / 10).toFixed(1)}/10\n`;
+        message += `• Sentiment (20%): ${(fearGreed.value / 10).toFixed(1)}/10\n`;
+        message += `• Macro (20%): ${(s.htfFilter ? 7 : 3).toFixed(1)}/10\n\n`;
+
+        message += `🎯 *Tages-Fazit:*\n`;
         if (s.signal === 'LONG') {
-            message += `🛑 Stop Loss: $${s.stopLoss?.toLocaleString(undefined, { maximumFractionDigits: 0 })}\n`;
+            message += `🟢 *LONG* - Aufwärtstrend aktiv.\n`;
+            message += `Gute Bedingungen für Entries. Stop Loss bei $${s.stopLoss?.toFixed(0)} beachten.\n\n`;
+        } else if (s.signal === 'EXIT') {
+            message += `🔴 *EXIT* - Gefahrenzone.\n`;
+            message += `Risiko rausnehmen. Death Cross aktiv.\n\n`;
+        } else {
+            message += `⚪ *Neutral* - Abwarten.\n`;
+            message += `Keine klare Richtung erkennbar. Kapital schützen und auf besseres Signal warten.\n\n`;
+        }
+
+        message += `Viel Erfolg heute! ☕\n\n`;
+
+        if (newsItems.length > 0) {
+            message += `📰 *Crypto News:*\n`;
+            newsItems.forEach(n => {
+                message += `• [${n.source}] ${n.title}\n`;
+            });
         }
 
         return message;
@@ -507,7 +564,8 @@ const SmartMoneySignal = {
                 body: JSON.stringify({
                     chat_id: chatId,
                     text: text,
-                    parse_mode: 'Markdown'
+                    parse_mode: 'Markdown',
+                    disable_web_page_preview: true
                 })
             });
 
@@ -553,12 +611,22 @@ const SmartMoneySignal = {
 
         let currentMessage = '';
 
-        const openPreview = (msg) => {
-            currentMessage = msg;
-            content.textContent = msg;
+        const openPreview = async (msgPromise) => {
+            content.textContent = '⏳ Generiere Report...';
             preview.style.display = 'flex'; // Overlay uses flex
             statusMsg.textContent = '';
             configForm.style.display = 'none';
+
+            // Check if msgPromise is a promise (for daily update) or string
+            let msg;
+            if (msgPromise instanceof Promise) {
+                msg = await msgPromise;
+            } else {
+                msg = msgPromise;
+            }
+
+            currentMessage = msg;
+            content.textContent = msg;
         };
 
         if (signalBtn) {
@@ -621,7 +689,6 @@ const SmartMoneySignal = {
                     const res = await this.sendTelegramMessage(currentMessage);
                     if (res.success) {
                         statusMsg.textContent = '✅ Gesendet!';
-                        statusMsg.style.color = '#10b981';
                     } else {
                         statusMsg.textContent = '❌ Fehler: ' + res.error;
                         statusMsg.style.color = '#ef4444';

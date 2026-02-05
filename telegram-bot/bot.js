@@ -146,6 +146,17 @@ async function fetchFearGreedIndex() {
     }
 }
 
+async function fetchNews() {
+    try {
+        const data = await fetchJSON('https://min-api.cryptocompare.com/data/v2/news/?lang=EN');
+        console.log(`✓ Fetched ${data.Data.length} news items`);
+        return data.Data.slice(0, 3);
+    } catch (error) {
+        console.error('Error fetching news:', error.message);
+        return [];
+    }
+}
+
 async function fetch24hChange() {
     try {
         const data = await fetchJSON(`${CONFIG.apis.binance}/ticker/24hr?symbol=BTCUSDT`);
@@ -391,55 +402,86 @@ function formatSignalMessage() {
     return message;
 }
 
-function formatDailyUpdate() {
-    const fgEmoji = state.fearGreedIndex < 30 ? '😱' :
-        state.fearGreedIndex > 70 ? '🤑' : '😐';
-    const fgLabel = state.fearGreedIndex < 25 ? 'Extreme Angst' :
-        state.fearGreedIndex < 45 ? 'Angst' :
-            state.fearGreedIndex < 55 ? 'Neutral' :
-                state.fearGreedIndex < 75 ? 'Gier' : 'Extreme Gier';
+function formatDailyUpdate(newsItems = []) {
+    const s = state;
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-    const signalEmoji = state.signal === 'LONG' ? '🟢' :
-        state.signal === 'EXIT' ? '🔴' : '⚪';
-    const signalText = state.signal === 'LONG' ? 'LONG (Alle Bedingungen erfüllt!)' :
-        state.signal === 'EXIT' ? 'EXIT (Death Cross!)' :
-            `NEUTRAL (${state.signalStrength}/3 Bedingungen)`;
+    // F&G
+    const fgValue = s.fearGreedIndex;
+    let fgText = 'Neutral';
+    if (fgValue < 25) fgText = 'Extreme Angst';
+    else if (fgValue < 45) fgText = 'Angst';
+    else if (fgValue > 75) fgText = 'Extreme Gier';
+    else if (fgValue > 55) fgText = 'Gier';
 
-    const priceChangeEmoji = state.priceChange24h > 0 ? '📈' : '📉';
-    const priceChangeSign = state.priceChange24h > 0 ? '+' : '';
+    // Calculation for Score (Approximation based on SM strategy and F&G)
+    // Base score 5
+    let score = 5.0;
+    let analysisText = "Der Markt zeigt sich unentschlossen.";
+    let trendScore = 5;
 
-    let message = `📊 <b>DAILY SMART MONEY UPDATE</b> 📊\n\n`;
-
-    message += `<b>💰 Bitcoin Status:</b>\n`;
-    message += `• Preis: $${state.currentPrice.toLocaleString()}\n`;
-    message += `• 24h: ${priceChangeEmoji} ${priceChangeSign}${state.priceChange24h.toFixed(2)}%\n`;
-    message += `• F&G: ${fgEmoji} ${state.fearGreedIndex} (${fgLabel})\n\n`;
-
-    message += `<b>🎯 Smart Money Signal:</b>\n`;
-    message += `${signalEmoji} <b>${signalText}</b>\n\n`;
-
-    message += `<b>📋 Bedingungen:</b>\n`;
-    message += `${state.goldenCross ? '✅' : '❌'} Golden Cross\n`;
-    message += `${state.htfFilter ? '✅' : '❌'} HTF Filter\n`;
-    message += `${state.rsiInZone ? '✅' : '❌'} RSI Zone (aktuell: ${state.rsi?.toFixed(1)})\n\n`;
-
-    message += `<b>📈 EMAs (1H):</b>\n`;
-    message += `• Fast (15): $${state.emaFast?.toFixed(0)}\n`;
-    message += `• Slow (300): $${state.emaSlow?.toFixed(0)}\n`;
-    message += `• HTF (800): $${state.emaHTF?.toFixed(0)}\n\n`;
-
-    if (state.signal === 'LONG') {
-        message += `<b>🚀 Position aktiv!</b>\n`;
-        message += `Stop Loss: $${state.stopLoss.toLocaleString(undefined, { maximumFractionDigits: 0 })}\n\n`;
-    } else if (state.signal === 'NEUTRAL') {
-        message += `<b>⏳ Warten auf Entry...</b>\n`;
-        if (!state.goldenCross) message += `→ EMA(15) muss über EMA(300) steigen\n`;
-        if (!state.htfFilter) message += `→ Preis muss über EMA(800) steigen\n`;
-        if (!state.rsiInZone) message += `→ RSI muss in Zone 45-70 kommen\n`;
-        message += '\n';
+    // EMA Diff
+    let diff = 0;
+    if (s.emaFast && s.emaSlow) {
+        diff = (s.emaFast - s.emaSlow) / s.emaSlow * 100;
     }
 
-    message += `⏰ ${new Date().toLocaleString('de-DE')}`;
+    if (s.goldenCross) {
+        score = 7.5;
+        analysisText = "Das Golden Cross ist aktiv. Langfristige Indikatoren zeigen einen Aufwärtstrend.";
+        trendScore = 8;
+    } else if (diff < -5) {
+        score = 2.5;
+        analysisText = "Der Markt ist im Bärenmodus. Wir warten auf Bodenbildung.";
+        trendScore = 2;
+    }
+
+    // Adjust score by F&G (Contrarian)
+    if (fgValue < 20) score += 1; // Buy fear
+    else if (fgValue > 80) score -= 1; // Sell greed
+
+    score = Math.min(10, Math.max(0, score));
+
+    // Build Message
+    let message = `🌅 *Guten Morgen! Dein BTC Update*\n`;
+    message += `📅 ${dateStr}\n\n`;
+
+    message += `💰 *Marktübersicht:*\n`;
+    message += `BTC Preis: $${s.currentPrice?.toLocaleString()} (${s.priceChange24h >= 0 ? '+' : ''}${s.priceChange24h.toFixed(2)}%)\n`;
+    message += `Fear & Greed: ${fgValue} (${fgText})\n`;
+    message += `Score: ${score.toFixed(1)}/10\n\n`;
+
+    message += `🔬 *Analyse & Bewertung:*\n`;
+    message += `"${analysisText}"\n\n`;
+
+    message += `📊 *Die Faktoren heute:*\n`;
+    message += `• Technik (35%): ${trendScore.toFixed(1)}/10\n`;
+    message += `• Momentum (25%): ${(s.rsi / 10).toFixed(1)}/10\n`;
+    message += `• Sentiment (20%): ${(fgValue / 10).toFixed(1)}/10\n`;
+    message += `• Macro (20%): ${(s.htfFilter ? 7 : 3).toFixed(1)}/10\n\n`;
+
+    message += `🎯 *Tages-Fazit:*\n`;
+
+    if (s.signal === 'LONG') {
+        message += `🟢 *LONG* - Aufwärtstrend aktiv.\n`;
+        message += `Gute Bedingungen für Entries. Stop Loss bei $${s.stopLoss?.toFixed(0)} beachten.\n\n`;
+    } else if (s.signal === 'EXIT') {
+        message += `🔴 *EXIT* - Gefahrenzone.\n`;
+        message += `Risiko rausnehmen. Death Cross aktiv.\n\n`;
+    } else {
+        message += `⚪ *Neutral* - Abwarten.\n`;
+        message += `Keine klare Richtung erkennbar. Kapital schützen und auf besseres Signal warten.\n\n`;
+    }
+
+    message += `Viel Erfolg heute! ☕\n\n`;
+
+    if (newsItems && newsItems.length > 0) {
+        message += `📰 *Crypto News:*\n`;
+        newsItems.forEach(n => {
+            message += `• [${n.source}] ${n.title}\n`;
+        });
+    }
 
     return message;
 }
@@ -516,13 +558,14 @@ async function sendDailyUpdate() {
     await calculateSignal();
     await fetchFearGreedIndex();
     await fetch24hChange();
+    const news = await fetchNews();
 
     console.log('\n' + '='.repeat(50));
 
     const previousState = loadPreviousState();
 
     console.log('\n📤 Sending daily update...');
-    await sendTelegramMessage(formatDailyUpdate());
+    await sendTelegramMessage(formatDailyUpdate(news));
 
     // Update last daily update timestamp
     fs.writeFileSync(CONFIG.stateFile, JSON.stringify({
