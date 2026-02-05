@@ -416,12 +416,113 @@ const SmartMoneySignal = {
     // Check if we should exit
     shouldExit() {
         return this.state.signal === 'EXIT' || !this.state.goldenCross;
+    },
+
+    // Generate Telegram Signal Check message
+    generateSignalCheckMessage() {
+        const s = this.state;
+        const now = new Date().toLocaleString('de-DE');
+
+        let message = `🤖 *BTC Smart Money Signal*\n`;
+        message += `📅 ${now}\n\n`;
+
+        // Signal Status
+        if (s.signal === 'LONG') {
+            message += `🟢 *LONG SIGNAL AKTIV!*\n\n`;
+        } else if (s.signal === 'EXIT') {
+            message += `🔴 *EXIT SIGNAL!*\n`;
+            message += `Death Cross erkannt - Position schließen!\n\n`;
+        } else {
+            message += `⚪ *NEUTRAL* - Keine Position\n\n`;
+        }
+
+        message += `💰 Preis: $${s.currentPrice?.toLocaleString()}\n\n`;
+
+        // Conditions
+        message += `📋 *Entry Bedingungen (${s.signalStrength}/3):*\n`;
+        message += `${s.goldenCross ? '✅' : '❌'} Golden Cross: EMA(15) $${s.emaFast?.toFixed(0)} ${s.goldenCross ? '>' : '<'} EMA(300) $${s.emaSlow?.toFixed(0)}\n`;
+        message += `${s.htfFilter ? '✅' : '❌'} HTF Filter: Preis ${s.htfFilter ? '>' : '<'} EMA(800) $${s.emaHTF?.toFixed(0)}\n`;
+        message += `${s.rsiInZone ? '✅' : '❌'} RSI Zone: ${s.rsi?.toFixed(1)} ${s.rsiInZone ? '✓' : '✗'} [45-70]\n\n`;
+
+        if (s.signal === 'LONG') {
+            message += `📊 *Trade Levels:*\n`;
+            message += `📍 Entry: $${s.currentPrice?.toLocaleString()}\n`;
+            message += `🛑 Stop Loss: $${s.stopLoss?.toLocaleString(undefined, { maximumFractionDigits: 0 })} (ATR×2.5)\n`;
+        }
+
+        return message;
+    },
+
+    // Generate Telegram Daily Update message
+    generateDailyUpdateMessage() {
+        const s = this.state;
+        const now = new Date().toLocaleString('de-DE');
+
+        let message = `📊 *BTC Daily Update*\n`;
+        message += `📅 ${now}\n\n`;
+
+        message += `💰 *Marktdaten:*\n`;
+        message += `Preis: $${s.currentPrice?.toLocaleString()}\n`;
+        message += `ATR(14): $${s.atr?.toFixed(0)}\n\n`;
+
+        message += `📈 *EMAs:*\n`;
+        message += `EMA(15): $${s.emaFast?.toFixed(0)}\n`;
+        message += `EMA(300): $${s.emaSlow?.toFixed(0)}\n`;
+        message += `EMA(800): $${s.emaHTF?.toFixed(0)}\n\n`;
+
+        message += `🎯 *RSI:* ${s.rsi?.toFixed(1)}\n\n`;
+
+        message += `📋 *Signal Status:*\n`;
+        message += `${s.goldenCross ? '✅' : '❌'} Golden Cross\n`;
+        message += `${s.htfFilter ? '✅' : '❌'} HTF Filter\n`;
+        message += `${s.rsiInZone ? '✅' : '❌'} RSI Zone\n\n`;
+
+        message += `🚦 *Aktuelles Signal:* ${s.signal}\n`;
+
+        if (s.signal === 'LONG') {
+            message += `🛑 Stop Loss: $${s.stopLoss?.toLocaleString(undefined, { maximumFractionDigits: 0 })}\n`;
+        }
+
+        return message;
+    },
+
+    // Initialize Telegram preview buttons
+    initTelegramPreview() {
+        const signalBtn = document.getElementById('testSignalCheck');
+        const dailyBtn = document.getElementById('testDailyUpdate');
+        const preview = document.getElementById('telegramPreview');
+        const content = document.getElementById('telegramPreviewContent');
+        const closeBtn = document.getElementById('closeTelegramPreview');
+
+        if (signalBtn) {
+            signalBtn.addEventListener('click', () => {
+                content.textContent = this.generateSignalCheckMessage();
+                preview.style.display = 'block';
+            });
+        }
+
+        if (dailyBtn) {
+            dailyBtn.addEventListener('click', () => {
+                content.textContent = this.generateDailyUpdateMessage();
+                preview.style.display = 'block';
+            });
+        }
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                preview.style.display = 'none';
+            });
+        }
     }
 };
 
 // Auto-initialize when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => SmartMoneySignal.init());
+    document.addEventListener('DOMContentLoaded', () => {
+        SmartMoneySignal.init();
+        SmartMoneySignal.initTelegramPreview();
+    });
 } else {
     SmartMoneySignal.init();
+    SmartMoneySignal.initTelegramPreview();
 }
