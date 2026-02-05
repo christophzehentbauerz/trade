@@ -1,17 +1,22 @@
 /**
  * BTC Smart Money Strategy - Telegram Bot
  * Sends LONG/EXIT signals based on Asymmetric Golden Cross Trading System
- * 
+ *
  * Strategy Rules:
  * - LONG Entry: Golden Cross (EMA15 > EMA300) + HTF Filter (Price > EMA800) + RSI Zone (45-70)
- * - EXIT: Death Cross (EMA15 < EMA300)
+ * - EXIT: Trailing Stop, Death Cross (profit < 5%), Time Stop (72h, profit < 0.5%)
  * - Stop Loss: Entry - (ATR × 2.5)
- * 
+ * - Trailing Stop: 0-3 ATR = 2.5 ATR, 3-5 ATR = 2.0 ATR, 5+ ATR = 4.0 ATR
+ *
  * Features:
  * - Real-time signal detection from 1H candles
- * - Daily market update at 08:00
+ * - Full position tracking with entry price, trailing stop, profit
+ * - Asymmetric trailing stop system (3 tiers)
+ * - Death Cross exit only when profit < 5%
+ * - Time stop: exit after 72h if profit < 0.5%
+ * - Daily market update
  * - Instant notification on signal change
- * 
+ *
  * Setup:
  * 1. Create a bot with @BotFather on Telegram
  * 2. Get your Chat ID from @userinfobot
@@ -35,7 +40,18 @@ const CONFIG = {
         rsiMin: 45,
         rsiMax: 70,
         atrPeriod: 14,
-        atrMultiplier: 2.5
+        atrMultiplier: 2.5,
+        // Trailing Stop Tiers
+        trail: {
+            tier1: { triggerATR: 0, distanceATR: 2.5 },  // 0-3 ATR profit
+            tier2: { triggerATR: 3, distanceATR: 2.0 },  // 3-5 ATR profit
+            tier3: { triggerATR: 5, distanceATR: 4.0 }   // 5+ ATR profit
+        },
+        // Death Cross exit only if profit below this threshold
+        deathCrossMaxProfit: 0.05, // 5%
+        // Time Stop
+        timeStopHours: 72,
+        timeStopMinProfit: 0.005 // 0.5%
     },
     apis: {
         binance: 'https://api.binance.com/api/v3',
@@ -296,7 +312,7 @@ async function calculateSignal() {
         state.signal = 'NEUTRAL';
     }
 
-    // Calculate stop loss
+    // Calculate initial stop loss (for new entries)
     state.stopLoss = currentPrice - (atr * CONFIG.strategy.atrMultiplier);
 
     // Log results
@@ -310,6 +326,68 @@ async function calculateSignal() {
     console.log(`\n🎯 Signal: ${state.signal} (${state.signalStrength}/3 Bedingungen)`);
 
     return state;
+}
+
+// =====================================================
+// Position Management
+// =====================================================
+
+function calculateTrailingStop(entryPrice, currentPrice, atr) {
+    const profitATR = (currentPrice - entryPrice) / atr;
+    const { trail } = CONFIG.strategy;
+
+    let distanceATR;
+    let tier;
+    if (profitATR >= trail.tier3.triggerATR) {
+        distanceATR = trail.tier3.distanceATR;
+        tier = 3;
+    } else if (profitATR >= trail.tier2.triggerATR) {
+        distanceATR = trail.tier2.distanceATR;
+        tier = 2;
+    } else {
+        distanceATR = trail.tier1.distanceATR;
+        tier = 1;
+    }
+
+    const newStop = currentPrice - (atr * distanceATR);
+    return { newStop, distanceATR, tier, profitATR };
+}
+
+function checkExitConditions(position, currentPrice, atr) {
+    const entryPrice = position.entryPrice;
+    const profitPct = (currentPrice - entryPrice) / entryPrice;
+    const hoursInTrade = (Date.now() - new Date(position.entryTime).getTime()) / (1000 * 60 * 60);
+
+    const reasons = [];
+
+    // 1. Trailing Stop Hit
+    if (position.trailingStop && currentPrice <= position.trailingStop) {
+        reasons.push({
+            type: 'TRAILING_STOP',
+            message: `Trailing Stop erreicht bei $${position.trailingStop.toFixed(0)}`,
+            profitPct
+        });
+    }
+
+    // 2. Death Cross - only exit if profit < 5%
+    if (!state.goldenCross && profitPct < CONFIG.strategy.deathCrossMaxProfit) {
+        reasons.push({
+            type: 'DEATH_CROSS',
+            message: `Death Cross bei ${(profitPct * 100).toFixed(2)}% Profit (< 5% Schwelle)`,
+            profitPct
+        });
+    }
+
+    // 3. Time Stop - exit after 72h if profit < 0.5%
+    if (hoursInTrade >= CONFIG.strategy.timeStopHours && profitPct < CONFIG.strategy.timeStopMinProfit) {
+        reasons.push({
+            type: 'TIME_STOP',
+            message: `${hoursInTrade.toFixed(0)}h in Position bei nur ${(profitPct * 100).toFixed(2)}% Profit`,
+            profitPct
+        });
+    }
+
+    return reasons;
 }
 
 // =====================================================
@@ -366,6 +444,101 @@ async function sendTelegramMessage(message) {
     });
 }
 
+// =====================================================
+// Message Formatting
+// =====================================================
+
+function formatEntryMessage(position) {
+    let msg = `🟢 <b>SMART MONEY LONG</b> 🟢\n\n`;
+
+    msg += `<b>💰 BTC Preis:</b> $${state.currentPrice.toLocaleString()}\n`;
+    msg += `<b>📊 Signal-Stärke:</b> ${state.signalStrength}/3\n\n`;
+
+    msg += `<b>📋 Entry-Bedingungen:</b>\n`;
+    msg += `✅ Golden Cross (EMA15 > EMA300)\n`;
+    msg += `✅ HTF Filter (Preis > EMA800)\n`;
+    msg += `✅ RSI Zone (${CONFIG.strategy.rsiMin}-${CONFIG.strategy.rsiMax})\n\n`;
+
+    msg += `<b>📈 Indikatoren:</b>\n`;
+    msg += `• EMA(15): $${state.emaFast?.toFixed(0)}\n`;
+    msg += `• EMA(300): $${state.emaSlow?.toFixed(0)}\n`;
+    msg += `• EMA(800): $${state.emaHTF?.toFixed(0)}\n`;
+    msg += `• RSI(14): ${state.rsi?.toFixed(1)}\n`;
+    msg += `• ATR(14): $${state.atr?.toFixed(0)}\n\n`;
+
+    msg += `<b>📍 Trade Setup:</b>\n`;
+    msg += `• Entry: $${position.entryPrice.toLocaleString()}\n`;
+    msg += `• Stop Loss: $${position.trailingStop.toLocaleString(undefined, { maximumFractionDigits: 0 })} (ATR×2.5)\n`;
+    msg += `• Trailing: Tier 1 (2.5 ATR)\n\n`;
+
+    msg += `<b>📐 Trailing Stop System:</b>\n`;
+    msg += `• 0-3 ATR Profit → 2.5 ATR Distanz\n`;
+    msg += `• 3-5 ATR Profit → 2.0 ATR Distanz\n`;
+    msg += `• 5+ ATR Profit → 4.0 ATR Distanz\n\n`;
+
+    msg += `<b>🎯 Empfehlung:</b> 📈 LONG EINSTIEG\n\n`;
+    msg += `⏰ ${new Date().toLocaleString('de-DE')}`;
+
+    return msg;
+}
+
+function formatExitMessage(position, exitReasons) {
+    const profitPct = ((state.currentPrice - position.entryPrice) / position.entryPrice * 100);
+    const profitEmoji = profitPct >= 0 ? '✅' : '❌';
+    const hoursInTrade = ((Date.now() - new Date(position.entryTime).getTime()) / (1000 * 60 * 60));
+
+    let msg = `🔴 <b>SMART MONEY EXIT</b> 🔴\n\n`;
+
+    msg += `<b>📊 Exit-Grund:</b>\n`;
+    exitReasons.forEach(r => {
+        const icon = r.type === 'TRAILING_STOP' ? '📉' : r.type === 'DEATH_CROSS' ? '💀' : '⏰';
+        msg += `${icon} ${r.message}\n`;
+    });
+    msg += `\n`;
+
+    msg += `<b>💰 Trade-Ergebnis:</b>\n`;
+    msg += `• Entry: $${position.entryPrice.toLocaleString()}\n`;
+    msg += `• Exit: $${state.currentPrice.toLocaleString()}\n`;
+    msg += `• ${profitEmoji} P/L: ${profitPct >= 0 ? '+' : ''}${profitPct.toFixed(2)}%\n`;
+    msg += `• Dauer: ${hoursInTrade.toFixed(0)}h\n`;
+    if (position.highestPrice) {
+        const maxProfit = ((position.highestPrice - position.entryPrice) / position.entryPrice * 100);
+        msg += `• Max Profit: +${maxProfit.toFixed(2)}% ($${position.highestPrice.toLocaleString()})\n`;
+    }
+    msg += `\n`;
+
+    msg += `<b>📈 Indikatoren bei Exit:</b>\n`;
+    msg += `• EMA(15): $${state.emaFast?.toFixed(0)}\n`;
+    msg += `• EMA(300): $${state.emaSlow?.toFixed(0)}\n`;
+    msg += `• RSI(14): ${state.rsi?.toFixed(1)}\n\n`;
+
+    msg += `<b>🎯 Empfehlung:</b> 🚫 POSITION SCHLIEßEN\n\n`;
+    msg += `⏰ ${new Date().toLocaleString('de-DE')}`;
+
+    return msg;
+}
+
+function formatTrailingUpdateMessage(position, trailInfo) {
+    const profitPct = ((state.currentPrice - position.entryPrice) / position.entryPrice * 100);
+
+    let msg = `📈 <b>TRAILING STOP UPDATE</b> 📈\n\n`;
+
+    msg += `<b>💰 BTC:</b> $${state.currentPrice.toLocaleString()} (+${profitPct.toFixed(2)}%)\n\n`;
+
+    msg += `<b>🔄 Neuer Trailing Stop:</b>\n`;
+    msg += `• Stop: $${position.trailingStop.toLocaleString(undefined, { maximumFractionDigits: 0 })}\n`;
+    msg += `• Tier: ${trailInfo.tier} (${trailInfo.distanceATR} ATR Distanz)\n`;
+    msg += `• Profit: ${trailInfo.profitATR.toFixed(1)} ATR\n\n`;
+
+    msg += `<b>📍 Position:</b>\n`;
+    msg += `• Entry: $${position.entryPrice.toLocaleString()}\n`;
+    msg += `• P/L: +${profitPct.toFixed(2)}%\n\n`;
+
+    msg += `⏰ ${new Date().toLocaleString('de-DE')}`;
+
+    return msg;
+}
+
 function formatSignalMessage() {
     const emoji = state.signal === 'LONG' ? '🟢' : state.signal === 'EXIT' ? '🔴' : '⚪';
     const action = state.signal === 'LONG' ? '📈 LONG EINSTIEG' :
@@ -389,14 +562,6 @@ function formatSignalMessage() {
     message += `• ATR(14): $${state.atr?.toFixed(0)}\n\n`;
 
     message += `<b>🎯 Empfehlung:</b> ${action}\n\n`;
-
-    if (state.signal === 'LONG') {
-        message += `<b>📍 Trade Setup:</b>\n`;
-        message += `• Entry: ~$${state.currentPrice.toLocaleString()}\n`;
-        message += `• Stop Loss: $${state.stopLoss.toLocaleString(undefined, { maximumFractionDigits: 0 })} (ATR×2.5)\n`;
-        message += `• Trailing Stop nach +5%\n\n`;
-    }
-
     message += `⏰ ${new Date().toLocaleString('de-DE')}`;
 
     return message;
@@ -416,7 +581,6 @@ function formatDailyUpdate(newsItems = []) {
     else if (fgValue > 55) fgText = 'Gier';
 
     // Calculation for Score (Approximation based on SM strategy and F&G)
-    // Base score 5
     let score = 5.0;
     let analysisText = "Der Markt zeigt sich unentschlossen.";
     let trendScore = 5;
@@ -438,8 +602,8 @@ function formatDailyUpdate(newsItems = []) {
     }
 
     // Adjust score by F&G (Contrarian)
-    if (fgValue < 20) score += 1; // Buy fear
-    else if (fgValue > 80) score -= 1; // Sell greed
+    if (fgValue < 20) score += 1;
+    else if (fgValue > 80) score -= 1;
 
     score = Math.min(10, Math.max(0, score));
 
@@ -460,6 +624,20 @@ function formatDailyUpdate(newsItems = []) {
     message += `• Momentum (25%): ${(s.rsi / 10).toFixed(1)}/10\n`;
     message += `• Sentiment (20%): ${(fgValue / 10).toFixed(1)}/10\n`;
     message += `• Macro (20%): ${(s.htfFilter ? 7 : 3).toFixed(1)}/10\n\n`;
+
+    // Show active position info in daily update
+    const prevState = loadPreviousState();
+    if (prevState.position) {
+        const pos = prevState.position;
+        const profitPct = ((s.currentPrice - pos.entryPrice) / pos.entryPrice * 100);
+        const hoursInTrade = ((Date.now() - new Date(pos.entryTime).getTime()) / (1000 * 60 * 60));
+
+        message += `📍 *Aktive Position:*\n`;
+        message += `• Entry: $${pos.entryPrice.toLocaleString()} (${hoursInTrade.toFixed(0)}h)\n`;
+        message += `• P/L: ${profitPct >= 0 ? '+' : ''}${profitPct.toFixed(2)}%\n`;
+        message += `• Trailing Stop: $${pos.trailingStop?.toLocaleString(undefined, { maximumFractionDigits: 0 })}\n`;
+        message += `• Tier: ${pos.currentTier || 1}\n\n`;
+    }
 
     message += `🎯 *Tages-Fazit:*\n`;
 
@@ -499,16 +677,12 @@ function loadPreviousState() {
     } catch (e) {
         console.log('No previous state found');
     }
-    return { signal: 'NEUTRAL', lastNotified: null, lastDailyUpdate: null };
+    return { signal: 'NEUTRAL', lastNotified: null, lastDailyUpdate: null, position: null };
 }
 
-function saveCurrentState(previousState) {
+function saveState(data) {
     try {
-        fs.writeFileSync(CONFIG.stateFile, JSON.stringify({
-            signal: state.signal,
-            lastNotified: new Date().toISOString(),
-            lastDailyUpdate: previousState.lastDailyUpdate || null
-        }));
+        fs.writeFileSync(CONFIG.stateFile, JSON.stringify(data));
     } catch (e) {
         console.error('Could not save state:', e.message);
     }
@@ -528,26 +702,109 @@ async function checkSignal() {
 
     console.log('\n' + '='.repeat(50));
 
-    // Check if signal changed
     const previousState = loadPreviousState();
-    const signalChanged = previousState.signal !== state.signal;
+    const hasPosition = previousState.position != null;
 
-    if (signalChanged) {
-        if (state.signal === 'LONG') {
-            console.log('\n🟢 NEUES LONG SIGNAL!');
-            await sendTelegramMessage(formatSignalMessage());
-        } else if (state.signal === 'EXIT' && previousState.signal === 'LONG') {
-            console.log('\n🔴 EXIT SIGNAL - Death Cross!');
-            await sendTelegramMessage(formatSignalMessage());
-        } else if (state.signal === 'NEUTRAL') {
-            console.log('\n⚪ Signal zurück auf NEUTRAL');
-            // Optional: Kann auch eine Nachricht senden
+    // ---- CASE 1: We have an active position → manage it ----
+    if (hasPosition) {
+        const position = previousState.position;
+        console.log(`\n📍 Aktive Position: Entry $${position.entryPrice} seit ${position.entryTime}`);
+
+        const profitPct = ((state.currentPrice - position.entryPrice) / position.entryPrice * 100);
+        console.log(`💰 Aktueller Profit: ${profitPct >= 0 ? '+' : ''}${profitPct.toFixed(2)}%`);
+
+        // Update highest price
+        if (state.currentPrice > (position.highestPrice || position.entryPrice)) {
+            position.highestPrice = state.currentPrice;
         }
-    } else {
-        console.log(`\n✓ Kein Signalwechsel (aktuell: ${state.signal})`);
+
+        // Calculate new trailing stop
+        const trailInfo = calculateTrailingStop(position.entryPrice, state.currentPrice, state.atr);
+        const oldStop = position.trailingStop;
+        const oldTier = position.currentTier || 1;
+
+        // Trailing stop can only go UP (never down)
+        if (trailInfo.newStop > position.trailingStop) {
+            position.trailingStop = trailInfo.newStop;
+            console.log(`📈 Trailing Stop angehoben: $${oldStop?.toFixed(0)} → $${position.trailingStop.toFixed(0)}`);
+        }
+        position.currentTier = trailInfo.tier;
+
+        // Notify on tier change
+        if (trailInfo.tier > oldTier) {
+            console.log(`🔄 Trailing Tier Upgrade: ${oldTier} → ${trailInfo.tier}`);
+            await sendTelegramMessage(formatTrailingUpdateMessage(position, trailInfo));
+        }
+
+        // Check exit conditions
+        const exitReasons = checkExitConditions(position, state.currentPrice, state.atr);
+
+        if (exitReasons.length > 0) {
+            // EXIT - close position
+            console.log(`\n🔴 EXIT! Gründe: ${exitReasons.map(r => r.type).join(', ')}`);
+            await sendTelegramMessage(formatExitMessage(position, exitReasons));
+
+            // Clear position
+            saveState({
+                signal: state.signal,
+                lastNotified: new Date().toISOString(),
+                lastDailyUpdate: previousState.lastDailyUpdate,
+                position: null
+            });
+        } else {
+            // Still in trade - save updated position
+            console.log(`\n✓ Position aktiv. Stop: $${position.trailingStop.toFixed(0)} | Tier: ${position.currentTier}`);
+            saveState({
+                signal: state.signal,
+                lastNotified: previousState.lastNotified,
+                lastDailyUpdate: previousState.lastDailyUpdate,
+                position
+            });
+        }
+    }
+    // ---- CASE 2: No position → check for new entry ----
+    else {
+        const signalChanged = previousState.signal !== state.signal;
+
+        if (state.signal === 'LONG' && (signalChanged || previousState.signal !== 'LONG')) {
+            console.log('\n🟢 NEUES LONG SIGNAL! Position eröffnen.');
+
+            const newPosition = {
+                entryPrice: state.currentPrice,
+                entryTime: new Date().toISOString(),
+                trailingStop: state.currentPrice - (state.atr * CONFIG.strategy.atrMultiplier),
+                highestPrice: state.currentPrice,
+                currentTier: 1,
+                entryATR: state.atr
+            };
+
+            await sendTelegramMessage(formatEntryMessage(newPosition));
+
+            saveState({
+                signal: state.signal,
+                lastNotified: new Date().toISOString(),
+                lastDailyUpdate: previousState.lastDailyUpdate,
+                position: newPosition
+            });
+        } else if (signalChanged && state.signal === 'NEUTRAL') {
+            console.log('\n⚪ Signal zurück auf NEUTRAL');
+            saveState({
+                signal: state.signal,
+                lastNotified: previousState.lastNotified,
+                lastDailyUpdate: previousState.lastDailyUpdate,
+                position: null
+            });
+        } else {
+            console.log(`\n✓ Kein Signal (aktuell: ${state.signal})`);
+            saveState({
+                signal: state.signal,
+                lastNotified: previousState.lastNotified,
+                lastDailyUpdate: previousState.lastDailyUpdate,
+                position: null
+            });
+        }
     }
 
-    saveCurrentState(previousState);
     console.log('\n✅ Signal check completed!');
 }
 
@@ -567,12 +824,13 @@ async function sendDailyUpdate() {
     console.log('\n📤 Sending daily update...');
     await sendTelegramMessage(formatDailyUpdate(news));
 
-    // Update last daily update timestamp
-    fs.writeFileSync(CONFIG.stateFile, JSON.stringify({
-        signal: state.signal,
+    // Update last daily update timestamp (preserve position!)
+    saveState({
+        signal: previousState.signal,
         lastNotified: previousState.lastNotified,
-        lastDailyUpdate: new Date().toISOString()
-    }));
+        lastDailyUpdate: new Date().toISOString(),
+        position: previousState.position
+    });
 
     console.log('\n✅ Daily update sent!');
 }
