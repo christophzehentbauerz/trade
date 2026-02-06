@@ -3584,26 +3584,25 @@ body::after {
 @media (max-width: 768px) {
     :root {
         font-size: 14px;
-        /* Lighter background for mobile readability */
-        --bg-primary: #0a0e14;
-        --bg-secondary: #111827;
+        /* Much lighter background for mobile */
+        --bg-primary: #1a1f2e;
+        --bg-secondary: #232938;
+        --bg-card: #1e2433;
     }
 
     .app {
-        padding: 8px;
-        /* Reduced from 12px */
-        gap: 12px;
-        /* Reduced from 20px */
+        padding: 6px;
+        /* Minimal padding */
+        gap: 8px;
+        /* Minimal gap */
     }
 
-    /* Header Mobile */
+    /* Header Mobile - Ultra Compact */
     .header {
         flex-direction: column;
         align-items: stretch;
-        gap: 12px;
-        /* Reduced from 16px */
-        padding: 12px;
-        /* Reduced from 16px */
+        gap: 8px;
+        padding: 10px;
     }
 
     .header-left,
@@ -3614,132 +3613,134 @@ body::after {
 
     .header-right {
         flex-wrap: wrap;
+        gap: 6px;
     }
 
     .trade-analysis-btn {
         width: 100%;
         text-align: center;
+        padding: 8px;
+        font-size: 0.9rem;
     }
 
-    /* Grid Mobile - Tighter */
+    /* Grid Mobile - Ultra Tight */
     .dashboard-grid {
         grid-template-columns: 1fr;
-        gap: 12px;
-        /* Reduced from 20px */
+        gap: 8px;
+        /* Minimal gap between cards */
     }
 
-    gap: 12px;
-}
+    .smart-money-signal-section {
+        grid-column: span 1;
+    }
 
-.smart-money-signal-section {
-    grid-column: span 1;
-}
+    /* Cards - Compact Mobile */
+    .card {
+        border-radius: 8px;
+    }
 
-/* Card Mobile */
-.card {
-    border-radius: var(--radius-md);
-}
+    .card-header {
+        padding: 10px 12px;
+        /* Very compact */
+    }
 
-.card-header {
-    padding: 12px 16px;
-}
+    .card-body {
+        padding: 12px;
+        /* Very compact */
+    }
 
-.card-body {
-    padding: 16px;
-}
+    .card-header h2 {
+        font-size: 1rem;
+    }
 
-.card-header h2 {
-    font-size: 1.1rem;
-}
+    /* Price Card Mobile */
+    .price-value {
+        font-size: 2.5rem;
+    }
 
-/* Price Card Mobile */
-.price-value {
-    font-size: 2.5rem;
-}
+    .price-meta {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
 
-.price-meta {
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-}
+    /* Signal Banner Mobile */
+    .signal-banner {
+        padding: 20px;
+    }
 
-/* Signal Banner Mobile */
-.signal-banner {
-    padding: 20px;
-}
+    .signal-value {
+        font-size: 2rem;
+    }
 
-.signal-value {
-    font-size: 2rem;
-}
+    /* Smart Money Strategy Mobile */
+    .sm-signal-header {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+        padding: 12px 14px;
+    }
 
-/* Smart Money Strategy Mobile */
-.sm-signal-header {
-    flex-direction: column;
-    gap: 10px;
-    text-align: center;
-    padding: 12px 14px;
-}
+    .sm-title h2 {
+        font-size: 1.1rem;
+    }
 
-.sm-title h2 {
-    font-size: 1.1rem;
-}
+    .sm-signal-body {
+        padding: 0;
+        gap: 0;
+    }
 
-.sm-signal-body {
-    padding: 0;
-    gap: 0;
-}
+    .sm-main-signal {
+        flex-direction: column;
+        text-align: center;
+        border-right: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 20px;
+    }
 
-.sm-main-signal {
-    flex-direction: column;
-    text-align: center;
-    border-right: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    padding: 20px;
-}
+    .sm-conditions {
+        padding: 16px;
+    }
 
-.sm-conditions {
-    padding: 16px;
-}
+    .condition-item {
+        padding: 10px;
+    }
 
-.condition-item {
-    padding: 10px;
-}
+    .sm-trade-levels {
+        padding: 16px;
+    }
 
-.sm-trade-levels {
-    padding: 16px;
-}
+    .sm-level-item {
+        padding: 10px;
+        flex-direction: column;
+        gap: 4px;
+        text-align: center;
+    }
 
-.sm-level-item {
-    padding: 10px;
-    flex-direction: column;
-    gap: 4px;
-    text-align: center;
-}
+    /* Telegram Preview */
+    .telegram-preview-modal {
+        width: 95%;
+        margin: 10px;
+    }
 
-/* Telegram Preview */
-.telegram-preview-modal {
-    width: 95%;
-    margin: 10px;
-}
+    .telegram-test-btn {
+        width: 100%;
+        justify-content: center;
+    }
 
-.telegram-test-btn {
-    width: 100%;
-    justify-content: center;
-}
+    .notification-settings-content {
+        flex-direction: column;
+        gap: 12px;
+    }
 
-.notification-settings-content {
-    flex-direction: column;
-    gap: 12px;
-}
+    .notification-buttons {
+        width: 100%;
+        display: flex;
+        gap: 8px;
+    }
 
-.notification-buttons {
-    width: 100%;
-    display: flex;
-    gap: 8px;
-}
-
-.notification-buttons button {
-    flex: 1;
-}
+    .notification-buttons button {
+        flex: 1;
+    }
 }
 
 /* Telegram Bot Preview Section */
