@@ -1343,7 +1343,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (closeAnalysisBtn) {
         closeAnalysisBtn.addEventListener('click', () => {
             document.getElementById('analysisCardContainer').style.display = 'none';
-            document.body.style.overflow = ''; // Unlock body scroll
+
+            // Restore Body Scroll (iOS Safe)
+            const scrollY = document.body.dataset.scrollY;
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.width = '';
+            window.scrollTo(0, parseInt(scrollY || '0'));
+            document.body.style.overflow = '';
         });
     }
 

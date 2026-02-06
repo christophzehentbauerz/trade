@@ -91,10 +91,18 @@ async function generateLiveAnalysis() {
         smartMoneyData = SmartMoneySignal.getState();
     }
 
-    // VOLUME ANALYSIS - Extract from historicalData if available
+    // VOLUME ANALYSIS - Robust Data Fetching
     let volumeAnalysis = null;
+    let volumes = [];
+
+    // Try multiple sources for volume data
     if (window.historicalData && window.historicalData.total_volumes) {
-        const volumes = window.historicalData.total_volumes.map(v => v[1]);
+        volumes = window.historicalData.total_volumes.map(v => v[1]);
+    } else if (state.volumeHistory && state.volumeHistory.length > 0) {
+        volumes = state.volumeHistory;
+    }
+
+    if (volumes.length > 0) {
         const currentVolume = state.volume24h || volumes[volumes.length - 1];
 
         const obvResult = calculateOBV(priceWindow, volumes.slice(-30));
@@ -107,7 +115,11 @@ async function generateLiveAnalysis() {
             divergence,
             currentVolume
         };
+    } else {
+        console.warn('⚠️ Keine Volumendaten verfügbar für Analyse');
     }
+
+    // Calculate Confluence Score...
 
     // Calculate Confluence Score (same logic as backtester)
     const confluenceScore = calculateLiveConfluenceScore(
@@ -704,9 +716,19 @@ async function showLiveAnalysis() {
 
     // Display
     document.getElementById('analysisContent').innerHTML = html;
+    // iOS-Safe Scroll Lock
+    const scrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+    document.body.dataset.scrollY = scrollY; // Store for restore
+
     document.getElementById('analysisCardContainer').style.display = 'block';
-    document.getElementById('analysisCardContainer').scrollTop = 0; // Reset scroll position
-    document.body.style.overflow = 'hidden'; // Lock body scroll
+
+    // Slight delay to ensure display:block is rendered before scrolling reset
+    setTimeout(() => {
+        document.getElementById('analysisCardContainer').scrollTop = 0;
+    }, 10);
 
     // Scroll to analysis
     document.getElementById('analysisCardContainer').scrollIntoView({

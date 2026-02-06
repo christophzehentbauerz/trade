@@ -173,15 +173,7 @@ body::after {
 }
 
 /* Live Analysis Overlay */
-.analysis-card-container {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 1000;
-    width: 90%;
-    max-width: 700px;
-}
+/* Analysis Card Container style removed - handled in analysis-styles.css */
 
 /* =====================================================
    Header
