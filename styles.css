@@ -3584,20 +3584,26 @@ body::after {
 @media (max-width: 768px) {
     :root {
         font-size: 14px;
-        /* Scale down base font size */
+        /* Lighter background for mobile readability */
+        --bg-primary: #0a0e14;
+        --bg-secondary: #111827;
     }
 
     .app {
-        padding: 12px;
+        padding: 8px;
+        /* Reduced from 12px */
         gap: 12px;
+        /* Reduced from 20px */
     }
 
     /* Header Mobile */
     .header {
         flex-direction: column;
         align-items: stretch;
-        gap: 16px;
-        padding: 16px;
+        gap: 12px;
+        /* Reduced from 16px */
+        padding: 12px;
+        /* Reduced from 16px */
     }
 
     .header-left,
@@ -3615,121 +3621,125 @@ body::after {
         text-align: center;
     }
 
-    /* Grid Mobile */
+    /* Grid Mobile - Tighter */
     .dashboard-grid {
         grid-template-columns: 1fr;
         gap: 12px;
+        /* Reduced from 20px */
     }
 
-    .smart-money-signal-section {
-        grid-column: span 1;
-    }
+    gap: 12px;
+}
 
-    /* Card Mobile */
-    .card {
-        border-radius: var(--radius-md);
-    }
+.smart-money-signal-section {
+    grid-column: span 1;
+}
 
-    .card-header {
-        padding: 12px 16px;
-    }
+/* Card Mobile */
+.card {
+    border-radius: var(--radius-md);
+}
 
-    .card-body {
-        padding: 16px;
-    }
+.card-header {
+    padding: 12px 16px;
+}
 
-    .card-header h2 {
-        font-size: 1.1rem;
-    }
+.card-body {
+    padding: 16px;
+}
 
-    /* Price Card Mobile */
-    .price-value {
-        font-size: 2.5rem;
-    }
+.card-header h2 {
+    font-size: 1.1rem;
+}
 
-    .price-meta {
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-    }
+/* Price Card Mobile */
+.price-value {
+    font-size: 2.5rem;
+}
 
-    /* Signal Banner Mobile */
-    .signal-banner {
-        padding: 20px;
-    }
+.price-meta {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
 
-    .signal-value {
-        font-size: 2rem;
-    }
+/* Signal Banner Mobile */
+.signal-banner {
+    padding: 20px;
+}
 
-    /* Smart Money Strategy Mobile */
-    .sm-signal-header {
-        flex-direction: column;
-        gap: 10px;
-        text-align: center;
-        padding: 12px 14px;
-    }
+.signal-value {
+    font-size: 2rem;
+}
 
-    .sm-title h2 {
-        font-size: 1.1rem;
-    }
+/* Smart Money Strategy Mobile */
+.sm-signal-header {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+    padding: 12px 14px;
+}
 
-    .sm-signal-body {
-        padding: 0;
-        gap: 0;
-    }
+.sm-title h2 {
+    font-size: 1.1rem;
+}
 
-    .sm-main-signal {
-        flex-direction: column;
-        text-align: center;
-        border-right: none;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        padding: 20px;
-    }
+.sm-signal-body {
+    padding: 0;
+    gap: 0;
+}
 
-    .sm-conditions {
-        padding: 16px;
-    }
+.sm-main-signal {
+    flex-direction: column;
+    text-align: center;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 20px;
+}
 
-    .condition-item {
-        padding: 10px;
-    }
+.sm-conditions {
+    padding: 16px;
+}
 
-    .sm-trade-levels {
-        padding: 16px;
-    }
+.condition-item {
+    padding: 10px;
+}
 
-    .sm-level-item {
-        padding: 10px;
-        flex-direction: column;
-        gap: 4px;
-        text-align: center;
-    }
+.sm-trade-levels {
+    padding: 16px;
+}
 
-    /* Telegram Preview */
-    .telegram-preview-modal {
-        width: 95%;
-        margin: 10px;
-    }
+.sm-level-item {
+    padding: 10px;
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
+}
 
-    .telegram-test-btn {
-        width: 100%;
-        justify-content: center;
-    }
+/* Telegram Preview */
+.telegram-preview-modal {
+    width: 95%;
+    margin: 10px;
+}
 
-    .notification-settings-content {
-        flex-direction: column;
-        gap: 12px;
-    }
+.telegram-test-btn {
+    width: 100%;
+    justify-content: center;
+}
 
-    .notification-buttons {
-        width: 100%;
-        display: flex;
-        gap: 8px;
-    }
+.notification-settings-content {
+    flex-direction: column;
+    gap: 12px;
+}
 
-    .notification-buttons button {
-        flex: 1;
-    }
+.notification-buttons {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+}
+
+.notification-buttons button {
+    flex: 1;
+}
 }
 
 /* Telegram Bot Preview Section */
