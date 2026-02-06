@@ -570,7 +570,7 @@ function calculateScores() {
         const currentVol = state.volume24h;
         const rvolResult = calculateRVOL(currentVol, volumes);
 
-        if (rvolResult.value > 1.5) {
+        if (rvolResult.ratio > 1.5) {
             // High volume validates the move
             if (state.priceChange24h > 0) macroScore += 1;
             else macroScore -= 1;
@@ -754,7 +754,7 @@ function updateTechnicalCard() {
 
             // Text
             let trendText = obvResult.trend === 'up' ? 'BULLISH' : obvResult.trend === 'down' ? 'BEARISH' : 'NEUTRAL';
-            volValueEl.textContent = `${trendText} (RVOL ${rvolResult.value.toFixed(1)})`;
+            volValueEl.textContent = `${trendText} (RVOL ${rvolResult.ratio.toFixed(1)})`;
             volValueEl.className = `indicator-value ${obvResult.trend === 'up' ? 'text-bullish' : obvResult.trend === 'down' ? 'text-bearish' : 'text-neutral'}`;
 
             // Visual Arrow
