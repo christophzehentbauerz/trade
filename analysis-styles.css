@@ -6,22 +6,23 @@
     position: fixed;
     top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1000;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    /* Ensure it's on top of everything */
     background: rgba(0, 0, 0, 0.85);
     display: flex;
     align-items: flex-start;
-    /* Changed from center to flex-start */
     justify-content: center;
     padding: 20px;
-    padding-top: 40px;
-    /* Extra top padding for better visibility */
-    padding-bottom: 40px;
-    /* Extra bottom padding */
+    padding-top: 50px;
+    /* Safe space for top */
+    padding-bottom: 50px;
     overflow-y: auto;
-    /* Scroll the entire overlay */
-    animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Enable vertical rolling */
+    -webkit-overflow-scrolling: touch;
+    /* Smooth scroll on iOS */
+    backdrop-filter: blur(5px);
 }
 
 @keyframes slideIn {
@@ -39,15 +40,16 @@
 .analysis-card {
     background: var(--bg-card);
     border: 1px solid var(--accent-primary);
-    box-shadow: 0 0 30px rgba(79, 70, 229, 0.2);
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
     position: relative;
     border-radius: var(--radius-lg);
     width: 100%;
     max-width: 900px;
-    /* Reduced from 1200px for better fit */
-    margin: 0 auto;
-    /* Center horizontally */
-    /* Remove max-height and overflow-y - let container handle scrolling */
+    margin: auto;
+    /* Centers horizontally if width < container */
+    margin-top: 0;
+    /* Align with flex-start */
+    margin-bottom: 20px;
 }
 
 .analysis-card .card-header {

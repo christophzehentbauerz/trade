@@ -705,6 +705,7 @@ async function showLiveAnalysis() {
     // Display
     document.getElementById('analysisContent').innerHTML = html;
     document.getElementById('analysisCardContainer').style.display = 'block';
+    document.body.style.overflow = 'hidden'; // Lock body scroll
 
     // Scroll to analysis
     document.getElementById('analysisCardContainer').scrollIntoView({

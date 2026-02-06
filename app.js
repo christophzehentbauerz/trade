@@ -1335,6 +1335,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (closeAnalysisBtn) {
         closeAnalysisBtn.addEventListener('click', () => {
             document.getElementById('analysisCardContainer').style.display = 'none';
+            document.body.style.overflow = ''; // Unlock body scroll
         });
     }
 
