@@ -572,3 +572,69 @@
         font-size: 0.9rem;
     }
 }
+
+/* =====================================================
+   Volume Analysis Section
+   ===================================================== */
+
+.volume-analysis-section {
+    margin-top: 20px;
+    padding: 20px;
+    background: rgba(99, 102, 241, 0.05);
+    border: 1px solid rgba(99, 102, 241, 0.1);
+    border-radius: var(--radius-md);
+}
+
+.volume-analysis-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 12px;
+}
+
+.volume-analysis-item {
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    text-align: center;
+}
+
+.volume-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.volume-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin: 6px 0;
+}
+
+.volume-status {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.divergence-warning {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: rgba(239, 68, 68, 0.1);
+    border-left: 3px solid var(--bearish);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+}
+
+.divergence-warning .alert-icon {
+    font-size: 1.2rem;
+}
+
+.divergence-warning .alert-text {
+    color: var(--text-primary);
+}
