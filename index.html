@@ -576,6 +576,21 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="indicator" id="volumeIndicator">
+                        <div class="indicator-header">
+                            <span class="indicator-name"
+                                title="On-Balance Volume (Trend) und Relative Volume (Intensität)">Volume Flow</span>
+                            <span class="indicator-value" id="volumeDashValue">--</span>
+                        </div>
+                        <div class="indicator-explanation">
+                            OBV Trend bestätigt Richtung<br>
+                            RVOL > 1.5 = Hohes Interesse
+                        </div>
+                        <div class="trend-visual" id="volumeDashVisual">
+                            <div class="trend-arrow"></div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -1135,8 +1150,8 @@
                             </div>
                             <span class="score-value" id="sentimentScore">--/10</span>
                         </div>
-                        <div class="score-item" title="Gewichtung: 20% - ATH-Distanz, Makro-Trends">
-                            <span class="score-name">Makro</span>
+                        <div class="score-item" title="Gewichtung: 20% - Volumen, OBV, ATH-Distanz">
+                            <span class="score-name">Volume & Makro</span>
                             <div class="score-bar">
                                 <div class="score-fill" id="macroScoreFill"></div>
                             </div>

@@ -545,13 +545,37 @@ function calculateScores() {
 
     state.scores.onchain = Math.max(0, Math.min(10, onchainScore));
 
-    // Macro Score (simplified)
+    // Macro & Volume Score
+    // Replaces pure Macro. Includes OBV, RVOL and ATH distance.
     let macroScore = 5;
 
-    // Price relative to ATH
+    // Price relative to ATH (Macro Context)
     if (state.athChange > -15) macroScore += 1;
     else if (state.athChange < -50) macroScore -= 1.5;
     else if (state.athChange < -30) macroScore -= 0.5;
+
+    // Volume Analysis (if available)
+    if (window.historicalData && window.historicalData.total_volumes && typeof calculateOBV === 'function') {
+        const volumes = window.historicalData.total_volumes.map(v => v[1]);
+        const obvPrices = state.priceHistory.slice(-30);
+        const obvVols = volumes.slice(-30);
+
+        const obvResult = calculateOBV(obvPrices, obvVols);
+
+        // OBV Trend Impact
+        if (obvResult.trend === 'up') macroScore += 1.5;
+        else if (obvResult.trend === 'down') macroScore -= 1.5;
+
+        // RVOL Impact (Intensity)
+        const currentVol = state.volume24h;
+        const rvolResult = calculateRVOL(currentVol, volumes);
+
+        if (rvolResult.value > 1.5) {
+            // High volume validates the move
+            if (state.priceChange24h > 0) macroScore += 1;
+            else macroScore -= 1;
+        }
+    }
 
     state.scores.macro = Math.max(0, Math.min(10, macroScore));
 
@@ -708,6 +732,38 @@ function updateTechnicalCard() {
     // Volatility
     document.getElementById('volatilityValue').textContent = `${formatNumber(volatility, 1)}%`;
     document.getElementById('volatilityBar').style.width = `${Math.min(100, volatility * 20)}%`;
+
+    // Volume Flow (New)
+    const volValueEl = document.getElementById('volumeDashValue');
+    const volVisualEl = document.getElementById('volumeDashVisual');
+
+    if (window.historicalData && window.historicalData.total_volumes) {
+        // Ensure we have volumes
+        const volumes = window.historicalData.total_volumes.map(v => v[1]);
+        const currentVol = state.volume24h;
+
+        // Check if functions exist (safe guard)
+        if (typeof calculateOBV === 'function' && typeof calculateRVOL === 'function') {
+            // Calculate metrics
+            // Use last 30 periods for OBV to match modal
+            const obvPrices = state.priceHistory.slice(-30);
+            const obvVols = volumes.slice(-30);
+            const obvResult = calculateOBV(obvPrices, obvVols);
+
+            const rvolResult = calculateRVOL(currentVol, volumes);
+
+            // Text
+            let trendText = obvResult.trend === 'up' ? 'BULLISH' : obvResult.trend === 'down' ? 'BEARISH' : 'NEUTRAL';
+            volValueEl.textContent = `${trendText} (RVOL ${rvolResult.value.toFixed(1)})`;
+            volValueEl.className = `indicator-value ${obvResult.trend === 'up' ? 'text-bullish' : obvResult.trend === 'down' ? 'text-bearish' : 'text-neutral'}`;
+
+            // Visual Arrow
+            const arrow = volVisualEl.querySelector('.trend-arrow');
+            if (arrow) {
+                arrow.className = 'trend-arrow ' + (obvResult.trend === 'up' ? 'up' : obvResult.trend === 'down' ? 'down' : 'sideways');
+            }
+        }
+    }
 
     // Badge
     const badge = document.getElementById('technicalBadge');

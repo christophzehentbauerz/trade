@@ -365,9 +365,26 @@ function calculateLiveConfluenceScore(price, rsi, trend, fearGreed, ath, sr, vol
     else if (direction === 'SHORT' && fearGreed > 65) scores.marketStructure = 2;
     else if (direction === 'SHORT' && fearGreed > 50) scores.marketStructure = 1;
 
-    // 5. Macro (0-2)
-    if (volatility > 2 && volatility < 5) scores.macro = 2;
-    else if (volatility > 1.5 && volatility < 6) scores.macro = 1;
+    // 5. Volume & Macro (0-2)
+    // Replaced pure volatility macro with Volume/OBV/RVOL which is more actionable
+    // If OBV trend matches direction OR RVOL is high/extreme -> +1 point each
+    const volAnalysis = window.lastAnalysisData?.volumeAnalysis;
+
+    if (volAnalysis) {
+        // Point 1: RVOL confirmation (High volume interests)
+        if (volAnalysis.rvol.status === 'high' || volAnalysis.rvol.status === 'extreme') {
+            scores.macro = 1;
+        }
+
+        // Point 2: OBV Trend confirmation
+        if (direction === 'LONG' && volAnalysis.obv.trend === 'up') scores.macro += 1;
+        else if (direction === 'SHORT' && volAnalysis.obv.trend === 'down') scores.macro += 1;
+
+    } else {
+        // Fallback to Volatility if no volume data
+        if (volatility > 2 && volatility < 5) scores.macro = 2;
+        else if (volatility > 1.5 && volatility < 6) scores.macro = 1;
+    }
 
     const total = Object.values(scores).reduce((a, b) => a + b, 0);
 
@@ -662,7 +679,7 @@ async function showLiveAnalysis() {
                         <span class="breakdown-value">${breakdown.marketStructure || 0}/2</span>
                     </div>
                     <div class="breakdown-item">
-                        <span class="breakdown-label">Macro</span>
+                        <span class="breakdown-label">Volume</span>
                         <span class="breakdown-value">${breakdown.macro || 0}/2</span>
                     </div>
                 </div>
