@@ -47,6 +47,13 @@ const Backtester = {
             }
 
             this.cachedHistoricalData = dailyData;
+
+            // Store globally for live-analysis Volume Analysis
+            window.historicalData = {
+                prices: priceData.prices,
+                total_volumes: priceData.total_volumes
+            };
+
             console.log(`✅ Loaded ${dailyData.length} days of historical data`);
             return dailyData;
 

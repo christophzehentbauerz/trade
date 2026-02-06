@@ -9,14 +9,19 @@
     right: 0;
     bottom: 0;
     z-index: 1000;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.85);
     display: flex;
-    align-items: center;
+    align-items: flex-start;
+    /* Changed from center to flex-start */
     justify-content: center;
     padding: 20px;
+    padding-top: 40px;
+    /* Extra top padding for better visibility */
+    padding-bottom: 40px;
+    /* Extra bottom padding */
     overflow-y: auto;
-    /* Enable scroll */
-    animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Scroll the entire overlay */
+    animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes slideIn {
@@ -34,16 +39,15 @@
 .analysis-card {
     background: var(--bg-card);
     border: 1px solid var(--accent-primary);
-    box-shadow: 0 0 20px rgba(79, 70, 229, 0.1);
+    box-shadow: 0 0 30px rgba(79, 70, 229, 0.2);
     position: relative;
     border-radius: var(--radius-lg);
-    max-width: 95%;
-    width: 1200px;
-    max-height: 95vh;
-    /* Limit height */
-    overflow-y: auto;
-    /* Scroll inside card if needed */
-    margin: auto;
+    width: 100%;
+    max-width: 900px;
+    /* Reduced from 1200px for better fit */
+    margin: 0 auto;
+    /* Center horizontally */
+    /* Remove max-height and overflow-y - let container handle scrolling */
 }
 
 .analysis-card .card-header {
@@ -453,6 +457,27 @@
    ===================================================== */
 
 @media (max-width: 768px) {
+    .analysis-card-container {
+        padding: 10px;
+        padding-top: 20px;
+        padding-bottom: 20px;
+    }
+
+    .analysis-card {
+        max-width: 100%;
+    }
+
+    .analysis-card .card-header {
+        padding: 16px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .analysis-card .card-body {
+        padding: 16px;
+    }
+
     .analysis-header {
         flex-direction: column;
         gap: 8px;
@@ -541,6 +566,29 @@
 
     .sm-analysis-values {
         font-size: 0.8rem;
+    }
+
+    /* Volume Analysis Mobile */
+    .volume-analysis-section {
+        padding: 14px;
+    }
+
+    .volume-analysis-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .volume-analysis-item {
+        padding: 10px;
+    }
+
+    .volume-value {
+        font-size: 1.1rem;
+    }
+
+    .divergence-warning {
+        font-size: 0.85rem;
+        padding: 8px 12px;
     }
 
     .analysis-disclaimer {
