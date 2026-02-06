@@ -2,27 +2,39 @@ name: BTC Signal Check
 
 on:
   schedule:
-    # Runs every 5 minutes
+    # Signal Check alle 5 Minuten
     - cron: '*/5 * * * *'
+    # Daily Update um 06:00 CET (= 05:00 UTC)
+    - cron: '0 5 * * *'
   workflow_dispatch: # Allows manual trigger
 
 jobs:
   check-signals:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      
-      - name: Run bot
+
+      - name: Signal Check
+        if: github.event.schedule != '0 5 * * *'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           cd telegram-bot
-          node bot.js
+          node bot.js check
+
+      - name: Daily Update
+        if: github.event.schedule == '0 5 * * *'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          cd telegram-bot
+          node bot.js daily

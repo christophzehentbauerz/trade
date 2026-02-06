@@ -3,7 +3,7 @@
 Der Bot benachrichtigt dich auf Telegram wenn:
 - 🟢 **LONG Signal** → Alle 3 Bedingungen erfüllt (Golden Cross + HTF Filter + RSI Zone)
 - 🔴 **EXIT Signal** → Death Cross (EMA 15 unter EMA 300)
-- 📊 **Daily Update** → Täglicher Marktbericht um 08:00
+- 📊 **Daily Update** → Täglicher Marktbericht um 06:00
 
 ## 1. Bot erstellen
 
@@ -49,8 +49,8 @@ Füge hinzu:
 # Signal Check alle 5 Minuten
 */5 * * * * TELEGRAM_BOT_TOKEN="xxx" TELEGRAM_CHAT_ID="xxx" /usr/bin/node /pfad/zu/telegram-bot/bot.js check
 
-# Daily Update um 08:00
-0 8 * * * TELEGRAM_BOT_TOKEN="xxx" TELEGRAM_CHAT_ID="xxx" /usr/bin/node /pfad/zu/telegram-bot/bot.js daily
+# Daily Update um 06:00
+0 6 * * * TELEGRAM_BOT_TOKEN="xxx" TELEGRAM_CHAT_ID="xxx" /usr/bin/node /pfad/zu/telegram-bot/bot.js daily
 ```
 
 ## 6. Cloud Deployment (Optional)
@@ -69,7 +69,7 @@ name: BTC Smart Money Bot
 on:
   schedule:
     - cron: '*/5 * * * *'  # Alle 5 Minuten
-    - cron: '0 7 * * *'    # Daily um 08:00 (UTC+1)
+    - cron: '0 5 * * *'    # Daily um 06:00 (UTC+1)
   workflow_dispatch:
 
 jobs:
@@ -81,13 +81,13 @@ jobs:
         with:
           node-version: '20'
       - name: Check Signal
-        if: github.event.schedule != '0 7 * * *'
+        if: github.event.schedule != '0 5 * * *'
         run: node telegram-bot/bot.js check
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       - name: Daily Update
-        if: github.event.schedule == '0 7 * * *'
+        if: github.event.schedule == '0 5 * * *'
         run: node telegram-bot/bot.js daily
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
