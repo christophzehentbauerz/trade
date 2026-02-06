@@ -2,6 +2,72 @@
 // Live Trading Analysis
 // =====================================================
 
+// Volume Analysis Functions
+function calculateOBV(prices, volumes) {
+    if (!prices || !volumes || prices.length === 0) return { current: 0, trend: 'neutral', values: [0] };
+
+    let obv = 0;
+    const obvData = [0];
+
+    for (let i = 1; i < Math.min(prices.length, volumes.length); i++) {
+        if (prices[i] > prices[i - 1]) {
+            obv += volumes[i]; // Price up = add volume
+        } else if (prices[i] < prices[i - 1]) {
+            obv -= volumes[i]; // Price down = subtract volume
+        }
+        obvData.push(obv);
+    }
+
+    // Determine trend (last 10 periods)
+    const recent = obvData.slice(-10);
+    const trend = recent[recent.length - 1] > recent[0] ? 'up' :
+        recent[recent.length - 1] < recent[0] ? 'down' : 'neutral';
+
+    return { current: obv, trend, values: obvData };
+}
+
+function calculateRVOL(currentVolume, historicalVolumes) {
+    if (!currentVolume || !historicalVolumes || historicalVolumes.length < 20) {
+        return { ratio: 1.0, status: 'normal' };
+    }
+
+    const avg = historicalVolumes.slice(-20).reduce((a, b) => a + b, 0) / 20;
+    const ratio = currentVolume / avg;
+
+    let status = 'normal';
+    if (ratio < 0.8) status = 'low';
+    else if (ratio > 1.5 && ratio < 2.5) status = 'high';
+    else if (ratio >= 2.5) status = 'extreme';
+
+    return { ratio, status };
+}
+
+function detectOBVDivergence(prices, obvData) {
+    if (!prices || !obvData || prices.length < 10 || obvData.length < 10) {
+        return { divergence: false, type: 'none' };
+    }
+
+    const recentPrices = prices.slice(-10);
+    const recentOBV = obvData.slice(-10);
+
+    const priceTrend = recentPrices[9] > recentPrices[0] ? 'up' :
+        recentPrices[9] < recentPrices[0] ? 'down' : 'neutral';
+    const obvTrend = recentOBV[9] > recentOBV[0] ? 'up' :
+        recentOBV[9] < recentOBV[0] ? 'down' : 'neutral';
+
+    // Bearish divergence: Price up, OBV down
+    if (priceTrend === 'up' && obvTrend === 'down') {
+        return { divergence: true, type: 'bearish' };
+    }
+
+    // Bullish divergence: Price down, OBV up
+    if (priceTrend === 'down' && obvTrend === 'up') {
+        return { divergence: true, type: 'bullish' };
+    }
+
+    return { divergence: false, type: 'none' };
+}
+
 async function generateLiveAnalysis() {
     console.log('🔬 Generiere Live-Analyse...');
 
@@ -23,6 +89,24 @@ async function generateLiveAnalysis() {
     let smartMoneyData = null;
     if (typeof SmartMoneySignal !== 'undefined' && SmartMoneySignal.state.lastUpdate) {
         smartMoneyData = SmartMoneySignal.getState();
+    }
+
+    // VOLUME ANALYSIS - Extract from historicalData if available
+    let volumeAnalysis = null;
+    if (window.historicalData && window.historicalData.total_volumes) {
+        const volumes = window.historicalData.total_volumes.map(v => v[1]);
+        const currentVolume = state.volume24h || volumes[volumes.length - 1];
+
+        const obvResult = calculateOBV(priceWindow, volumes.slice(-30));
+        const rvolResult = calculateRVOL(currentVolume, volumes);
+        const divergence = detectOBVDivergence(priceWindow, obvResult.values);
+
+        volumeAnalysis = {
+            obv: obvResult,
+            rvol: rvolResult,
+            divergence,
+            currentVolume
+        };
     }
 
     // Calculate Confluence Score (same logic as backtester)
@@ -166,7 +250,8 @@ ${reasons.map(r => `- ${r}`).join('\n')}
         stopLoss,
         takeProfit,
         slPercent,
-        tpPercent
+        tpPercent,
+        volumeAnalysis // NEW: Volume analysis data
     };
 
     return output;
@@ -492,7 +577,56 @@ async function showLiveAnalysis() {
         `;
     }
 
-    // Add Score Breakdown
+    // Add Volume Analysis Section (if data available)
+    const volumeAnalysis = window.lastAnalysisData?.volumeAnalysis;
+    if (volumeAnalysis) {
+        const { obv, rvol, divergence } = volumeAnalysis;
+
+        // RVOL status colors
+        const rvolColor = rvol.status === 'low' ? 'var(--bearish)' :
+            rvol.status === 'extreme' ? 'var(--bearish)' :
+                rvol.status === 'high' ? 'var(--bullish)' : 'var(--neutral)';
+
+        const rvolIcon = rvol.status === 'low' ? '🔴' :
+            rvol.status === 'extreme' ? '🔴' :
+                rvol.status === 'high' ? '🟢' : '🟡';
+
+        // OBV trend
+        const obvIcon = obv.trend === 'up' ? '📈' : obv.trend === 'down' ? '📉' : '➡️';
+        const obvColor = obv.trend === 'up' ? 'var(--bullish)' : obv.trend === 'down' ? 'var(--bearish)' : 'var(--neutral)';
+
+        html += `
+            <div class="volume-analysis-section">
+                <div class="breakdown-title">📊 Volume Analysis</div>
+                <div class="volume-analysis-grid">
+                    <div class="volume-analysis-item">
+                        <div class="volume-label">RVOL (Relative Volume)</div>
+                        <div class="volume-value" style="color: ${rvolColor}">
+                            ${rvolIcon} ${rvol.ratio.toFixed(2)}x
+                        </div>
+                        <div class="volume-status">${rvol.status === 'low' ? 'Niedrig' : rvol.status === 'high' ? 'Erhöht' : rvol.status === 'extreme' ? 'Extrem' : 'Normal'}</div>
+                    </div>
+                    <div class="volume-analysis-item">
+                        <div class="volume-label">OBV Trend</div>
+                        <div class="volume-value" style="color: ${obvColor}">
+                            ${obvIcon} ${obv.trend === 'up' ? 'Steigend' : obv.trend === 'down' ? 'Fallend' : 'Neutral'}
+                        </div>
+                    </div>
+                </div>
+                ${divergence.divergence ? `
+                    <div class="divergence-warning">
+                        <span class="alert-icon">⚠️</span>
+                        <span class="alert-text">
+                            ${divergence.type === 'bearish' ? 'Bearish' : 'Bullish'} Divergenz: 
+                            Preis und Volumen laufen auseinander
+                        </span>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    //Add Score Breakdown
     if (window.lastConfluenceScore) {
         const breakdown = window.lastConfluenceScore.breakdown;
         html += `
