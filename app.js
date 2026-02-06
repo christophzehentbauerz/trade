@@ -40,6 +40,7 @@ let state = {
     openInterest: null,
     longShortRatio: { long: 50, short: 50 },
     priceHistory: [],
+    volumeHistory: [],
     scores: {
         technical: 5,
         onchain: 5,
@@ -327,6 +328,13 @@ async function fetchPriceHistory() {
         );
 
         state.priceHistory = data.prices.map(p => p[1]);
+
+        // Store full historical data for advanced analysis (Volume, OBV, etc.)
+        window.historicalData = data;
+        if (data.total_volumes) {
+            state.volumeHistory = data.total_volumes.map(v => v[1]);
+        }
+
         return true;
     } catch (error) {
         console.error('Error fetching price history:', error);
