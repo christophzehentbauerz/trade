@@ -647,29 +647,60 @@ async function calculateSpotStrategy() {
 
         buyScore = Math.max(0, Math.min(100, buyScore));
 
-        // ═══ SELL SCORE ═══
+        // ═══ SELL SCORE v3 (with bull market dampener) ═══
+        const sma50val = closes.slice(-50).reduce((a, b) => a + b, 0) / 50;
         let sellScore = 0;
-        if (smaRatio > 1.5) sellScore += 30;
-        else if (smaRatio > 1.3) sellScore += 15;
-        if (rsi14 > 80) sellScore += 25;
-        else if (rsi14 > 70) sellScore += 15;
-        if (fearGreed > 80) sellScore += 20;
-        else if (fearGreed > 70) sellScore += 10;
-        if (rsiWeekly > 80) sellScore += 15;
-        else if (rsiWeekly > 70) sellScore += 10;
-        if (athDown < 5) sellScore += 10;
+
+        // 1. SMA200 Extension (Max 25)
+        if (smaRatio > 2.0) sellScore += 25;
+        else if (smaRatio > 1.6) sellScore += 20;
+        else if (smaRatio > 1.4) sellScore += 12;
+        else if (smaRatio > 1.3) sellScore += 5;
+
+        // 2. Daily RSI (Max 20) - stricter
+        if (rsi14 > 85) sellScore += 20;
+        else if (rsi14 > 78) sellScore += 12;
+        else if (rsi14 > 72) sellScore += 5;
+
+        // 3. Weekly RSI (Max 20)
+        if (rsiWeekly > 85) sellScore += 20;
+        else if (rsiWeekly > 78) sellScore += 12;
+        else if (rsiWeekly > 72) sellScore += 5;
+
+        // 4. Near ATH (Max 10)
+        if (athDown < 3) sellScore += 10;
+        else if (athDown < 8) sellScore += 5;
+
+        // 5. Parabolic Extension (Max 15)
+        const sma50ratio = currentPrice / sma50val;
+        if (sma50ratio > 1.3) sellScore += 15;
+        else if (sma50ratio > 1.2) sellScore += 8;
+        else if (sma50ratio > 1.15) sellScore += 3;
+
+        // 6. Bull Market Age Dampener
+        let daysAbove = 0;
+        for (let j = closes.length - 1; j >= Math.max(0, closes.length - 365); j--) {
+            const s200 = closes.slice(Math.max(0, j - 199), j + 1);
+            if (s200.length >= 200 && closes[j] > s200.reduce((a, b) => a + b, 0) / s200.length) daysAbove++;
+            else break;
+        }
+        if (daysAbove < 30) sellScore = Math.round(sellScore * 0.3);
+        else if (daysAbove < 60) sellScore = Math.round(sellScore * 0.5);
+        else if (daysAbove < 120) sellScore = Math.round(sellScore * 0.7);
+
         sellScore = Math.max(0, Math.min(100, sellScore));
 
-        // Zone
+        // Zone (tiered warnings)
         let zone, signal;
-        if (sellScore >= 60) { zone = '🔴 EUPHORIA'; signal = 'SELL SOME'; }
-        else if (sellScore >= 35) { zone = '⚠️ EXPENSIVE'; signal = 'WAIT'; }
+        if (sellScore >= 60) { zone = '🚨 EUPHORIA'; signal = 'SELL'; }
+        else if (sellScore >= 45) { zone = '🔴 ÜBERHITZT'; signal = 'SELL SOME'; }
+        else if (sellScore >= 30) { zone = '⚠️ WARM'; signal = 'CAUTION'; }
         else if (buyScore >= 75) { zone = '🔥 FIRE SALE'; signal = 'BUY HEAVY'; }
         else if (buyScore >= 50) { zone = '🟢 ACCUMULATION'; signal = 'BUY DCA'; }
         else if (buyScore >= 25) { zone = '⚖️ FAIR VALUE'; signal = 'HOLD'; }
         else { zone = '⚠️ EXPENSIVE'; signal = 'WAIT'; }
 
-        return { buyScore, sellScore, zone, signal, sma200, rsi14, rsiWeekly, athDown, ath };
+        return { buyScore, sellScore, zone, signal, sma200, rsi14, rsiWeekly, athDown, ath, daysAbove };
     } catch (e) {
         console.error('Spot Calc Error:', e);
         return null;

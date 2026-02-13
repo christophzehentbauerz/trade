@@ -1,19 +1,17 @@
 /**
- * Smart Accumulator v2 - Long Term Spot Strategy
+ * Smart Accumulator v3 - Long Term Spot Strategy
  * 
- * Improved Logic:
- * 1. Price vs SMA 200 (Daily): 35pts max - Buy below/near SMA, Sell signal above 1.5x
- * 2. RSI (Daily 14): 25pts max - Realistic thresholds for BTC daily
- * 3. Fear & Greed Index: 20pts max - Contrarian sentiment
- * 4. ATH Discount: 10pts max - Uses full candle history (1000 days)
- * 5. Weekly RSI (Momentum): 10pts max - Additional confirmation
+ * Buy Logic (unchanged, 76% accuracy over 8 years):
+ * 1. Price vs SMA 200 (Daily): 35pts max
+ * 2. RSI (Daily 14): 25pts max
+ * 3. Fear & Greed Index: 20pts max - Contrarian
+ * 4. ATH Discount: 10pts max
+ * 5. Weekly RSI (Momentum): 10pts max
  * 
- * Zones:
- *   🔥 FIRE SALE (75+): Aggressive Buy - All indicators aligned
- *   🟢 ACCUMULATION (50-74): Good DCA zone
- *   ⚖️ FAIR VALUE (25-49): Hold / Small DCA only
- *   ⚠️ EXPENSIVE (10-24): Take profits, no buying
- *   🔴 EUPHORIA (0-9): Sell some, extreme overheating
+ * Sell Logic v3 (improved, with bull market dampener):
+ * - Stricter RSI thresholds (85/78/72 instead of 80/70)
+ * - SMA50 parabolic extension check
+ * - Bull market age dampener (young bull = lower sell score)
  * 
  * DCA Cooldown: Recommends max 1 buy per 7 days
  */
@@ -35,12 +33,14 @@ const SpotStrategy = {
         athDown: 0,
         score: 0,
         sellScore: 0,
+        sellWarning: '',
+        daysAboveSMA: 0,
         signal: 'LOADING',
         zone: 'LOADING',
         action: '',
         lastUpdate: null,
-        lastBuyDate: null,  // DCA cooldown tracking
-        // Sub-scores for transparency
+        lastBuyDate: null,
+        _closes: [],  // stored for bull-age calculation
         scores: {
             sma: 0,
             rsi: 0,
@@ -76,6 +76,7 @@ const SpotStrategy = {
 
             // 3. Calculate Indicators
             const closes = candles.map(c => c.close);
+            this.state._closes = closes;
             this.state.price = closes[closes.length - 1];
             this.state.sma200 = this.calculateSMA(closes, 200);
             this.state.sma50 = this.calculateSMA(closes, 50);
@@ -92,6 +93,15 @@ const SpotStrategy = {
             const allHighs = candles.map(c => c.high);
             this.state.athPrice = Math.max(...allHighs);
             this.state.athDown = ((this.state.athPrice - this.state.price) / this.state.athPrice) * 100;
+
+            // Bull Market Age: how many consecutive days above SMA200
+            let daysAbove = 0;
+            for (let j = closes.length - 1; j >= Math.max(0, closes.length - 365); j--) {
+                const s200 = this.calculateSMA(closes.slice(0, j + 1), 200);
+                if (s200 > 0 && closes[j] > s200) daysAbove++;
+                else break;
+            }
+            this.state.daysAboveSMA = daysAbove;
 
             // 4. Evaluate
             this.evaluateSignal();
@@ -226,27 +236,58 @@ const SpotStrategy = {
         s.scores.momentum = Math.max(0, buyScore - prevBuy4);
 
         // ═══════════════════════════════════════════
-        // SELL SCORING (separate, 0-100)
+        // SELL SCORING v3 (with bull market dampener)
         // ═══════════════════════════════════════════
-        if (smaRatio > 1.5) sellScore += 30;
-        else if (smaRatio > 1.3) sellScore += 15;
 
-        if (s.rsiDaily > 80) sellScore += 25;
-        else if (s.rsiDaily > 70) sellScore += 15;
+        // 1. SMA200 Extension (Max 25) - How stretched above SMA?
+        if (smaRatio > 2.0) sellScore += 25;
+        else if (smaRatio > 1.6) sellScore += 20;
+        else if (smaRatio > 1.4) sellScore += 12;
+        else if (smaRatio > 1.3) sellScore += 5;
 
-        if (s.fearGreed > 80) sellScore += 20;
-        else if (s.fearGreed > 70) sellScore += 10;
+        // 2. Daily RSI (Max 20) - stricter thresholds
+        if (s.rsiDaily > 85) sellScore += 20;
+        else if (s.rsiDaily > 78) sellScore += 12;
+        else if (s.rsiDaily > 72) sellScore += 5;
 
-        if (s.rsiWeekly > 80) sellScore += 15;
-        else if (s.rsiWeekly > 70) sellScore += 10;
+        // 3. Weekly RSI (Max 20) - most reliable overbought signal
+        if (s.rsiWeekly > 85) sellScore += 20;
+        else if (s.rsiWeekly > 78) sellScore += 12;
+        else if (s.rsiWeekly > 72) sellScore += 5;
 
-        if (s.athDown < 5) sellScore += 10;  // Near ATH
+        // 4. Near ATH (Max 10)
+        if (s.athDown < 3) sellScore += 10;
+        else if (s.athDown < 8) sellScore += 5;
+
+        // 5. Parabolic Extension (Max 15) - price way above SMA50
+        const sma50ratio = s.price / s.sma50;
+        if (sma50ratio > 1.3) sellScore += 15;
+        else if (sma50ratio > 1.2) sellScore += 8;
+        else if (sma50ratio > 1.15) sellScore += 3;
+
+        // 6. DAMPENER: Bull Market Age
+        // Young bull market → dampen sell score (don't sell too early!)
+        if (s.daysAboveSMA < 30) sellScore = Math.round(sellScore * 0.3);
+        else if (s.daysAboveSMA < 60) sellScore = Math.round(sellScore * 0.5);
+        else if (s.daysAboveSMA < 120) sellScore = Math.round(sellScore * 0.7);
+        // Mature bull (120+ days) → no dampening
 
         // ═══════════════════════════════════════════
         // FINAL SCORING
         // ═══════════════════════════════════════════
         s.score = Math.max(0, Math.min(100, buyScore));
         s.sellScore = Math.max(0, Math.min(100, sellScore));
+
+        // Sell Warning Tier
+        if (s.sellScore >= 60) {
+            s.sellWarning = '🚨 Stark überhitzt! Gewinne sichern (20-30%)';
+        } else if (s.sellScore >= 45) {
+            s.sellWarning = '🔴 Teilverkauf empfohlen (10-20%)';
+        } else if (s.sellScore >= 30) {
+            s.sellWarning = '⚠️ Vorsicht – evtl. Position etwas reduzieren';
+        } else {
+            s.sellWarning = '';
+        }
 
         // DCA Cooldown Check
         let cooldownActive = false;
@@ -257,13 +298,17 @@ const SpotStrategy = {
 
         // Determine Zone & Signal
         if (s.sellScore >= 60) {
-            s.zone = '🔴 EUPHORIA';
+            s.zone = '🚨 EUPHORIA';
+            s.signal = 'SELL';
+            s.action = 'Markt ist parabolisch überhitzt. Gewinne sichern! Verkaufe 20-30%.';
+        } else if (s.sellScore >= 45) {
+            s.zone = '🔴 ÜBERHITZT';
             s.signal = 'SELL SOME';
-            s.action = 'Markt ist überhitzt. Gewinne mitnehmen! Verkaufe 10-25% deiner Position.';
-        } else if (s.sellScore >= 35) {
-            s.zone = '⚠️ EXPENSIVE';
-            s.signal = 'WAIT';
-            s.action = 'Zu teuer zum Kaufen. Abwarten und Gewinne laufen lassen.';
+            s.action = 'Mehrere Indikatoren überhitzt. Teilverkauf empfohlen (10-20%).';
+        } else if (s.sellScore >= 30) {
+            s.zone = '⚠️ WARM';
+            s.signal = 'CAUTION';
+            s.action = 'Markt wird teuer. Keine Käufe, evtl. Position leicht reduzieren.';
         } else if (s.score >= 75) {
             s.zone = '🔥 FIRE SALE';
             s.signal = cooldownActive ? 'COOLDOWN' : 'BUY HEAVY';
@@ -297,8 +342,8 @@ const SpotStrategy = {
         signalEl.textContent = s.signal;
         let statusClass = 'neutral';
         if (s.signal.includes('BUY')) statusClass = 'long';
-        else if (s.signal === 'SELL SOME') statusClass = 'short';
-        else if (s.signal === 'COOLDOWN') statusClass = 'neutral';
+        else if (s.signal === 'SELL' || s.signal === 'SELL SOME') statusClass = 'short';
+        else if (s.signal === 'CAUTION') statusClass = 'neutral';
         signalEl.className = `sm-signal sm-signal-${statusClass}`;
 
         // Zone & Score
@@ -307,15 +352,19 @@ const SpotStrategy = {
         if (zoneEl) zoneEl.textContent = s.zone;
         if (scoreEl) scoreEl.textContent = `${Math.round(s.score)}/100`;
 
-        // Action Recommendation
+        // Action Recommendation (include sell warning if active)
         const actionEl = document.getElementById('spotAction');
-        if (actionEl) actionEl.textContent = s.action;
+        if (actionEl) {
+            let actionText = s.action;
+            if (s.sellWarning) actionText = s.sellWarning + '\n' + actionText;
+            actionEl.textContent = actionText;
+        }
 
         // Sell Score
         const sellEl = document.getElementById('spotSellScore');
         if (sellEl) {
             sellEl.textContent = `${Math.round(s.sellScore)}/100`;
-            sellEl.className = s.sellScore >= 60 ? 'text-bearish' : s.sellScore >= 35 ? 'text-warning' : 'text-bullish';
+            sellEl.className = s.sellScore >= 60 ? 'text-bearish' : s.sellScore >= 45 ? 'text-bearish' : s.sellScore >= 30 ? 'text-warning' : 'text-bullish';
         }
 
         // Price info
