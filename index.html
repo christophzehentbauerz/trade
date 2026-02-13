@@ -597,42 +597,43 @@
                             <div class="condition-status metric-value">--</div>
                             <div class="condition-progress metric-sub">--</div>
                             <div class="condition-explanation">Best buying opportunity when Price < SMA 200</div>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- RSI Daily -->
-                    <div class="condition-item" id="metric-rsi">
-                        <span class="condition-icon">📊</span>
-                        <div class="condition-content">
-                            <div class="condition-name">RSI (Daily)</div>
-                            <div class="condition-status metric-value">--</div>
-                            <div class="condition-progress metric-sub">--</div>
-                            <div class="condition-explanation">Oversold (< 40) signals accumulation zone</div>
-                        </div>
-                    </div>
+                        <!-- RSI Daily -->
+                        <div class="condition-item" id="metric-rsi">
+                            <span class="condition-icon">📊</span>
+                            <div class="condition-content">
+                                <div class="condition-name">RSI (Daily)</div>
+                                <div class="condition-status metric-value">--</div>
+                                <div class="condition-progress metric-sub">--</div>
+                                <div class="condition-explanation">Oversold (< 40) signals accumulation zone</div>
+                                </div>
+                            </div>
 
-                    <!-- Discount -->
-                    <div class="condition-item" id="metric-discount">
-                        <span class="condition-icon">🏷️</span>
-                        <div class="condition-content">
-                            <div class="condition-name">Discount from Top</div>
-                            <div class="condition-status metric-value">--</div>
-                            <div class="condition-progress metric-sub">--</div>
-                            <div class="condition-explanation">Larger drawdown = Better long-term entry</div>
+                            <!-- Discount -->
+                            <div class="condition-item" id="metric-discount">
+                                <span class="condition-icon">🏷️</span>
+                                <div class="condition-content">
+                                    <div class="condition-name">Discount from Top</div>
+                                    <div class="condition-status metric-value">--</div>
+                                    <div class="condition-progress metric-sub">--</div>
+                                    <div class="condition-explanation">Larger drawdown = Better long-term entry</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Strategy Description Box -->
+                        <div class="sm-performance" style="margin-top: 15px;">
+                            <h3>ℹ️ Strategy Logic</h3>
+                            <p style="color: var(--text-secondary); font-size: 0.9em; line-height: 1.5;">
+                                This strategy identifies <strong>long-term accumulation zones</strong> for Bitcoin.
+                                It looks for confluence of macro-technical factors (200-Day SMA), momentum (RSI
+                                Oversold),
+                                and sentiment (Fear & Greed) to spot "Fire Sale" prices.
+                            </p>
                         </div>
                     </div>
-                </div>
-                
-                <!-- Strategy Description Box -->
-                <div class="sm-performance" style="margin-top: 15px;">
-                    <h3>ℹ️ Strategy Logic</h3>
-                    <p style="color: var(--text-secondary); font-size: 0.9em; line-height: 1.5;">
-                        This strategy identifies <strong>long-term accumulation zones</strong> for Bitcoin. 
-                        It looks for confluence of macro-technical factors (200-Day SMA), momentum (RSI Oversold), 
-                        and sentiment (Fear & Greed) to spot "Fire Sale" prices.
-                    </p>
-                </div>
-            </div>
         </section>
     </div>
 
@@ -1163,6 +1164,37 @@
     <script src="app.js"></script>
     <script src="trend-strategy.js"></script>
     <script src="spot-strategy.js"></script>
+
+    <script>
+        function switchStrategy(id) {
+            // Update Tabs
+            document.querySelectorAll('.strategy-tab').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(`tab-btn-${id}`).classList.add('active');
+
+            // Update Content
+            document.querySelectorAll('.strategy-content').forEach(content => {
+                content.classList.remove('active');
+                content.style.display = 'none';
+            });
+
+            const activeContent = document.getElementById(`strategy-content-${id}`);
+            if (activeContent) {
+                activeContent.style.display = 'block';
+                // Trigger reflow for animation
+                void activeContent.offsetWidth;
+                activeContent.classList.add('active');
+            }
+
+            // Save preference
+            localStorage.setItem('btc-strategy-pref', id);
+        }
+
+        // Init Strategy from LocalStorage
+        document.addEventListener('DOMContentLoaded', () => {
+            const saved = localStorage.getItem('btc-strategy-pref') || 'smart-money';
+            switchStrategy(saved);
+        });
+    </script>
 
     <!-- Custom Tooltip Logic -->
     <style>
