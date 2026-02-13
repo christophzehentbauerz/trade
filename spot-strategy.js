@@ -236,8 +236,12 @@ const SpotStrategy = {
 };
 
 // Auto Init
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => SpotStrategy.init());
-} else {
-    SpotStrategy.init();
+try {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => SpotStrategy.init());
+    } else {
+        SpotStrategy.init();
+    }
+} catch (e) {
+    console.error('Spot Strategy Init Error:', e);
 }
