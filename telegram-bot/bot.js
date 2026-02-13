@@ -570,9 +570,12 @@ function formatSignalMessage() {
 
 async function fetchDailyKlines() {
     try {
-        const url = `${CONFIG.apis.binance}/klines?symbol=BTCUSDT&interval=1d&limit=365`;
+        const url = `${CONFIG.apis.binance}/klines?symbol=BTCUSDT&interval=1d&limit=1000`;
         const data = await fetchJSON(url);
-        return data.map(c => parseFloat(c[4])); // Only need close prices
+        return data.map(c => ({
+            close: parseFloat(c[4]),
+            high: parseFloat(c[2])
+        }));
     } catch (error) {
         console.error('Error fetching daily klines:', error.message);
         return [];
@@ -581,9 +584,10 @@ async function fetchDailyKlines() {
 
 async function calculateSpotStrategy() {
     try {
-        const closes = await fetchDailyKlines();
-        if (closes.length < 200) return null;
+        const candles = await fetchDailyKlines();
+        if (candles.length < 200) return null;
 
+        const closes = candles.map(c => c.close);
         const currentPrice = closes[closes.length - 1];
 
         // SMA 200
@@ -592,51 +596,86 @@ async function calculateSpotStrategy() {
         // Daily RSI (14)
         const rsi14 = calculateRSI(closes, 14);
 
-        // ATH (Approx from last 365 days)
-        const ath = Math.max(...closes);
+        // Weekly RSI (approximate)
+        const weeklies = [];
+        for (let i = 6; i < closes.length; i += 7) weeklies.push(closes[i]);
+        const rsiWeekly = weeklies.length > 15 ? calculateRSI(weeklies, 14) : 50;
+
+        // ATH from full history
+        const ath = Math.max(...candles.map(c => c.high));
         const athDown = ((ath - currentPrice) / ath) * 100;
 
-        // F&G
+        // Fear & Greed
         const fearGreed = state.fearGreedIndex || 50;
 
-        // Score Calculation (Same logic as spot-strategy.js)
-        let score = 0;
-
-        // 1. SMA 200 (Max 40)
+        // ═══ BUY SCORE (v2) ═══
+        let buyScore = 0;
         const smaRatio = currentPrice / sma200;
-        if (smaRatio < 1.0) score += 40;
-        else if (smaRatio < 1.1) score += 30;
-        else if (smaRatio < 1.3) score += 15;
-        else if (smaRatio > 1.6) score -= 10;
 
-        // 2. RSI (Max 30)
-        if (rsi14 < 35) score += 30;
-        else if (rsi14 < 45) score += 20;
-        else if (rsi14 < 55) score += 10;
-        else if (rsi14 > 75) score -= 10;
+        // 1. SMA 200 (Max 35)
+        if (smaRatio < 0.85) buyScore += 35;
+        else if (smaRatio < 1.0) buyScore += 30;
+        else if (smaRatio < 1.1) buyScore += 20;
+        else if (smaRatio < 1.3) buyScore += 10;
+        else if (smaRatio >= 1.5) buyScore -= 10;
 
-        // 3. F&G (Max 20)
-        if (fearGreed < 20) score += 20;
-        else if (fearGreed < 40) score += 10;
-        else if (fearGreed > 75) score -= 10;
+        // 2. RSI Daily (Max 25)
+        if (rsi14 < 30) buyScore += 25;
+        else if (rsi14 < 40) buyScore += 20;
+        else if (rsi14 < 50) buyScore += 12;
+        else if (rsi14 < 60) buyScore += 5;
+        else if (rsi14 >= 70) buyScore -= 5;
+
+        // 3. Fear & Greed (Max 20)
+        if (fearGreed < 15) buyScore += 20;
+        else if (fearGreed < 25) buyScore += 15;
+        else if (fearGreed < 40) buyScore += 8;
+        else if (fearGreed < 55) buyScore += 3;
+        else if (fearGreed >= 75) buyScore -= 5;
 
         // 4. ATH Discount (Max 10)
-        if (athDown > 50) score += 10;
-        else if (athDown > 30) score += 5;
+        if (athDown > 60) buyScore += 10;
+        else if (athDown > 40) buyScore += 8;
+        else if (athDown > 25) buyScore += 5;
+        else if (athDown > 15) buyScore += 2;
 
-        score = Math.max(0, Math.min(100, score));
+        // 5. Weekly RSI (Max 10)
+        if (rsiWeekly < 35) buyScore += 10;
+        else if (rsiWeekly < 45) buyScore += 7;
+        else if (rsiWeekly < 55) buyScore += 3;
+        else if (rsiWeekly > 80) buyScore -= 5;
 
-        let zone = 'NEUTRAL ⚖️';
-        if (score >= 75) zone = 'FIRE SALE 🔥';
-        else if (score >= 50) zone = 'ACCUMULATION 🟢';
-        else if (score < 30) zone = 'OVERHEATED ⚠️';
+        buyScore = Math.max(0, Math.min(100, buyScore));
 
-        return { score, zone, sma200, rsi14, athDown };
+        // ═══ SELL SCORE ═══
+        let sellScore = 0;
+        if (smaRatio > 1.5) sellScore += 30;
+        else if (smaRatio > 1.3) sellScore += 15;
+        if (rsi14 > 80) sellScore += 25;
+        else if (rsi14 > 70) sellScore += 15;
+        if (fearGreed > 80) sellScore += 20;
+        else if (fearGreed > 70) sellScore += 10;
+        if (rsiWeekly > 80) sellScore += 15;
+        else if (rsiWeekly > 70) sellScore += 10;
+        if (athDown < 5) sellScore += 10;
+        sellScore = Math.max(0, Math.min(100, sellScore));
+
+        // Zone
+        let zone, signal;
+        if (sellScore >= 60) { zone = '🔴 EUPHORIA'; signal = 'SELL SOME'; }
+        else if (sellScore >= 35) { zone = '⚠️ EXPENSIVE'; signal = 'WAIT'; }
+        else if (buyScore >= 75) { zone = '🔥 FIRE SALE'; signal = 'BUY HEAVY'; }
+        else if (buyScore >= 50) { zone = '🟢 ACCUMULATION'; signal = 'BUY DCA'; }
+        else if (buyScore >= 25) { zone = '⚖️ FAIR VALUE'; signal = 'HOLD'; }
+        else { zone = '⚠️ EXPENSIVE'; signal = 'WAIT'; }
+
+        return { buyScore, sellScore, zone, signal, sma200, rsi14, rsiWeekly, athDown, ath };
     } catch (e) {
         console.error('Spot Calc Error:', e);
         return null;
     }
 }
+
 
 async function formatDailyUpdate(newsItems = []) {
     const s = state;
@@ -690,10 +729,12 @@ async function formatDailyUpdate(newsItems = []) {
 
     // Spot Strategy Section
     if (spot) {
-        message += `🏦 <b>Smart Accumulator (Langfristig):</b>\n`;
-        message += `Zone: <b>${spot.zone}</b> (Score: ${spot.score}/100)\n`;
-        message += `• Price vs SMA200: ${s.currentPrice < spot.sma200 ? '✅ Günstig' : '❌ Teuer'}\n`;
-        message += `• RSI (Daily): ${spot.rsi14.toFixed(1)}\n\n`;
+        message += `🏦 <b>Smart Accumulator (Spot):</b>\n`;
+        message += `Zone: <b>${spot.zone}</b> | Signal: <b>${spot.signal}</b>\n`;
+        message += `Buy Score: ${spot.buyScore}/100 | Sell Score: ${spot.sellScore}/100\n`;
+        message += `• SMA200: $${Math.round(spot.sma200).toLocaleString()} (${s.currentPrice < spot.sma200 ? '✅ Unter SMA' : '❌ Über SMA'})\n`;
+        message += `• RSI Daily: ${spot.rsi14.toFixed(1)} | Weekly: ${spot.rsiWeekly.toFixed(1)}\n`;
+        message += `• ATH Discount: -${spot.athDown.toFixed(1)}%\n\n`;
     }
 
     message += `🔬 <b>Analyse &amp; Bewertung:</b>\n`;

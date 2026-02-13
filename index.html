@@ -556,15 +556,14 @@
                 </div>
             </section>
         </div>
-
-        <!-- Tab Content: Smart Accumulator (New) -->
+        <!-- Tab Content: Smart Accumulator v2 -->
         <div id="strategy-content-spot" class="strategy-content" style="order: -9;">
             <section class="smart-money-signal-section" id="spotStrategySection">
                 <div class="sm-signal-header">
                     <div class="sm-title">
                         <span class="sm-icon">🏦</span>
                         <h2>Smart Accumulator</h2>
-                        <span class="sm-badge">LONG TERM</span>
+                        <span class="sm-badge">SPOT · LONG TERM</span>
                     </div>
                     <div class="sm-update-info">
                         <span class="sm-timeframe">Daily Timeframe</span>
@@ -573,55 +572,136 @@
                         <span id="spotUpdate" class="sm-update-time">--:--</span>
                     </div>
                 </div>
+
                 <div class="sm-signal-body">
+                    <!-- Main Signal -->
                     <div class="sm-main-signal">
                         <div class="sm-signal-label">STRATEGY ZONE</div>
                         <div id="spotSignal" class="sm-signal sm-signal-neutral">LADE...</div>
                         <div class="sm-strength">
-                            Zone: <span id="spotZone">--</span> | Score: <span id="spotScore">0/100</span>
+                            Zone: <span id="spotZone">--</span> | Buy Score: <span id="spotScore">0/100</span> | Sell
+                            Score: <span id="spotSellScore" class="text-bullish">0/100</span>
                         </div>
                     </div>
+
+                    <!-- Action Recommendation -->
+                    <div class="spot-action-box"
+                        style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 15px; margin: 15px 0;">
+                        <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 5px;">� Empfehlung
+                        </div>
+                        <div id="spotAction" style="font-size: 1.05em; color: var(--text-primary); font-weight: 500;">
+                            Lade...</div>
+                    </div>
+
+                    <!-- Indicators -->
                     <div class="sm-conditions">
-                        <h3>📋 Accumulation Factors</h3>
+                        <h3>📋 Indikatoren</h3>
+
+                        <!-- SMA 200 -->
                         <div class="condition-item" id="metric-sma">
                             <span class="condition-icon">📉</span>
                             <div class="condition-content">
                                 <div class="condition-name">Price vs SMA 200 (Daily)</div>
                                 <div class="condition-status metric-value">--</div>
                                 <div class="condition-progress metric-sub">--</div>
-                                <div class="condition-explanation">Best buying opportunity when Price &lt; SMA 200</div>
+                                <div class="condition-explanation">Unter SMA 200 = beste Kaufzone (max 35 Punkte)</div>
                             </div>
                         </div>
+
+                        <!-- RSI Daily -->
                         <div class="condition-item" id="metric-rsi">
                             <span class="condition-icon">📊</span>
                             <div class="condition-content">
-                                <div class="condition-name">RSI (Daily)</div>
+                                <div class="condition-name">RSI (Daily, 14)</div>
                                 <div class="condition-status metric-value">--</div>
                                 <div class="condition-progress metric-sub">--</div>
-                                <div class="condition-explanation">Oversold (&lt; 40) signals accumulation zone</div>
+                                <div class="condition-explanation">Unter 40 = Überverkauft, Kaufzone (max 25 Punkte)
+                                </div>
                             </div>
                         </div>
+
+                        <!-- Discount ATH -->
                         <div class="condition-item" id="metric-discount">
                             <span class="condition-icon">🏷️</span>
                             <div class="condition-content">
-                                <div class="condition-name">Discount from Top</div>
+                                <div class="condition-name">Rabatt vom ATH</div>
                                 <div class="condition-status metric-value">--</div>
                                 <div class="condition-progress metric-sub">--</div>
-                                <div class="condition-explanation">Larger drawdown = Better long-term entry</div>
+                                <div class="condition-explanation">Je größer der Rabatt, desto besser (max 10 Punkte)
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Weekly RSI -->
+                        <div class="condition-item" id="metric-weekly">
+                            <span class="condition-icon">📅</span>
+                            <div class="condition-content">
+                                <div class="condition-name">Weekly RSI (Momentum)</div>
+                                <div class="condition-status metric-value">--</div>
+                                <div class="condition-progress metric-sub">--</div>
+                                <div class="condition-explanation">Wöchentliches Momentum als Bestätigung (max 10
+                                    Punkte)</div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Score Breakdown -->
+                    <div class="sm-trade-levels" style="margin-top: 15px;">
+                        <h3>📊 Score Breakdown (Buy Score)</h3>
+                        <div class="score-breakdown">
+                            <div id="smaScore" class="score-row">
+                                <span class="score-label">SMA 200</span>
+                                <div class="score-bar">
+                                    <div class="score-fill" style="width: 0%"></div>
+                                </div>
+                                <span class="score-value">0/35</span>
+                            </div>
+                            <div id="rsiScore" class="score-row">
+                                <span class="score-label">RSI Daily</span>
+                                <div class="score-bar">
+                                    <div class="score-fill" style="width: 0%"></div>
+                                </div>
+                                <span class="score-value">0/25</span>
+                            </div>
+                            <div id="sentimentScore2" class="score-row">
+                                <span class="score-label">Fear &amp; Greed</span>
+                                <div class="score-bar">
+                                    <div class="score-fill" style="width: 0%"></div>
+                                </div>
+                                <span class="score-value">0/20</span>
+                            </div>
+                            <div id="discountScore" class="score-row">
+                                <span class="score-label">ATH Discount</span>
+                                <div class="score-bar">
+                                    <div class="score-fill" style="width: 0%"></div>
+                                </div>
+                                <span class="score-value">0/10</span>
+                            </div>
+                            <div id="momentumScore" class="score-row">
+                                <span class="score-label">Weekly RSI</span>
+                                <div class="score-bar">
+                                    <div class="score-fill" style="width: 0%"></div>
+                                </div>
+                                <span class="score-value">0/10</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Strategy Info -->
                     <div class="sm-performance" style="margin-top: 15px;">
-                        <h3>ℹ️ Strategy Logic</h3>
-                        <p style="color: var(--text-secondary); font-size: 0.9em; line-height: 1.5;">
-                            This strategy identifies <strong>long-term accumulation zones</strong> for Bitcoin.
-                            It looks for confluence of macro-technical factors (200-Day SMA), momentum (RSI Oversold),
-                            and sentiment (Fear &amp; Greed) to spot "Fire Sale" prices.
+                        <h3>ℹ️ So funktioniert's</h3>
+                        <p style="color: var(--text-secondary); font-size: 0.88em; line-height: 1.6;">
+                            Diese Strategie identifiziert <strong>langfristige Kaufzonen</strong> für Bitcoin.
+                            Der <strong>Buy Score</strong> (0-100) misst wie günstig der aktuelle Preis ist.
+                            Der <strong>Sell Score</strong> warnt bei Überhitzung.
+                            5 Faktoren fließen ein: SMA 200, RSI, Sentiment, ATH-Rabatt und wöchentliches Momentum.
+                            Ein <strong>7-Tage DCA Cooldown</strong> verhindert zu häufige Käufe.
                         </p>
                     </div>
                 </div>
             </section>
         </div>
+
 
         <script>
             function switchStrategy(id) {

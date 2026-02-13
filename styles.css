@@ -22,6 +22,9 @@
     /* Violet */
     --accent-gradient: linear-gradient(135deg, #4f46e5 0%, #0ea5e9 100%);
     --accent-glow: linear-gradient(135deg, rgba(79, 70, 229, 0.15) 0%, rgba(14, 165, 233, 0.15) 100%);
+    --accent-green: #10b981;
+    --accent-blue: #0ea5e9;
+    --accent-yellow: #f59e0b;
 
     /* Signal Colors - High Contrast */
     --bullish: #10b981;
@@ -4227,6 +4230,7 @@ body::after {
         font-size: 2rem;
     }
 }
+
 /* Added by Task: Smart Money Signal Styles */
 .sm-main-signal {
     text-align: center;
@@ -4264,3 +4268,62 @@ body::after {
     font-weight: 600;
 }
 
+/* =====================================================
+   Smart Accumulator v2 - Score Breakdown Styles
+   ===================================================== */
+
+.text-warning {
+    color: #f59e0b !important;
+}
+
+.score-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px 0;
+}
+
+.score-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.score-label {
+    min-width: 100px;
+    font-size: 0.85em;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.score-bar {
+    flex: 1;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.score-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: var(--accent-primary);
+    transition: width 0.6s ease, background 0.4s ease;
+}
+
+.score-value {
+    min-width: 45px;
+    text-align: right;
+    font-size: 0.82em;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.spot-action-box {
+    transition: border-color 0.3s ease;
+}
+
+.spot-action-box:hover {
+    border-color: rgba(255, 255, 255, 0.15) !important;
+}
