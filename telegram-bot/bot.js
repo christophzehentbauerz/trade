@@ -607,19 +607,19 @@ function formatDailyUpdate(newsItems = []) {
 
     score = Math.min(10, Math.max(0, score));
 
-    // Build Message
-    let message = `🌅 *Guten Morgen! Dein BTC Update*\n`;
+    // Build Message (HTML format to match parse_mode)
+    let message = `🌅 <b>Guten Morgen! Dein BTC Update</b>\n`;
     message += `📅 ${dateStr}\n\n`;
 
-    message += `💰 *Marktübersicht:*\n`;
+    message += `💰 <b>Marktübersicht:</b>\n`;
     message += `BTC Preis: $${s.currentPrice?.toLocaleString()} (${s.priceChange24h >= 0 ? '+' : ''}${s.priceChange24h.toFixed(2)}%)\n`;
-    message += `Fear & Greed: ${fgValue} (${fgText})\n`;
+    message += `Fear &amp; Greed: ${fgValue} (${fgText})\n`;
     message += `Score: ${score.toFixed(1)}/10\n\n`;
 
-    message += `🔬 *Analyse & Bewertung:*\n`;
+    message += `🔬 <b>Analyse &amp; Bewertung:</b>\n`;
     message += `"${analysisText}"\n\n`;
 
-    message += `📊 *Die Faktoren heute:*\n`;
+    message += `📊 <b>Die Faktoren heute:</b>\n`;
     message += `• Technik (35%): ${trendScore.toFixed(1)}/10\n`;
     message += `• Momentum (25%): ${(s.rsi / 10).toFixed(1)}/10\n`;
     message += `• Sentiment (20%): ${(fgValue / 10).toFixed(1)}/10\n`;
@@ -632,30 +632,30 @@ function formatDailyUpdate(newsItems = []) {
         const profitPct = ((s.currentPrice - pos.entryPrice) / pos.entryPrice * 100);
         const hoursInTrade = ((Date.now() - new Date(pos.entryTime).getTime()) / (1000 * 60 * 60));
 
-        message += `📍 *Aktive Position:*\n`;
+        message += `📍 <b>Aktive Position:</b>\n`;
         message += `• Entry: $${pos.entryPrice.toLocaleString()} (${hoursInTrade.toFixed(0)}h)\n`;
         message += `• P/L: ${profitPct >= 0 ? '+' : ''}${profitPct.toFixed(2)}%\n`;
         message += `• Trailing Stop: $${pos.trailingStop?.toLocaleString(undefined, { maximumFractionDigits: 0 })}\n`;
         message += `• Tier: ${pos.currentTier || 1}\n\n`;
     }
 
-    message += `🎯 *Tages-Fazit:*\n`;
+    message += `🎯 <b>Tages-Fazit:</b>\n`;
 
     if (s.signal === 'LONG') {
-        message += `🟢 *LONG* - Aufwärtstrend aktiv.\n`;
+        message += `🟢 <b>LONG</b> - Aufwärtstrend aktiv.\n`;
         message += `Gute Bedingungen für Entries. Stop Loss bei $${s.stopLoss?.toFixed(0)} beachten.\n\n`;
     } else if (s.signal === 'EXIT') {
-        message += `🔴 *EXIT* - Gefahrenzone.\n`;
+        message += `🔴 <b>EXIT</b> - Gefahrenzone.\n`;
         message += `Risiko rausnehmen. Death Cross aktiv.\n\n`;
     } else {
-        message += `⚪ *Neutral* - Abwarten.\n`;
+        message += `⚪ <b>Neutral</b> - Abwarten.\n`;
         message += `Keine klare Richtung erkennbar. Kapital schützen und auf besseres Signal warten.\n\n`;
     }
 
     message += `Viel Erfolg heute! ☕\n\n`;
 
     if (newsItems && newsItems.length > 0) {
-        message += `📰 *Crypto News:*\n`;
+        message += `📰 <b>Crypto News:</b>\n`;
         newsItems.forEach(n => {
             message += `• [${n.source}] ${n.title}\n`;
         });
