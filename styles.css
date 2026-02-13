@@ -4227,3 +4227,40 @@ body::after {
         font-size: 2rem;
     }
 }
+/* Added by Task: Smart Money Signal Styles */
+.sm-main-signal {
+    text-align: center;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    margin-bottom: 24px;
+}
+
+.sm-signal {
+    font-size: 2rem;
+    font-weight: 800;
+    margin: 10px 0;
+    letter-spacing: -0.02em;
+}
+
+.sm-signal-neutral {
+    color: var(--text-secondary);
+}
+
+.sm-signal-long {
+    color: var(--bullish);
+    text-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+}
+
+.sm-signal-short {
+    color: var(--bearish);
+    text-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+}
+
+.sm-strength {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+

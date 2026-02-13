@@ -567,7 +567,78 @@ function formatSignalMessage() {
     return message;
 }
 
-function formatDailyUpdate(newsItems = []) {
+
+async function fetchDailyKlines() {
+    try {
+        const url = `${CONFIG.apis.binance}/klines?symbol=BTCUSDT&interval=1d&limit=365`;
+        const data = await fetchJSON(url);
+        return data.map(c => parseFloat(c[4])); // Only need close prices
+    } catch (error) {
+        console.error('Error fetching daily klines:', error.message);
+        return [];
+    }
+}
+
+async function calculateSpotStrategy() {
+    try {
+        const closes = await fetchDailyKlines();
+        if (closes.length < 200) return null;
+
+        const currentPrice = closes[closes.length - 1];
+
+        // SMA 200
+        const sma200 = closes.slice(closes.length - 200).reduce((a, b) => a + b, 0) / 200;
+
+        // Daily RSI (14)
+        const rsi14 = calculateRSI(closes, 14);
+
+        // ATH (Approx from last 365 days)
+        const ath = Math.max(...closes);
+        const athDown = ((ath - currentPrice) / ath) * 100;
+
+        // F&G
+        const fearGreed = state.fearGreedIndex || 50;
+
+        // Score Calculation (Same logic as spot-strategy.js)
+        let score = 0;
+
+        // 1. SMA 200 (Max 40)
+        const smaRatio = currentPrice / sma200;
+        if (smaRatio < 1.0) score += 40;
+        else if (smaRatio < 1.1) score += 30;
+        else if (smaRatio < 1.3) score += 15;
+        else if (smaRatio > 1.6) score -= 10;
+
+        // 2. RSI (Max 30)
+        if (rsi14 < 35) score += 30;
+        else if (rsi14 < 45) score += 20;
+        else if (rsi14 < 55) score += 10;
+        else if (rsi14 > 75) score -= 10;
+
+        // 3. F&G (Max 20)
+        if (fearGreed < 20) score += 20;
+        else if (fearGreed < 40) score += 10;
+        else if (fearGreed > 75) score -= 10;
+
+        // 4. ATH Discount (Max 10)
+        if (athDown > 50) score += 10;
+        else if (athDown > 30) score += 5;
+
+        score = Math.max(0, Math.min(100, score));
+
+        let zone = 'NEUTRAL ⚖️';
+        if (score >= 75) zone = 'FIRE SALE 🔥';
+        else if (score >= 50) zone = 'ACCUMULATION 🟢';
+        else if (score < 30) zone = 'OVERHEATED ⚠️';
+
+        return { score, zone, sma200, rsi14, athDown };
+    } catch (e) {
+        console.error('Spot Calc Error:', e);
+        return null;
+    }
+}
+
+async function formatDailyUpdate(newsItems = []) {
     const s = state;
     const now = new Date();
     const dateStr = now.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -586,19 +657,17 @@ function formatDailyUpdate(newsItems = []) {
     let trendScore = 5;
 
     // EMA Diff
-    let diff = 0;
     if (s.emaFast && s.emaSlow) {
-        diff = (s.emaFast - s.emaSlow) / s.emaSlow * 100;
-    }
-
-    if (s.goldenCross) {
-        score = 7.5;
-        analysisText = "Das Golden Cross ist aktiv. Langfristige Indikatoren zeigen einen Aufwärtstrend.";
-        trendScore = 8;
-    } else if (diff < -5) {
-        score = 2.5;
-        analysisText = "Der Markt ist im Bärenmodus. Wir warten auf Bodenbildung.";
-        trendScore = 2;
+        const diff = (s.emaFast - s.emaSlow) / s.emaSlow * 100;
+        if (s.goldenCross) {
+            score = 7.5;
+            analysisText = "Das Golden Cross ist aktiv. Langfristige Indikatoren zeigen einen Aufwärtstrend.";
+            trendScore = 8;
+        } else if (diff < -5) {
+            score = 2.5;
+            analysisText = "Der Markt ist im Bärenmodus. Wir warten auf Bodenbildung.";
+            trendScore = 2;
+        }
     }
 
     // Adjust score by F&G (Contrarian)
@@ -607,6 +676,9 @@ function formatDailyUpdate(newsItems = []) {
 
     score = Math.min(10, Math.max(0, score));
 
+    // Calculate Spot Strategy
+    const spot = await calculateSpotStrategy();
+
     // Build Message (HTML format to match parse_mode)
     let message = `🌅 <b>Guten Morgen! Dein BTC Update</b>\n`;
     message += `📅 ${dateStr}\n\n`;
@@ -614,16 +686,18 @@ function formatDailyUpdate(newsItems = []) {
     message += `💰 <b>Marktübersicht:</b>\n`;
     message += `BTC Preis: $${s.currentPrice?.toLocaleString()} (${s.priceChange24h >= 0 ? '+' : ''}${s.priceChange24h.toFixed(2)}%)\n`;
     message += `Fear &amp; Greed: ${fgValue} (${fgText})\n`;
-    message += `Score: ${score.toFixed(1)}/10\n\n`;
+    message += `Trend Score: ${score.toFixed(1)}/10\n\n`;
+
+    // Spot Strategy Section
+    if (spot) {
+        message += `🏦 <b>Smart Accumulator (Langfristig):</b>\n`;
+        message += `Zone: <b>${spot.zone}</b> (Score: ${spot.score}/100)\n`;
+        message += `• Price vs SMA200: ${s.currentPrice < spot.sma200 ? '✅ Günstig' : '❌ Teuer'}\n`;
+        message += `• RSI (Daily): ${spot.rsi14.toFixed(1)}\n\n`;
+    }
 
     message += `🔬 <b>Analyse &amp; Bewertung:</b>\n`;
     message += `"${analysisText}"\n\n`;
-
-    message += `📊 <b>Die Faktoren heute:</b>\n`;
-    message += `• Technik (35%): ${trendScore.toFixed(1)}/10\n`;
-    message += `• Momentum (25%): ${(s.rsi / 10).toFixed(1)}/10\n`;
-    message += `• Sentiment (20%): ${(fgValue / 10).toFixed(1)}/10\n`;
-    message += `• Macro (20%): ${(s.htfFilter ? 7 : 3).toFixed(1)}/10\n\n`;
 
     // Show active position info in daily update
     const prevState = loadPreviousState();
