@@ -342,9 +342,10 @@ body::after {
     border-radius: 0;
     margin-bottom: 0;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     flex-wrap: wrap;
     gap: 14px;
+    z-index: 100;
 }
 
 .header::before {
@@ -507,10 +508,11 @@ body::after {
     padding: 24px 28px;
     margin-bottom: 0;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     box-shadow: none;
+    z-index: 90;
 }
 
 .signal-banner::before {
@@ -670,7 +672,7 @@ body::after {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: 0;
-    overflow: hidden;
+    overflow: visible;
     transition: all var(--transition-normal);
     box-shadow: none;
     position: relative;
