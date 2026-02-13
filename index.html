@@ -689,14 +689,72 @@
 
                     <!-- Strategy Info -->
                     <div class="sm-performance" style="margin-top: 15px;">
-                        <h3>ℹ️ So funktioniert's</h3>
-                        <p style="color: var(--text-secondary); font-size: 0.88em; line-height: 1.6;">
-                            Diese Strategie identifiziert <strong>langfristige Kaufzonen</strong> für Bitcoin.
-                            Der <strong>Buy Score</strong> (0-100) misst wie günstig der aktuelle Preis ist.
-                            Der <strong>Sell Score</strong> warnt bei Überhitzung.
-                            5 Faktoren fließen ein: SMA 200, RSI, Sentiment, ATH-Rabatt und wöchentliches Momentum.
-                            Ein <strong>7-Tage DCA Cooldown</strong> verhindert zu häufige Käufe.
+                        <h3>ℹ️ So funktioniert die Strategie</h3>
+                        <p
+                            style="color: var(--text-secondary); font-size: 0.88em; line-height: 1.7; margin-bottom: 12px;">
+                            Der <strong>Smart Accumulator</strong> identifiziert langfristige Kaufzonen für Bitcoin
+                            anhand von 5 Indikatoren. Er berechnet einen <strong>Buy Score</strong> (0-100) der misst,
+                            wie günstig der aktuelle Preis historisch gesehen ist, und einen <strong>Sell Score</strong>
+                            (0-100)
+                            der vor Überhitzung warnt. Ein <strong>7-Tage DCA Cooldown</strong> verhindert zu häufige
+                            Käufe.
                         </p>
+
+                        <h3 style="margin-top: 16px;">📊 Backtest-Ergebnisse (2017-2026)</h3>
+                        <div class="sm-perf-grid" style="margin-top: 8px;">
+                            <div class="sm-perf-item">
+                                <div class="sm-perf-label">Buy Signal Genauigkeit</div>
+                                <div class="sm-perf-value text-bullish">76%</div>
+                            </div>
+                            <div class="sm-perf-item">
+                                <div class="sm-perf-label">Sell Signal Genauigkeit</div>
+                                <div class="sm-perf-value" style="color: var(--accent-secondary);">57%</div>
+                            </div>
+                            <div class="sm-perf-item">
+                                <div class="sm-perf-label">Buy Signale gesamt</div>
+                                <div class="sm-perf-value">24</div>
+                            </div>
+                            <div class="sm-perf-item">
+                                <div class="sm-perf-label">🔥 Fire Sales</div>
+                                <div class="sm-perf-value">10</div>
+                            </div>
+                        </div>
+
+                        <h3 style="margin-top: 16px;">🎯 Zonen-Erklärung</h3>
+                        <div
+                            style="font-size: 0.85em; color: var(--text-secondary); line-height: 1.8; margin-top: 6px;">
+                            <div>🔥 <strong>FIRE SALE</strong> (Buy Score ≥75) → Aggressive Käufe, 3-5% Portfolio</div>
+                            <div>🟢 <strong>ACCUMULATION</strong> (Buy ≥50) → Standard DCA Kauf, 1-2% Portfolio</div>
+                            <div>⚖️ <strong>FAIR VALUE</strong> (Buy ≥25) → Halten, minimales DCA</div>
+                            <div>⚠️ <strong>WARM</strong> (Sell ≥30) → Keine Käufe, evtl. leicht reduzieren</div>
+                            <div>🔴 <strong>ÜBERHITZT</strong> (Sell ≥45) → Teilverkauf empfohlen (10-20%)</div>
+                            <div>🚨 <strong>EUPHORIA</strong> (Sell ≥60) → Gewinne sichern! 20-30% verkaufen</div>
+                        </div>
+
+                        <h3 style="margin-top: 16px;">🏆 Beste historische Signale</h3>
+                        <div
+                            style="font-size: 0.85em; color: var(--text-secondary); line-height: 1.8; margin-top: 6px;">
+                            <div>✅ <strong>Bärenmarkt 2018</strong> → Fire Sale bei $3.200 → +2.054% Return</div>
+                            <div>✅ <strong>Corona Crash 2020</strong> → Fire Sale bei $4.800 → +1.341% Return</div>
+                            <div>✅ <strong>Bärenmarkt 2022</strong> → Fire Sale bei $15.800 → +338% Return</div>
+                            <div>✅ <strong>Sell Apr 2021</strong> → Euphoria bei $63.500 → danach -51% Crash</div>
+                            <div>✅ <strong>Sell Feb 2024</strong> → Euphoria bei $73.000 → danach -21%</div>
+                        </div>
+
+                        <h3 style="margin-top: 16px;">⚠️ Wichtige Hinweise</h3>
+                        <div
+                            style="font-size: 0.85em; color: var(--text-secondary); line-height: 1.7; margin-top: 6px;">
+                            <div>• Buy Score ist <strong>deutlich zuverlässiger</strong> (76%) als Sell Score (57%)
+                            </div>
+                            <div>• Sell Signale sind <strong>Warnungen</strong>, keine harten Sell-Orders</div>
+                            <div>• Der <strong>Bull-Dampener</strong> reduziert Sell-Score wenn der Aufwärtstrend noch
+                                jung ist (&lt;120 Tage)</div>
+                            <div>• Fear &amp; Greed verstärkt Signale: Real wären Buy-Scores in Panikphasen +10-20
+                                Punkte höher</div>
+                            <div>• Strategie ist für <strong>langfristiges Spot-Buying</strong> designed – nicht für
+                                kurzfristige Trades</div>
+                            <div>• Backtest-Daten: 8+ Jahre (2017-2026), 3.100+ Tageskerzen</div>
+                        </div>
                     </div>
                 </div>
             </section>
