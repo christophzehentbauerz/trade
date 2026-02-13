@@ -676,11 +676,14 @@ body::after {
     transition: all var(--transition-normal);
     box-shadow: none;
     position: relative;
+    z-index: 1;
 }
 
 .card:hover {
     border-color: rgba(99, 102, 241, 0.15);
     background: var(--bg-card-hover);
+    z-index: 100;
+    /* Ensure card stays on top when interacting */
 }
 
 .card-header {
@@ -741,6 +744,8 @@ body::after {
 
 .price-card {
     grid-column: 1 / -1;
+    z-index: 95;
+    /* Keep price card high */
 }
 
 .price-card .card-body {
