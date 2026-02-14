@@ -317,10 +317,43 @@
                 </div>
             </div>
         </section>
+        <!-- Price Ticker Bar -->
+        <section class="price-ticker-bar">
+            <div class="ticker-price">
+                <span class="ticker-currency">$</span>
+                <span class="ticker-value" id="btcPrice">--,---</span>
+                <span class="ticker-change" id="priceChange">
+                    <span class="change-value">--%</span>
+                    <span class="change-period">24h</span>
+                </span>
+            </div>
+            <div class="ticker-meta">
+                <div class="ticker-item" title="Gesamtwert aller existierenden Bitcoins zusammen">
+                    <span class="ticker-label">MCap</span>
+                    <span class="ticker-data" id="marketCap">$--</span>
+                </div>
+                <div class="ticker-item" title="Handelsvolumen in den letzten 24 Stunden">
+                    <span class="ticker-label">Vol 24h</span>
+                    <span class="ticker-data" id="volume24h">$--</span>
+                </div>
+                <div class="ticker-item" title="All-Time High">
+                    <span class="ticker-label">ATH</span>
+                    <span class="ticker-data" id="ath">$--</span>
+                </div>
+                <div class="ticker-item" title="Entfernung vom Allzeithoch">
+                    <span class="ticker-label">vom ATH</span>
+                    <span class="ticker-data" id="athChange">--%</span>
+                </div>
+                <div class="ticker-item" title="Fear & Greed Index">
+                    <span class="ticker-label">F&G</span>
+                    <span class="ticker-data" id="tickerFearGreed">--</span>
+                </div>
+            </div>
+        </section>
 
         <!-- Smart Money Strategy - Live Signal Detection -->
         <!-- Strategy Tabs Navigation -->
-        <div class="strategy-tabs-container" style="grid-column: 1 / -1; margin-bottom: 0; order: -10;">
+        <div class="strategy-tabs-container">
             <div class="strategy-tabs">
                 <button id="tab-btn-smart-money" class="strategy-tab active" onclick="switchStrategy('smart-money')">🎯
                     Smart Money</button>
@@ -332,7 +365,7 @@
         </div>
 
         <!-- Tab Content: Smart Money (Existing) -->
-        <div id="strategy-content-smart-money" class="strategy-content active" style="order: -9;">
+        <div id="strategy-content-smart-money" class="strategy-content active">
             <section class="smart-money-signal-section" id="smartMoneySection">
                 <div class="sm-signal-header">
                     <div class="sm-title">
@@ -445,7 +478,7 @@
         </div>
 
         <!-- Tab Content: TrendGuard Dynamic (New) -->
-        <div id="strategy-content-trend-guard" class="strategy-content" style="order: -9;">
+        <div id="strategy-content-trend-guard" class="strategy-content">
             <section class="smart-money-signal-section" id="trendStrategySection">
                 <div class="sm-signal-header">
                     <div class="sm-title">
@@ -557,7 +590,7 @@
             </section>
         </div>
         <!-- Tab Content: Smart Accumulator v2 -->
-        <div id="strategy-content-spot" class="strategy-content" style="order: -9;">
+        <div id="strategy-content-spot" class="strategy-content">
             <section class="smart-money-signal-section" id="spotStrategySection">
                 <div class="sm-signal-header">
                     <div class="sm-title">
@@ -790,52 +823,7 @@
             });
         </script>
 
-        <!-- Main Grid -->
         <main class="dashboard-grid">
-            <!-- Price Card -->
-            <section class="card price-card">
-                <div class="card-header">
-                    <h2><span class="card-icon">💰</span> Bitcoin Preis</h2>
-                    <span class="info-badge"
-                        title="Aktueller Bitcoin-Preis in US-Dollar. Daten von CoinGecko API.">?</span>
-                </div>
-                <div class="card-body">
-                    <div class="explanation-box">
-                        Der aktuelle Bitcoin-Kurs zeigt dir den Marktwert. Die 24h-Änderung zeigt,
-                        ob BTC heute gestiegen (grün) oder gefallen (rot) ist.
-                    </div>
-                    <div class="price-main">
-                        <span class="price-currency">$</span>
-                        <span class="price-value" id="btcPrice">--,---</span>
-                    </div>
-                    <div class="price-change" id="priceChange">
-                        <span class="change-value">--%</span>
-                        <span class="change-period">24h</span>
-                    </div>
-                    <div class="price-meta">
-                        <div class="meta-item" title="Gesamtwert aller existierenden Bitcoins zusammen">
-                            <span class="meta-label">Market Cap</span>
-                            <span class="meta-value" id="marketCap">$--</span>
-                        </div>
-                        <div class="meta-item"
-                            title="Wie viel Handelsvolumen in den letzten 24 Stunden - zeigt die Aktivität im Markt">
-                            <span class="meta-label">24h Volume</span>
-                            <span class="meta-value" id="volume24h">$--</span>
-                        </div>
-                        <div class="meta-item"
-                            title="All-Time High: Der höchste Preis, den Bitcoin jemals erreicht hat">
-                            <span class="meta-label">ATH</span>
-                            <span class="meta-value" id="ath">$--</span>
-                        </div>
-                        <div class="meta-item"
-                            title="Prozentuale Entfernung vom Allzeithoch - zeigt wie weit wir vom Top entfernt sind">
-                            <span class="meta-label">Von ATH</span>
-                            <span class="meta-value" id="athChange">--%</span>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
             <!-- Fear & Greed Card -->
             <section class="card fear-greed-card">
                 <div class="card-header">
@@ -1308,6 +1296,19 @@
     <script src="app.js"></script>
     <script src="trend-strategy.js"></script>
     <script src="spot-strategy.js"></script>
+
+    <!-- Sync Fear & Greed value to ticker bar -->
+    <script>
+        (function () {
+            const fgSource = document.getElementById('fearGreedValue');
+            const fgTicker = document.getElementById('tickerFearGreed');
+            if (fgSource && fgTicker) {
+                new MutationObserver(() => {
+                    fgTicker.textContent = fgSource.textContent;
+                }).observe(fgSource, { childList: true, characterData: true, subtree: true });
+            }
+        })();
+    </script>
 
 
     <!-- Custom Tooltip Logic -->

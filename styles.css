@@ -210,29 +210,47 @@ body::after {
     order: -10;
 }
 
-/* Price Card at absolute top of dashboard grid */
-.price-card {
-    order: -15;
-    grid-column: 1 / -1;
+/* Grid card ordering for pro-trader workflow */
+.technical-card {
+    order: 1;
+}
+
+.derivatives-card {
+    order: 2;
+}
+
+.trade-card {
+    order: 3;
+}
+
+.sentiment-card {
+    order: 4;
+}
+
+.levels-card {
+    order: 5;
+}
+
+.risk-card {
+    order: 6;
+}
+
+.fear-greed-card {
+    order: 7;
 }
 
 .signal-banner {
-    order: -11;
-    grid-column: 1 / -1;
-    /* Full width */
+    /* order handled in Section Ordering block */
 }
 
 .smart-money-signal-section {
-    order: -9;
-    grid-column: 1 / -1;
-    /* Full width */
+    /* order handled in Section Ordering block */
 }
 
 /* Backtest and Strategy at bottom */
 .backtest-card,
 .strategy-card {
     order: 100;
-    grid-column: 1 / -1;
 }
 
 /* Live Analysis Overlay */
@@ -405,32 +423,70 @@ body::after {
 .header-right {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Header Bot Buttons */
+.header-bot-buttons {
+    display: flex;
+    gap: 6px;
+}
+
+.header-bot-buttons .telegram-test-btn {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    white-space: nowrap;
+}
+
+.header-bot-buttons .telegram-test-btn:hover {
+    background: rgba(99, 102, 241, 0.12);
+    border-color: rgba(99, 102, 241, 0.3);
+    color: var(--text-primary);
+}
+
+.header-bot-buttons .telegram-test-btn.active {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: var(--accent-primary);
+    color: white;
+}
+
+.header-divider {
+    width: 1px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .trade-analysis-btn {
-    padding: 12px 24px;
+    padding: 8px 16px;
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     color: white;
     border: none;
-    border-radius: var(--radius-md);
-    font-size: 0.95rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
     font-weight: 700;
     cursor: pointer;
     transition: var(--transition-fast);
-    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
     white-space: nowrap;
 }
 
 .trade-analysis-btn:hover {
     background: linear-gradient(135deg, #059669 0%, #047857 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
 .trade-analysis-btn:active {
     transform: translateY(0);
-    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);
 }
 
 .last-update {
@@ -453,11 +509,11 @@ body::after {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     color: var(--text-secondary);
     cursor: pointer;
     transition: var(--transition-fast);
@@ -484,16 +540,144 @@ body::after {
 }
 
 .auto-refresh {
-    padding: 8px 16px;
+    padding: 6px 12px;
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
 }
 
 .countdown {
     font-family: 'SF Mono', 'Consolas', monospace;
-    font-size: 0.875rem;
+    font-size: 0.8rem;
     color: var(--accent-primary);
+}
+
+/* =====================================================
+   Price Ticker Bar
+   ===================================================== */
+
+.price-ticker-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-color);
+    gap: 24px;
+    flex-wrap: wrap;
+    order: 3;
+}
+
+.ticker-price {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.ticker-currency {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.ticker-value {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.ticker-change,
+.price-ticker-bar .price-change {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.ticker-change.positive,
+.price-ticker-bar .price-change.positive {
+    background: var(--bullish-bg);
+    color: var(--bullish);
+}
+
+.ticker-change.negative,
+.price-ticker-bar .price-change.negative {
+    background: var(--bearish-bg);
+    color: var(--bearish);
+}
+
+.ticker-meta {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.ticker-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    cursor: default;
+}
+
+.ticker-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+
+.ticker-data {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-family: 'SF Mono', 'Consolas', monospace;
+}
+
+/* =====================================================
+   Section Ordering (CSS flex order on .app children)
+   ===================================================== */
+
+.header {
+    order: 1;
+}
+
+.price-ticker-bar {
+    order: 2;
+}
+
+.signal-banner {
+    order: 3;
+}
+
+.no-trade-warning {
+    order: 4;
+}
+
+.strategy-tabs-container {
+    order: 5;
+}
+
+.strategy-content {
+    order: 6;
+}
+
+.dashboard-grid {
+    order: 7;
+}
+
+.how-it-works-section {
+    order: 99;
+}
+
+.disclaimer {
+    order: 100;
 }
 
 /* =====================================================
