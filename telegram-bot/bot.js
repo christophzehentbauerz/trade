@@ -477,7 +477,7 @@ function formatEntryMessage(position) {
     msg += `• 5+ ATR Profit → 4.0 ATR Distanz\n\n`;
 
     msg += `<b>🎯 Empfehlung:</b> 📈 LONG EINSTIEG\n\n`;
-    msg += `⏰ ${new Date().toLocaleString('de-DE')}`;
+    msg += `⏰ ${new Date().toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })}`;
 
     return msg;
 }
@@ -513,7 +513,7 @@ function formatExitMessage(position, exitReasons) {
     msg += `• RSI(14): ${state.rsi?.toFixed(1)}\n\n`;
 
     msg += `<b>🎯 Empfehlung:</b> 🚫 POSITION SCHLIEßEN\n\n`;
-    msg += `⏰ ${new Date().toLocaleString('de-DE')}`;
+    msg += `⏰ ${new Date().toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })}`;
 
     return msg;
 }
@@ -534,7 +534,7 @@ function formatTrailingUpdateMessage(position, trailInfo) {
     msg += `• Entry: $${position.entryPrice.toLocaleString()}\n`;
     msg += `• P/L: +${profitPct.toFixed(2)}%\n\n`;
 
-    msg += `⏰ ${new Date().toLocaleString('de-DE')}`;
+    msg += `⏰ ${new Date().toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })}`;
 
     return msg;
 }

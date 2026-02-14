@@ -1,14 +1,16 @@
-name: BTC Signal Check
+name: Daily Report
 
 on:
   schedule:
-    # Signal Check alle 5 Minuten
-    - cron: '*/5 * * * *'
-  workflow_dispatch: # Allows manual trigger
+    # 05:00 UTC = 06:00 CET / 07:00 CEST
+    - cron: '0 5 * * *'
+  workflow_dispatch:
 
 jobs:
-  check-signals:
+  daily-update:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repository
@@ -27,13 +29,20 @@ jobs:
           restore-keys: |
             bot-state-
 
-      - name: Signal Check
+      - name: Install Dependencies
+        run: |
+          cd telegram-bot
+          # No dependencies needed for now as we use standard libs, 
+          # but good practice if we add axios later
+          # npm install
+
+      - name: Send Daily Report
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           cd telegram-bot
-          node bot.js check
+          node bot.js daily
 
       - name: Save bot state
         uses: actions/cache/save@v4
