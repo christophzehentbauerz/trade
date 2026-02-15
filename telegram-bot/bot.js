@@ -396,10 +396,14 @@ function checkExitConditions(position, currentPrice, atr) {
 
 async function sendTelegramMessage(message) {
     if (!CONFIG.telegram.botToken || !CONFIG.telegram.chatId) {
-        console.error('❌ Telegram credentials not configured!');
-        console.log('Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID environment variables');
-        return false;
+        const errMsg = '❌ Telegram credentials not configured! Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID environment variables';
+        console.error(errMsg);
+        throw new Error(errMsg);
     }
+
+    console.log(`📨 Sending Telegram message (${message.length} chars)...`);
+    console.log(`   Bot Token: ${CONFIG.telegram.botToken.substring(0, 8)}...${CONFIG.telegram.botToken.slice(-4)}`);
+    console.log(`   Chat ID: ${CONFIG.telegram.chatId}`);
 
     const url = `https://api.telegram.org/bot${CONFIG.telegram.botToken}/sendMessage`;
     const data = JSON.stringify({
@@ -425,11 +429,11 @@ async function sendTelegramMessage(message) {
             res.on('data', chunk => responseData += chunk);
             res.on('end', () => {
                 if (res.statusCode === 200) {
-                    console.log('✅ Telegram message sent!');
+                    console.log('✅ Telegram message sent successfully!');
                     resolve(true);
                 } else {
-                    console.error('❌ Telegram error:', responseData);
-                    resolve(false);
+                    console.error(`❌ Telegram API error (HTTP ${res.statusCode}):`, responseData);
+                    reject(new Error(`Telegram API error: ${res.statusCode} - ${responseData}`));
                 }
             });
         });
@@ -968,7 +972,12 @@ async function sendDailyUpdate() {
     const previousState = loadPreviousState();
 
     console.log('\n📤 Sending daily update...');
-    await sendTelegramMessage(formatDailyUpdate(news));
+    const message = await formatDailyUpdate(news);
+    const sent = await sendTelegramMessage(message);
+
+    if (!sent) {
+        throw new Error('Failed to send daily update via Telegram');
+    }
 
     // Update last daily update timestamp (preserve position!)
     saveState({
@@ -990,10 +999,16 @@ const command = args[0] || 'check';
 
 switch (command) {
     case 'daily':
-        sendDailyUpdate().catch(console.error);
+        sendDailyUpdate().catch(err => {
+            console.error('\n💥 FATAL ERROR in daily update:', err.message);
+            process.exit(1);
+        });
         break;
     case 'check':
     default:
-        checkSignal().catch(console.error);
+        checkSignal().catch(err => {
+            console.error('\n💥 FATAL ERROR in signal check:', err.message);
+            process.exit(1);
+        });
         break;
 }
