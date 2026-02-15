@@ -35,7 +35,7 @@ jobs:
           cd telegram-bot
           node bot.js check
 
-      - name: Daily Report (07:00 CET)
+      - name: Daily Report (07:00 CET = 06:00 UTC)
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -43,12 +43,12 @@ jobs:
           HOUR=$(date -u +%H)
           MIN=$(date -u +%M)
           echo "Current UTC time: ${HOUR}:${MIN}"
-          if [ "$HOUR" = "07" ] && [ "$MIN" -lt "15" ]; then
-            echo "🕖 07:00 CET window - sending daily report..."
+          if [ "$HOUR" = "06" ] && [ "$MIN" -lt "30" ]; then
+            echo "🕖 07:00 CET window (06:00-06:30 UTC) - sending daily report..."
             cd telegram-bot
             node bot.js daily
           else
-            echo "⏭️ Not in daily report window (06:00-06:04 UTC), skipping."
+            echo "⏭️ Not in daily report window (06:00-06:30 UTC), skipping."
           fi
 
       - name: Save bot state

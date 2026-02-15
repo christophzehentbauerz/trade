@@ -2,8 +2,8 @@ name: Daily Report
 
 on:
   schedule:
-    # TEMP TEST: 06:45 UTC = 07:45 CET - revert to '0 6 * * *' after test
-    - cron: '45 6 * * *'
+    # 06:00 UTC = 07:00 CET
+    - cron: '0 6 * * *'
   workflow_dispatch:
     # Manual trigger for testing
 
@@ -33,9 +33,7 @@ jobs:
       - name: Install Dependencies
         run: |
           cd telegram-bot
-          # No dependencies needed for now as we use standard libs, 
-          # but good practice if we add axios later
-          # npm install
+          npm install --production 2>/dev/null || echo 'No dependencies to install'
 
       - name: Send Daily Report
         env:
