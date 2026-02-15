@@ -202,9 +202,15 @@ async function fetchFearGreedIndex() {
 
 async function fetchNews() {
     try {
-        const data = await fetchJSON('https://min-api.cryptocompare.com/data/v2/news/?lang=EN');
+        const data = await fetchJSON('https://min-api.cryptocompare.com/data/v2/news/?lang=EN&sortOrder=popular');
         console.log(`✓ Fetched ${data.Data.length} news items`);
-        return data.Data.slice(0, 3);
+        return data.Data.slice(0, 5).map(n => ({
+            title: n.title,
+            source: n.source_info?.name || n.source || 'Unknown',
+            url: n.url,
+            categories: n.categories || '',
+            body: (n.body || '').substring(0, 120)
+        }));
     } catch (error) {
         console.error('Error fetching news:', error.message);
         return [];
@@ -213,9 +219,17 @@ async function fetchNews() {
 
 async function fetch24hChange() {
     try {
-        const data = await fetchJSON(`${CONFIG.apis.binance}/ticker/24hr?symbol=BTCUSDT`);
-        state.priceChange24h = parseFloat(data.priceChangePercent);
-        console.log(`✓ 24h Change: ${state.priceChange24h.toFixed(2)}%`);
+        // Use CryptoCompare instead of Binance (Binance blocked on US GitHub runners)
+        const data = await fetchJSON('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=24');
+        if (data.Response === 'Success' && data.Data && data.Data.Data) {
+            const candles = data.Data.Data;
+            const price24hAgo = candles[0].open;
+            const priceNow = candles[candles.length - 1].close;
+            state.priceChange24h = ((priceNow - price24hAgo) / price24hAgo) * 100;
+            console.log(`✓ 24h Change: ${state.priceChange24h.toFixed(2)}%`);
+        } else {
+            throw new Error('Invalid response');
+        }
     } catch (error) {
         console.error('Error fetching 24h change:', error.message);
         state.priceChange24h = 0;
@@ -612,12 +626,16 @@ function formatSignalMessage() {
 
 
 async function fetchDailyKlines() {
+    // Use CryptoCompare instead of Binance (Binance blocked on US GitHub runners)
     try {
-        const url = `${CONFIG.apis.binance}/klines?symbol=BTCUSDT&interval=1d&limit=1000`;
+        const url = 'https://min-api.cryptocompare.com/data/v2/histoday?fsym=BTC&tsym=USD&limit=1000';
         const data = await fetchJSON(url);
-        return data.map(c => ({
-            close: parseFloat(c[4]),
-            high: parseFloat(c[2])
+        if (data.Response !== 'Success' || !data.Data || !data.Data.Data) {
+            throw new Error(`CryptoCompare daily error: ${data.Message || 'Unknown'}`);
+        }
+        return data.Data.Data.map(c => ({
+            close: c.close,
+            high: c.high
         }));
     } catch (error) {
         console.error('Error fetching daily klines:', error.message);
@@ -755,102 +773,165 @@ async function formatDailyUpdate(newsItems = []) {
     const s = state;
     const now = new Date();
     const dateStr = now.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const timeStr = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 
-    // F&G
+    // Fear & Greed Analysis
     const fgValue = s.fearGreedIndex;
-    let fgText = 'Neutral';
-    if (fgValue < 25) fgText = 'Extreme Angst';
-    else if (fgValue < 45) fgText = 'Angst';
-    else if (fgValue > 75) fgText = 'Extreme Gier';
-    else if (fgValue > 55) fgText = 'Gier';
+    let fgText, fgEmoji;
+    if (fgValue < 20) { fgText = 'Extreme Angst'; fgEmoji = '😱'; }
+    else if (fgValue < 40) { fgText = 'Angst'; fgEmoji = '😰'; }
+    else if (fgValue < 60) { fgText = 'Neutral'; fgEmoji = '😐'; }
+    else if (fgValue < 80) { fgText = 'Gier'; fgEmoji = '🤑'; }
+    else { fgText = 'Extreme Gier'; fgEmoji = '🔥'; }
 
-    // Calculation for Score (Approximation based on SM strategy and F&G)
+    // Fear & Greed visual bar
+    const fgBarLen = 10;
+    const fgFilled = Math.round(fgValue / 100 * fgBarLen);
+    const fgBar = '█'.repeat(fgFilled) + '░'.repeat(fgBarLen - fgFilled);
+
+    // Market Score
     let score = 5.0;
-    let analysisText = "Der Markt zeigt sich unentschlossen.";
-    let trendScore = 5;
-
-    // EMA Diff
     if (s.emaFast && s.emaSlow) {
-        const diff = (s.emaFast - s.emaSlow) / s.emaSlow * 100;
-        if (s.goldenCross) {
-            score = 7.5;
-            analysisText = "Das Golden Cross ist aktiv. Langfristige Indikatoren zeigen einen Aufwärtstrend.";
-            trendScore = 8;
-        } else if (diff < -5) {
-            score = 2.5;
-            analysisText = "Der Markt ist im Bärenmodus. Wir warten auf Bodenbildung.";
-            trendScore = 2;
-        }
+        if (s.goldenCross) score = 7.5;
+        else if ((s.emaFast - s.emaSlow) / s.emaSlow * 100 < -5) score = 2.5;
     }
-
-    // Adjust score by F&G (Contrarian)
     if (fgValue < 20) score += 1;
     else if (fgValue > 80) score -= 1;
-
     score = Math.min(10, Math.max(0, score));
 
-    // Calculate Spot Strategy
+    // Score visual bar
+    const scoreBarLen = 10;
+    const scoreFilled = Math.round(score / 10 * scoreBarLen);
+    const scoreBar = '█'.repeat(scoreFilled) + '░'.repeat(scoreBarLen - scoreFilled);
+
+    // Smart Accumulator Strategy
     const spot = await calculateSpotStrategy();
 
-    // Build Message (HTML format to match parse_mode)
-    let message = `🌅 <b>Guten Morgen! Dein BTC Update</b>\n`;
-    message += `📅 ${dateStr}\n\n`;
+    // Price formatting
+    const priceStr = s.currentPrice ? `$${Math.round(s.currentPrice).toLocaleString('de-DE')}` : 'N/A';
+    const changeStr = `${s.priceChange24h >= 0 ? '📈 +' : '📉 '}${s.priceChange24h.toFixed(2)}%`;
 
-    message += `💰 <b>Marktübersicht:</b>\n`;
-    message += `BTC Preis: $${s.currentPrice?.toLocaleString()} (${s.priceChange24h >= 0 ? '+' : ''}${s.priceChange24h.toFixed(2)}%)\n`;
-    message += `Fear &amp; Greed: ${fgValue} (${fgText})\n`;
-    message += `Trend Score: ${score.toFixed(1)}/10\n\n`;
+    // ═══════════════════════════════════
+    // BUILD THE MESSAGE
+    // ═══════════════════════════════════
 
-    // Spot Strategy Section
+    let m = '';
+
+    // ─── HEADER ───
+    m += `☀️ <b>BTC DAILY BRIEFING</b>\n`;
+    m += `📅 ${dateStr}\n`;
+    m += `━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+    // ─── PRICE DASHBOARD ───
+    m += `💰 <b>MARKT DASHBOARD</b>\n\n`;
+    m += `<b>Bitcoin:</b> ${priceStr}  ${changeStr}\n\n`;
+
+    m += `${fgEmoji} Fear &amp; Greed: <b>${fgValue}</b>/100 (${fgText})\n`;
+    m += `   ${fgBar}\n\n`;
+
+    m += `📊 Trend Score: <b>${score.toFixed(1)}</b>/10\n`;
+    m += `   ${scoreBar}\n\n`;
+
+    // ─── TECHNICALS ───
+    m += `━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    m += `🔬 <b>TECHNISCHE ANALYSE</b>\n\n`;
+
+    m += `EMA Trend:\n`;
+    m += `  • EMA(15):  $${s.emaFast ? Math.round(s.emaFast).toLocaleString('de-DE') : 'N/A'}\n`;
+    m += `  • EMA(300): $${s.emaSlow ? Math.round(s.emaSlow).toLocaleString('de-DE') : 'N/A'}\n`;
+    m += `  • EMA(800): $${s.emaHTF ? Math.round(s.emaHTF).toLocaleString('de-DE') : 'N/A'}\n\n`;
+
+    m += `${s.goldenCross ? '✅' : '❌'} Golden Cross (EMA15 > EMA300)\n`;
+    m += `${s.htfFilter ? '✅' : '❌'} HTF Filter (Preis > EMA800)\n`;
+    m += `${s.rsiInZone ? '✅' : '❌'} RSI Zone (${s.rsi?.toFixed(1) || 'N/A'})\n\n`;
+
+    // ─── SMART ACCUMULATOR ───
     if (spot) {
-        message += `🏦 <b>Smart Accumulator (Spot):</b>\n`;
-        message += `Zone: <b>${spot.zone}</b> | Signal: <b>${spot.signal}</b>\n`;
-        message += `Buy Score: ${spot.buyScore}/100 | Sell Score: ${spot.sellScore}/100\n`;
-        message += `• SMA200: $${Math.round(spot.sma200).toLocaleString()} (${s.currentPrice < spot.sma200 ? '✅ Unter SMA' : '❌ Über SMA'})\n`;
-        message += `• RSI Daily: ${spot.rsi14.toFixed(1)} | Weekly: ${spot.rsiWeekly.toFixed(1)}\n`;
-        message += `• ATH Discount: -${spot.athDown.toFixed(1)}%\n\n`;
+        m += `━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        m += `🏦 <b>SMART ACCUMULATOR</b>\n\n`;
+
+        m += `Zone: <b>${spot.zone}</b>\n`;
+        m += `Signal: <b>${spot.signal}</b>\n\n`;
+
+        // Buy/Sell Score visual
+        const buyBar = '🟢'.repeat(Math.round(spot.buyScore / 20)) + '⚪'.repeat(5 - Math.round(spot.buyScore / 20));
+        const sellBar = '🔴'.repeat(Math.round(spot.sellScore / 20)) + '⚪'.repeat(5 - Math.round(spot.sellScore / 20));
+
+        m += `Buy Score:  ${buyBar} ${spot.buyScore}/100\n`;
+        m += `Sell Score: ${sellBar} ${spot.sellScore}/100\n\n`;
+
+        m += `📐 Key Levels:\n`;
+        m += `  • SMA200: $${Math.round(spot.sma200).toLocaleString('de-DE')} ${s.currentPrice < spot.sma200 ? '(✅ Unter SMA = günstig)' : '(Über SMA)'}\n`;
+        m += `  • RSI Daily: ${spot.rsi14.toFixed(1)} | RSI Weekly: ${spot.rsiWeekly.toFixed(1)}\n`;
+        m += `  • ATH: $${Math.round(spot.ath).toLocaleString('de-DE')} (Rabatt: -${spot.athDown.toFixed(1)}%)\n`;
+        if (spot.daysAbove > 0) {
+            m += `  • Bull Run: ${spot.daysAbove} Tage über SMA200\n`;
+        }
+        m += `\n`;
     }
 
-    message += `🔬 <b>Analyse &amp; Bewertung:</b>\n`;
-    message += `"${analysisText}"\n\n`;
-
-    // Show active position info in daily update
+    // ─── ACTIVE POSITION ───
     const prevState = loadPreviousState();
     if (prevState.position) {
         const pos = prevState.position;
         const profitPct = ((s.currentPrice - pos.entryPrice) / pos.entryPrice * 100);
         const hoursInTrade = ((Date.now() - new Date(pos.entryTime).getTime()) / (1000 * 60 * 60));
+        const profitEmoji = profitPct >= 5 ? '🚀' : profitPct >= 0 ? '💚' : profitPct >= -3 ? '⚠️' : '🔴';
 
-        message += `📍 <b>Aktive Position:</b>\n`;
-        message += `• Entry: $${pos.entryPrice.toLocaleString()} (${hoursInTrade.toFixed(0)}h)\n`;
-        message += `• P/L: ${profitPct >= 0 ? '+' : ''}${profitPct.toFixed(2)}%\n`;
-        message += `• Trailing Stop: $${pos.trailingStop?.toLocaleString(undefined, { maximumFractionDigits: 0 })}\n`;
-        message += `• Tier: ${pos.currentTier || 1}\n\n`;
+        m += `━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        m += `📍 <b>AKTIVE POSITION</b>\n\n`;
+        m += `${profitEmoji} P/L: <b>${profitPct >= 0 ? '+' : ''}${profitPct.toFixed(2)}%</b>\n`;
+        m += `  • Entry: $${pos.entryPrice.toLocaleString('de-DE')} (vor ${hoursInTrade.toFixed(0)}h)\n`;
+        m += `  • Stop:  $${pos.trailingStop?.toLocaleString('de-DE', { maximumFractionDigits: 0 })} (Tier ${pos.currentTier || 1})\n\n`;
     }
 
-    message += `🎯 <b>Tages-Fazit:</b>\n`;
+    // ─── SIGNAL / FAZIT ───
+    m += `━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    m += `🎯 <b>TAGES-SIGNAL</b>\n\n`;
 
     if (s.signal === 'LONG') {
-        message += `🟢 <b>LONG</b> - Aufwärtstrend aktiv.\n`;
-        message += `Gute Bedingungen für Entries. Stop Loss bei $${s.stopLoss?.toFixed(0)} beachten.\n\n`;
+        m += `🟢 <b>LONG — Aufwärtstrend aktiv</b>\n`;
+        m += `Golden Cross bestätigt. Gute Bedingungen für Entries.\n`;
+        if (s.stopLoss) m += `Stop Loss: $${Math.round(s.stopLoss).toLocaleString('de-DE')}\n`;
     } else if (s.signal === 'EXIT') {
-        message += `🔴 <b>EXIT</b> - Gefahrenzone.\n`;
-        message += `Risiko rausnehmen. Death Cross aktiv.\n\n`;
+        m += `🔴 <b>EXIT — Kein Einstieg</b>\n`;
+        m += `Death Cross aktiv. Risiko rausnehmen, Kapital schützen.\n`;
     } else {
-        message += `⚪ <b>Neutral</b> - Abwarten.\n`;
-        message += `Keine klare Richtung erkennbar. Kapital schützen und auf besseres Signal warten.\n\n`;
+        m += `⚪ <b>NEUTRAL — Abwarten</b>\n`;
+        m += `Kein klares Signal. Geduld zahlt sich aus.\n`;
     }
 
-    message += `Viel Erfolg heute! ☕\n\n`;
+    // Smart Accumulator recommendation
+    if (spot) {
+        m += `\n💡 <b>Empfehlung:</b> `;
+        if (spot.signal === 'BUY HEAVY') m += `Starke Kaufzone! Größere Position aufbauen.`;
+        else if (spot.signal === 'BUY DCA') m += `Guter DCA-Zeitpunkt. Regelmäßig nachkaufen.`;
+        else if (spot.signal === 'HOLD') m += `Halten. Fairer Preis, kein Handlungsbedarf.`;
+        else if (spot.signal === 'WAIT') m += `Abwarten. Markt ist teuer für Neueinstiege.`;
+        else if (spot.signal === 'CAUTION') m += `Vorsicht! Erste Warnsignale. Gewinne absichern.`;
+        else if (spot.signal === 'SELL SOME') m += `Teilverkauf empfohlen! Markt überhitzt.`;
+        else if (spot.signal === 'SELL') m += `Verkaufen! Euphorie-Phase. Gewinne mitnehmen!`;
+        m += `\n`;
+    }
 
+    // ─── NEWS ───
     if (newsItems && newsItems.length > 0) {
-        message += `📰 <b>Crypto News:</b>\n`;
-        newsItems.forEach(n => {
-            message += `• [${n.source}] ${n.title}\n`;
+        m += `\n━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        m += `📰 <b>TOP CRYPTO NEWS</b>\n\n`;
+        newsItems.forEach((n, i) => {
+            m += `${i + 1}. <b>${n.title}</b>\n`;
+            m += `   📌 ${n.source}`;
+            if (n.categories) m += ` · ${n.categories.split('|').slice(0, 2).join(', ')}`;
+            m += `\n\n`;
         });
     }
 
-    return message;
+    // ─── FOOTER ───
+    m += `━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    m += `🤖 <i>Smart Money Bot · ${timeStr} Uhr</i>\n`;
+    m += `<i>Keine Anlageberatung. DYOR.</i>`;
+
+    return m;
 }
 
 // =====================================================
