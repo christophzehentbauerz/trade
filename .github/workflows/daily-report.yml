@@ -42,15 +42,11 @@ jobs:
         run: |
           echo "=== DIAGNOSTICS ==="
           echo "Node version: $(node --version)"
-          echo "Working dir: $(pwd)"
           echo "Bot token length: ${#TELEGRAM_BOT_TOKEN}"
           echo "Chat ID length: ${#TELEGRAM_CHAT_ID}"
-          echo "Bot token set: $([ -n "$TELEGRAM_BOT_TOKEN" ] && echo YES || echo NO)"
-          echo "Chat ID set: $([ -n "$TELEGRAM_CHAT_ID" ] && echo YES || echo NO)"
-          ls -la telegram-bot/
           echo "=== RUNNING BOT ==="
           cd telegram-bot
-          node bot.js daily 2>&1 || echo "EXIT CODE: $?"
+          node bot.js daily
 
       - name: Save bot state
         uses: actions/cache/save@v4
