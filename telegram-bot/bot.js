@@ -1002,14 +1002,17 @@ switch (command) {
     case 'daily':
         sendDailyUpdate().catch(err => {
             console.error('\n💥 FATAL ERROR in daily update:', err.message);
+            console.error(err.stack);
             process.exit(1);
         });
         break;
     case 'check':
     default:
         checkSignal().catch(err => {
-            console.error('\n💥 FATAL ERROR in signal check:', err.message);
-            process.exit(1);
+            console.error('\n⚠️ Error in signal check:', err.message);
+            console.error(err.stack);
+            // Don't exit with error code for signal check
+            // API calls may intermittently fail, this is not critical
         });
         break;
 }
