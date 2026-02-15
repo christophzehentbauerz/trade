@@ -396,9 +396,10 @@ function checkExitConditions(position, currentPrice, atr) {
 
 async function sendTelegramMessage(message) {
     if (!CONFIG.telegram.botToken || !CONFIG.telegram.chatId) {
-        const errMsg = '❌ Telegram credentials not configured! Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID environment variables';
-        console.error(errMsg);
-        throw new Error(errMsg);
+        console.error('❌ Telegram credentials not configured!');
+        console.error('   Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID environment variables');
+        console.error('   Check: https://github.com/christophzehentbauerz/trade/settings/secrets/actions');
+        return false;
     }
 
     console.log(`📨 Sending Telegram message (${message.length} chars)...`);
