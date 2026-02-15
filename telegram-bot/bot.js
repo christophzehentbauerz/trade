@@ -116,9 +116,15 @@ function fetchJSON(url) {
             res.on('data', chunk => data += chunk);
             res.on('end', () => {
                 try {
-                    resolve(JSON.parse(data));
+                    const parsed = JSON.parse(data);
+                    if (res.statusCode >= 400) {
+                        const errMsg = parsed.msg || parsed.message || `HTTP ${res.statusCode}`;
+                        reject(new Error(`API error (${res.statusCode}): ${errMsg}`));
+                    } else {
+                        resolve(parsed);
+                    }
                 } catch (e) {
-                    reject(new Error(`JSON parse error: ${e.message}`));
+                    reject(new Error(`JSON parse error (HTTP ${res.statusCode}): ${e.message}`));
                 }
             });
         }).on('error', reject);
@@ -129,25 +135,38 @@ function fetchJSON(url) {
 // Data Fetching
 // =====================================================
 
-async function fetchKlines() {
-    try {
-        const url = `${CONFIG.apis.binance}/klines?symbol=BTCUSDT&interval=1h&limit=1000`;
-        const data = await fetchJSON(url);
+async function fetchKlines(retries = 3) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            const url = `${CONFIG.apis.binance}/klines?symbol=BTCUSDT&interval=1h&limit=1000`;
+            const data = await fetchJSON(url);
 
-        const candles = data.map(candle => ({
-            time: candle[0],
-            open: parseFloat(candle[1]),
-            high: parseFloat(candle[2]),
-            low: parseFloat(candle[3]),
-            close: parseFloat(candle[4]),
-            volume: parseFloat(candle[5])
-        }));
+            // Binance may return an error object instead of an array
+            if (!Array.isArray(data)) {
+                const errMsg = data.msg || data.message || JSON.stringify(data);
+                throw new Error(`Binance API error: ${errMsg}`);
+            }
 
-        console.log(`✓ Fetched ${candles.length} 1H candles`);
-        return candles;
-    } catch (error) {
-        console.error('Error fetching klines:', error.message);
-        throw error;
+            const candles = data.map(candle => ({
+                time: candle[0],
+                open: parseFloat(candle[1]),
+                high: parseFloat(candle[2]),
+                low: parseFloat(candle[3]),
+                close: parseFloat(candle[4]),
+                volume: parseFloat(candle[5])
+            }));
+
+            console.log(`✓ Fetched ${candles.length} 1H candles`);
+            return candles;
+        } catch (error) {
+            console.error(`Error fetching klines (attempt ${attempt}/${retries}):`, error.message);
+            if (attempt < retries) {
+                console.log(`   Retrying in 2 seconds...`);
+                await new Promise(r => setTimeout(r, 2000));
+            } else {
+                throw error;
+            }
+        }
     }
 }
 
