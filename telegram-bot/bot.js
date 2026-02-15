@@ -135,38 +135,57 @@ function fetchJSON(url) {
 // Data Fetching
 // =====================================================
 
-async function fetchKlines(retries = 3) {
-    for (let attempt = 1; attempt <= retries; attempt++) {
-        try {
-            const url = `${CONFIG.apis.binance}/klines?symbol=BTCUSDT&interval=1h&limit=1000`;
-            const data = await fetchJSON(url);
+async function fetchKlines() {
+    // Try CryptoCompare first (no geo-restrictions, works from GitHub Actions)
+    try {
+        console.log('   Fetching from CryptoCompare...');
+        const url = 'https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=1000';
+        const data = await fetchJSON(url);
 
-            // Binance may return an error object instead of an array
-            if (!Array.isArray(data)) {
-                const errMsg = data.msg || data.message || JSON.stringify(data);
-                throw new Error(`Binance API error: ${errMsg}`);
-            }
-
-            const candles = data.map(candle => ({
-                time: candle[0],
-                open: parseFloat(candle[1]),
-                high: parseFloat(candle[2]),
-                low: parseFloat(candle[3]),
-                close: parseFloat(candle[4]),
-                volume: parseFloat(candle[5])
-            }));
-
-            console.log(`✓ Fetched ${candles.length} 1H candles`);
-            return candles;
-        } catch (error) {
-            console.error(`Error fetching klines (attempt ${attempt}/${retries}):`, error.message);
-            if (attempt < retries) {
-                console.log(`   Retrying in 2 seconds...`);
-                await new Promise(r => setTimeout(r, 2000));
-            } else {
-                throw error;
-            }
+        if (data.Response !== 'Success' || !data.Data || !data.Data.Data) {
+            throw new Error(`CryptoCompare error: ${data.Message || 'Unknown error'}`);
         }
+
+        const candles = data.Data.Data.map(candle => ({
+            time: candle.time * 1000, // Convert to ms like Binance
+            open: candle.open,
+            high: candle.high,
+            low: candle.low,
+            close: candle.close,
+            volume: candle.volumefrom
+        }));
+
+        console.log(`✓ Fetched ${candles.length} 1H candles (CryptoCompare)`);
+        return candles;
+    } catch (ccError) {
+        console.error(`⚠️ CryptoCompare failed: ${ccError.message}`);
+        console.log('   Trying Binance as fallback...');
+    }
+
+    // Fallback: Binance (may be geo-blocked on US-based runners)
+    try {
+        const url = `${CONFIG.apis.binance}/klines?symbol=BTCUSDT&interval=1h&limit=1000`;
+        const data = await fetchJSON(url);
+
+        if (!Array.isArray(data)) {
+            const errMsg = data.msg || data.message || JSON.stringify(data);
+            throw new Error(`Binance API error: ${errMsg}`);
+        }
+
+        const candles = data.map(candle => ({
+            time: candle[0],
+            open: parseFloat(candle[1]),
+            high: parseFloat(candle[2]),
+            low: parseFloat(candle[3]),
+            close: parseFloat(candle[4]),
+            volume: parseFloat(candle[5])
+        }));
+
+        console.log(`✓ Fetched ${candles.length} 1H candles (Binance)`);
+        return candles;
+    } catch (binanceError) {
+        console.error(`❌ Binance also failed: ${binanceError.message}`);
+        throw new Error(`All data sources failed. CryptoCompare & Binance unavailable.`);
     }
 }
 
