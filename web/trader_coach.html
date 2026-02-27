@@ -650,6 +650,14 @@
       <div class="tick-label">EMA 800</div>
       <div class="tick-value" id="tEma800">---</div>
     </div>
+    <div class="tick">
+      <div class="tick-label">Fear & Greed</div>
+      <div class="tick-value" id="tFg">---</div>
+    </div>
+    <div class="tick">
+      <div class="tick-label">News Bias</div>
+      <div class="tick-value" id="tNews">---</div>
+    </div>
   </div>
 
   <!-- SCORE -->
@@ -706,6 +714,20 @@
           <div class="ind-row"><span class="ind-label">Golden Cross</span><span class="ind-val" id="iGc">---</span>
           </div>
           <div class="ind-row"><span class="ind-label">Über EMA 800</span><span class="ind-val" id="iHtf">---</span>
+          </div>
+          <div class="ind-row"><span class="ind-label">MACD (1h)</span><span class="ind-val" id="iMacd">---</span>
+          </div>
+          <div class="ind-row"><span class="ind-label">Funding</span><span class="ind-val" id="iFunding">---</span>
+          </div>
+          <div class="ind-row"><span class="ind-label">Open Interest Δ</span><span class="ind-val" id="iOi">---</span>
+          </div>
+          <div class="ind-row"><span class="ind-label">L/S Ratio</span><span class="ind-val" id="iLs">---</span>
+          </div>
+          <div class="ind-row"><span class="ind-label">News Score</span><span class="ind-val" id="iNews">---</span>
+          </div>
+          <div class="ind-row"><span class="ind-label">Cycle</span><span class="ind-val" id="iCycle">---</span>
+          </div>
+          <div class="ind-row"><span class="ind-label">On-Chain Proxy</span><span class="ind-val" id="iOnchain">---</span>
           </div>
         </div>
       </div>
@@ -786,6 +808,23 @@
       for (let i = n; i < p.length; i++) e = p[i] * k + e * (1 - k);
       return e;
     }
+    function calcEMAArray(p, n) {
+      if (p.length === 0) return [];
+      const k = 2 / (n + 1);
+      const arr = [p[0]];
+      for (let i = 1; i < p.length; i++) arr.push(p[i] * k + arr[i - 1] * (1 - k));
+      return arr;
+    }
+    function calcMACD(p, fast = 12, slow = 26, signal = 9) {
+      if (p.length < slow + signal) return { trend: 'neutral', histogram: 0 };
+      const fastArr = calcEMAArray(p, fast);
+      const slowArr = calcEMAArray(p, slow);
+      const macd = p.map((_, i) => (fastArr[i] || 0) - (slowArr[i] || 0));
+      const sig = calcEMAArray(macd, signal);
+      const hist = macd[macd.length - 1] - sig[sig.length - 1];
+      const t = hist > 0 ? 'bull' : hist < 0 ? 'bear' : 'neutral';
+      return { trend: t, histogram: hist };
+    }
     function calcRSI(p, n = 14) {
       if (p.length < n + 1) return 50;
       let g = 0, l = 0;
@@ -811,40 +850,110 @@
       if (v < e50 && e50 < e200) return 'bear';
       return 'neutral';
     }
+    function analyzeNewsSentiment(items) {
+      const bull = ['etf inflow', 'approval', 'adoption', 'accumulation', 'surge', 'bullish'];
+      const bear = ['etf outflow', 'ban', 'lawsuit', 'hack', 'liquidation', 'bearish', 'crash'];
+      const impact = ['fed', 'fomc', 'cpi', 'sec', 'etf', 'regulation'];
+      let b = 0, s = 0, hi = 0;
+      for (const it of items || []) {
+        const t = (it.title || '').toLowerCase();
+        if (bull.some(k => t.includes(k))) b++;
+        if (bear.some(k => t.includes(k))) s++;
+        if (impact.some(k => t.includes(k))) hi++;
+      }
+      const score = Math.max(0, Math.min(10, 5 + (b - s) * 1.2 + Math.min(1.5, hi * 0.25)));
+      return { score, bullish: b, bearish: s, highImpact: hi };
+    }
+    function calcCycle() {
+      const now = new Date();
+      const h = [new Date('2024-04-20T00:00:00Z'), new Date('2028-04-20T00:00:00Z')];
+      const total = Math.max(1, (h[1] - h[0]) / 86400000);
+      const elapsed = Math.max(0, (now - h[0]) / 86400000);
+      const pct = Math.max(0, Math.min(100, elapsed / total * 100));
+      let phase = 'Mid-Cycle', score = 7;
+      if (pct < 25) { phase = 'Post-Halving'; score = 6.5; }
+      else if (pct > 80) { phase = 'Pre-Halving'; score = 5.8; }
+      else if (pct > 55) { phase = 'Late Cycle'; score = 4.8; }
+      return { phase, score };
+    }
     function score(d) {
-      let s = 0;
-      const { mtf, rsi, price, ema800, atr, goldenCross } = d;
-      s += mtf.aligned === 'bull' || mtf.aligned === 'bear' ? 40 : mtf.t1h === mtf.t4h && mtf.t1h !== 'neutral' ? 22 : 5;
-      s += rsi >= 45 && rsi <= 65 ? 20 : (rsi >= 35 && rsi < 45) || (rsi > 65 && rsi <= 75) ? 11 : 3;
-      const dist = ema800 ? Math.abs((price - ema800) / ema800 * 100) : 99;
-      s += dist <= 2 ? 15 : dist <= 5 ? 8 : 2;
-      const ap = price > 0 ? atr / price * 100 : 0;
-      s += ap >= 0.8 && ap <= 3 ? 15 : ap >= 0.4 && ap <= 4.5 ? 8 : 2;
-      if (goldenCross) s += 10;
-      return Math.max(0, Math.min(100, Math.round(s)));
+      let tech = 5, onchain = 5, sentiment = 5, macro = 5, news = d.news?.score || 5;
+      if (d.rsi < 30) tech += 2.2; else if (d.rsi > 70) tech -= 2.2; else if (d.rsi < 40) tech += 1; else if (d.rsi > 60) tech -= 1;
+      if (d.macd.trend === 'bull') tech += 1.2; else if (d.macd.trend === 'bear') tech -= 1.2;
+      if (d.goldenCross) tech += 1;
+
+      if (d.onchain.whaleTrades >= 8) onchain += 0.7;
+      if (d.onchain.exchangeFlowPct > 4) onchain += 1; else if (d.onchain.exchangeFlowPct < -4) onchain -= 1;
+      if (d.oiChange > 8 && d.change24 > 0) onchain += 0.7; else if (d.oiChange > 8 && d.change24 < 0) onchain -= 0.7;
+
+      if (d.fg <= 20) sentiment += 3; else if (d.fg <= 35) sentiment += 1.5; else if (d.fg >= 80) sentiment -= 3; else if (d.fg >= 65) sentiment -= 1.5;
+      if (d.funding < -0.01) sentiment += 1.2; else if (d.funding > 0.05) sentiment -= 1.2;
+      if (d.lsShort > 55) sentiment += 0.8; else if (d.lsLong > 55) sentiment -= 0.8;
+
+      macro += (d.cycle.score - 5) * 0.8;
+      if (d.mtf.aligned === 'bull') macro += 0.8; else if (d.mtf.aligned === 'bear') macro -= 0.8;
+
+      if (d.news.highImpact >= 2) news -= 0.4;
+
+      tech = Math.max(0, Math.min(10, tech));
+      onchain = Math.max(0, Math.min(10, onchain));
+      sentiment = Math.max(0, Math.min(10, sentiment));
+      macro = Math.max(0, Math.min(10, macro));
+      news = Math.max(0, Math.min(10, news));
+      const weighted10 = tech * 0.32 + onchain * 0.22 + sentiment * 0.18 + macro * 0.18 + news * 0.10;
+      return { total: Math.round(weighted10 * 10), tech, onchain, sentiment, macro, news };
     }
 
     async function loadMarketData() {
       try {
-        const [d1h, d4h, d1d, d24] = await Promise.all([
+        const [d1h, d4h, d1d, d24, fgData, fundingData, oiNow, oiHist, lsData, newsData, aggTrades] = await Promise.all([
           fetchJSON('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=1000'),
           fetchJSON('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=500&aggregate=4'),
           fetchJSON('https://min-api.cryptocompare.com/data/v2/histoday?fsym=BTC&tsym=USD&limit=300'),
-          fetchJSON('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=24')
+          fetchJSON('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=24'),
+          fetchJSON('https://api.alternative.me/fng/?limit=1').catch(() => ({ data: [{ value: '50' }] })),
+          fetchJSON('https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&limit=1').catch(() => [{ fundingRate: 0 }]),
+          fetchJSON('https://fapi.binance.com/fapi/v1/openInterest?symbol=BTCUSDT').catch(() => ({ openInterest: 0 })),
+          fetchJSON('https://fapi.binance.com/futures/data/openInterestHist?symbol=BTCUSDT&period=1h&limit=24').catch(() => []),
+          fetchJSON('https://fapi.binance.com/fapi/v1/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1').catch(() => [{ longShortRatio: 1 }]),
+          fetchJSON('https://min-api.cryptocompare.com/data/v2/news/?lang=EN&categories=BTC,Regulation,Market&excludeCategories=Sponsored').catch(() => ({ Data: [] })),
+          fetchJSON('https://api.binance.com/api/v3/aggTrades?symbol=BTCUSDT&limit=1000').catch(() => [])
         ]);
         const c1h = d1h.Data.Data, c4h = d4h.Data.Data, c1d = d1d.Data.Data;
         const cl = c1h.map(c => c.close), price = cl[cl.length - 1];
         const ema15 = calcEMA(cl, 15), ema300 = calcEMA(cl, 300), ema800 = calcEMA(cl, 800);
         const rsi = calcRSI(cl, 14), atr = calcATR(c1h.map(c => ({ high: c.high, low: c.low, close: c.close })), 14);
+        const macd = calcMACD(cl);
         const t1h = trend(cl), t4h = trend(c4h.map(c => c.close)), t1d = trend(c1d.map(c => c.close));
         const aligned = t1h === t4h && t4h === t1d && t1h !== 'neutral' ? t1h : 'mixed';
         const mtf = { t1h, t4h, t1d, aligned };
         const goldenCross = ema15 > ema300, htfFilter = price > ema800, rsiZone = rsi >= 45 && rsi <= 70;
         const strength = (goldenCross ? 1 : 0) + (htfFilter ? 1 : 0) + (rsiZone ? 1 : 0);
-        const sig = goldenCross && htfFilter && rsiZone ? 'LONG' : !goldenCross ? 'EXIT' : 'NEUTRAL';
-        const sc = score({ mtf, rsi, price, ema800, atr, goldenCross });
+        const fg = parseInt(fgData?.data?.[0]?.value || '50', 10);
+        const funding = parseFloat(fundingData?.[0]?.fundingRate || 0) * 100;
+        const oiChange = Array.isArray(oiHist) && oiHist.length > 1
+          ? ((parseFloat(oiHist[oiHist.length - 1].sumOpenInterestValue || 0) - parseFloat(oiHist[0].sumOpenInterestValue || 0)) / Math.max(1, parseFloat(oiHist[0].sumOpenInterestValue || 1))) * 100
+          : 0;
+        const lsRatio = parseFloat(lsData?.[0]?.longShortRatio || 1);
+        const lsLong = (lsRatio / (1 + lsRatio)) * 100, lsShort = 100 - lsLong;
+        const news = analyzeNewsSentiment(newsData?.Data?.slice(0, 8) || []);
+        let whaleTrades = 0;
+        for (const t of aggTrades || []) {
+          const notional = (parseFloat(t.p) || 0) * (parseFloat(t.q) || 0);
+          if (notional >= 1500000) whaleTrades++;
+        }
+        let totalQ = 0, buyQ = 0;
+        for (const c of c1h.slice(-24)) { totalQ += (c.volumeto || 0); if (c.close > c.open) buyQ += (c.volumeto || 0); }
+        const exchangeFlowPct = totalQ > 0 ? ((buyQ - (totalQ - buyQ)) / totalQ) * 100 : 0;
+        const onchain = { whaleTrades, exchangeFlowPct };
+        const cycle = calcCycle();
+        const scObj = score({ mtf, rsi, price, ema800, atr, goldenCross, macd, fg, funding, oiChange, lsLong, lsShort, news, onchain, cycle, change24: ((price - d24.Data.Data[0].open) / d24.Data.Data[0].open * 100) });
+        const sc = scObj.total;
+        const minScore = +document.getElementById('cfgMinScore').value || 60;
+        const shortThreshold = 100 - minScore;
+        const sig = sc >= minScore ? 'LONG' : sc <= shortThreshold ? 'SHORT' : (!goldenCross ? 'EXIT' : 'NEUTRAL');
         const change24 = ((price - d24.Data.Data[0].open) / d24.Data.Data[0].open * 100);
-        mktData = { price, ema15, ema300, ema800, rsi, atr, goldenCross, htfFilter, rsiZone, strength, signal: sig, score: sc, mtf, change24, closes: cl };
+        mktData = { price, ema15, ema300, ema800, rsi, atr, macd, goldenCross, htfFilter, rsiZone, strength, signal: sig, score: sc, scoreObj: scObj, mtf, change24, fg, funding, oi: parseFloat(oiNow?.openInterest || 0), oiChange, lsLong, lsShort, news, onchain, cycle, closes: cl };
         updateUI();
       } catch (e) {
         document.getElementById('statusDot').className = 'status-dot err';
@@ -866,6 +975,8 @@
       document.getElementById('tScore').textContent = d.score + '/100';
       document.getElementById('tRsi').textContent = d.rsi.toFixed(1);
       document.getElementById('tEma800').textContent = '$' + fmt(d.ema800);
+      document.getElementById('tFg').textContent = d.fg;
+      document.getElementById('tNews').textContent = d.news.bullish > d.news.bearish ? 'Bullish' : d.news.bearish > d.news.bullish ? 'Bearish' : 'Neutral';
       const sn = document.getElementById('scoreNum');
       sn.textContent = d.score; sn.className = 'score-num ' + (d.score >= 65 ? 'high' : d.score >= 40 ? 'mid' : 'low');
       const sb = document.getElementById('scoreBar');
@@ -880,6 +991,13 @@
       document.getElementById('iAtr').textContent = '$' + fmt(d.atr);
       document.getElementById('iGc').textContent = d.goldenCross ? '✅ Ja' : '❌ Nein';
       document.getElementById('iHtf').textContent = d.htfFilter ? '✅ Ja' : '❌ Nein';
+      document.getElementById('iMacd').textContent = `${d.macd.trend} (${d.macd.histogram.toFixed(2)})`;
+      document.getElementById('iFunding').textContent = `${d.funding >= 0 ? '+' : ''}${d.funding.toFixed(4)}%`;
+      document.getElementById('iOi').textContent = `${d.oiChange >= 0 ? '+' : ''}${d.oiChange.toFixed(2)}%`;
+      document.getElementById('iLs').textContent = `${d.lsLong.toFixed(1)} / ${d.lsShort.toFixed(1)}`;
+      document.getElementById('iNews').textContent = `${d.news.score.toFixed(1)}/10`;
+      document.getElementById('iCycle').textContent = d.cycle.phase;
+      document.getElementById('iOnchain').textContent = `Whales ${d.onchain.whaleTrades}, Flow ${d.onchain.exchangeFlowPct.toFixed(1)}%`;
       document.getElementById('lastUpdated').textContent = 'Update ' + new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
     }
 
@@ -895,8 +1013,9 @@
       if (ctx.openRisk >= 2.5) guards.push('Open-Risk-Limit erreicht');
       const blocked = guards.length > 0;
       let action = 'wait', entry = null, sl = null, tp1 = null, tp2 = null;
-      if (!blocked && mtf.aligned === 'bull' && rsi < 72) { action = 'long'; entry = price; sl = Math.min(ema300, price - 1.5 * atr); const r = Math.max(entry - sl, .0001); tp1 = entry + 2 * r; tp2 = entry + 3.5 * r; }
-      else if (!blocked && mtf.aligned === 'bear' && rsi > 28) { action = 'short'; entry = price; sl = Math.max(ema300, price + 1.5 * atr); const r = Math.max(sl - entry, .0001); tp1 = entry - 2 * r; tp2 = entry - 3.5 * r; }
+      const shortThreshold = 100 - ctx.minScore;
+      if (!blocked && score >= ctx.minScore && mktData.signal === 'LONG' && rsi < 74) { action = 'long'; entry = price; sl = Math.min(ema300, price - 1.5 * atr); const r = Math.max(entry - sl, .0001); tp1 = entry + 2 * r; tp2 = entry + 3.5 * r; }
+      else if (!blocked && score <= shortThreshold && mktData.signal === 'SHORT' && rsi > 26) { action = 'short'; entry = price; sl = Math.max(ema300, price + 1.5 * atr); const r = Math.max(sl - entry, .0001); tp1 = entry - 2 * r; tp2 = entry - 3.5 * r; }
       let rr1 = null, rr2 = null, size = null;
       if (entry && sl) { const ru = action === 'long' ? Math.max(entry - sl, .0001) : Math.max(sl - entry, .0001); rr1 = action === 'long' ? (tp1 - entry) / ru : (entry - tp1) / ru; rr2 = action === 'long' ? (tp2 - entry) / ru : (entry - tp2) / ru; size = (ctx.account * ctx.riskPct / 100) / ru; }
       return { action, entry, sl, tp1, tp2, rr1, rr2, size, score, blocked, guards };
@@ -904,13 +1023,13 @@
 
     function builtinAnswer(q) {
       const d = mktData;
-      const { price, ema800, rsi, atr, mtf, goldenCross, htfFilter, rsiZone, signal, score, change24 } = d;
+      const { price, ema800, rsi, atr, mtf, goldenCross, htfFilter, rsiZone, signal, score, change24, fg, funding, oiChange, news, cycle } = d;
       const ctx = getCtx();
       q = q.toLowerCase();
       if (/ema|800|trigger/.test(q)) { const dist = ((price - ema800) / ema800 * 100); return `📏 EMA 800\n\nEMA 800: $${fmt(ema800)}\nBTC: $${fmt(price)}\n\n${price >= ema800 ? '✅ Preis ÜBER EMA 800 → bullisch' : '❌ Preis UNTER EMA 800 → bearisch'}\nAbstand: ${dist >= 0 ? '+' : ''}${dist.toFixed(2)}%\n\n${price >= ema800 ? 'Trigger fällt unter $' + fmt(ema800) : 'Bull-Signal: Close über $' + fmt(ema800)}`; }
-      if (/score|qualit|stärk/.test(q)) { const bar = '█'.repeat(Math.round(score / 10)) + '░'.repeat(10 - Math.round(score / 10)); return `📊 Signal-Score\n\n${score}/100\n${bar}\n\nMTF: 1h=${mtf.t1h} | 4h=${mtf.t4h} | 1d=${mtf.t1d}\nAlignment: ${mtf.aligned}\nRSI: ${rsi.toFixed(1)}\n\n${score >= 70 ? '🟢 Starkes Setup' : score >= 50 ? '🟡 Mittleres Setup' : '🔴 Schwaches Signal — abwarten'}`; }
+      if (/score|qualit|stärk/.test(q)) { const bar = '█'.repeat(Math.round(score / 10)) + '░'.repeat(10 - Math.round(score / 10)); return `📊 Signal-Score\n\n${score}/100\n${bar}\n\nTech/OnChain/Sent/Macro/News: ${d.scoreObj.tech.toFixed(1)}/${d.scoreObj.onchain.toFixed(1)}/${d.scoreObj.sentiment.toFixed(1)}/${d.scoreObj.macro.toFixed(1)}/${d.scoreObj.news.toFixed(1)}\nMTF: 1h=${mtf.t1h} | 4h=${mtf.t4h} | 1d=${mtf.t1d}\nFG: ${fg} | Funding: ${funding.toFixed(4)}% | OIΔ: ${oiChange.toFixed(2)}%\nNews: ${news.score.toFixed(1)}/10 | Cycle: ${cycle.phase}\n\n${score >= 70 ? '🟢 Starkes Setup' : score >= 50 ? '🟡 Mittleres Setup' : '🔴 Schwaches Signal — abwarten'}`; }
       if (/plan|entry|setup|long|short|stop|tp|trade|kauf/.test(q)) { const plan = buildPlan(ctx); if (!plan) return '⏳'; if (plan.blocked) return `🚫 No Trade\n\n${plan.guards.map(g => '• ' + g).join('\n')}\n\nScore: ${plan.score}/100`; if (plan.action === 'wait') return `⏸️ Kein Signal\n\nMTF: ${mtf.t1h}/${mtf.t4h}/${mtf.t1d}\nScore: ${plan.score}/100`; const dir = plan.action === 'long' ? '📈 LONG' : '📉 SHORT'; return `${plan.action === 'long' ? '🟢' : '🔴'} ${dir}\n\nEntry: $${fmt(plan.entry)}\nStop:  $${fmt(plan.sl)}\nTP1:   $${fmt(plan.tp1)} (${plan.rr1?.toFixed(1)}:1)\nTP2:   $${fmt(plan.tp2)} (${plan.rr2?.toFixed(1)}:1)\n\nGröße: ${plan.size?.toFixed(5)} BTC\n(${ctx.riskPct}% Risiko · $${ctx.account.toLocaleString('de-DE')} Konto)\n\nScore: ${plan.score}/100 | ${mtf.aligned}`; }
-      if (/status|preis|live|rsi|indi/.test(q)) { return `📡 Live Status\n\nBTC: $${fmt(price)} (${change24 >= 0 ? '+' : ''}${change24.toFixed(2)}% 24h)\n\nEMA 15:  $${fmt(d.ema15)}\nEMA 300: $${fmt(d.ema300)}\nEMA 800: $${fmt(ema800)}\nRSI 14:  ${rsi.toFixed(1)} | ATR: $${fmt(atr)}\n\nSignal: ${signal} (${d.strength}/3) | Score: ${score}/100\n${goldenCross ? '✅' : '❌'} Golden Cross · ${htfFilter ? '✅' : '❌'} Über EMA800 · ${rsiZone ? '✅' : '❌'} RSI`; }
+      if (/status|preis|live|rsi|indi/.test(q)) { return `📡 Live Status\n\nBTC: $${fmt(price)} (${change24 >= 0 ? '+' : ''}${change24.toFixed(2)}% 24h)\n\nEMA 15:  $${fmt(d.ema15)}\nEMA 300: $${fmt(d.ema300)}\nEMA 800: $${fmt(ema800)}\nRSI 14:  ${rsi.toFixed(1)} | ATR: $${fmt(atr)} | MACD: ${d.macd.trend}\nFG: ${fg} | Funding: ${funding.toFixed(4)}% | OIΔ: ${oiChange.toFixed(2)}%\nNews Score: ${news.score.toFixed(1)}/10 | Cycle: ${cycle.phase}\n\nSignal: ${signal} (${d.strength}/3) | Score: ${score}/100\n${goldenCross ? '✅' : '❌'} Golden Cross · ${htfFilter ? '✅' : '❌'} Über EMA800 · ${rsiZone ? '✅' : '❌'} RSI`; }
       return `🤖 TraderCoach\n\nFrag mich:\n• "Gib mir einen Trade-Plan"\n• "Wie ist der Score?"\n• "EMA 800 Analyse"\n• "Live Status"\n• "Soll ich kaufen?"\n\nScore: ${score}/100 | ${signal}`;
     }
 
@@ -927,9 +1046,16 @@ AKTUELLE MARKTDATEN (Live):
 - BTC Preis: $${fmt(d.price)} (${d.change24 >= 0 ? '+' : ''}${d.change24.toFixed(2)}% 24h)
 - Signal: ${d.signal} | Score: ${d.score}/100
 - RSI 14: ${d.rsi.toFixed(1)} | ATR: $${fmt(d.atr)}
+- MACD: ${d.macd.trend} (${d.macd.histogram.toFixed(2)})
 - EMA 15: $${fmt(d.ema15)} | EMA 300: $${fmt(d.ema300)} | EMA 800: $${fmt(d.ema800)}
 - Golden Cross: ${d.goldenCross ? 'JA' : 'NEIN'} | Über EMA800: ${d.htfFilter ? 'JA' : 'NEIN'} | RSI Zone: ${d.rsiZone ? 'JA' : 'NEIN'}
 - MTF: 1h=${d.mtf.t1h} / 4h=${d.mtf.t4h} / 1d=${d.mtf.t1d} → Alignment: ${d.mtf.aligned}
+- Fear & Greed: ${d.fg} | Funding: ${d.funding.toFixed(4)}% | OIΔ: ${d.oiChange.toFixed(2)}%
+- L/S Ratio: ${d.lsLong.toFixed(1)}% Long / ${d.lsShort.toFixed(1)}% Short
+- News Score: ${d.news.score.toFixed(1)}/10 (Bull ${d.news.bullish} / Bear ${d.news.bearish}, HI ${d.news.highImpact})
+- Cycle: ${d.cycle.phase}
+- On-Chain Proxy: Whale Trades ${d.onchain.whaleTrades} | Exchange Flow ${d.onchain.exchangeFlowPct.toFixed(2)}%
+- Weighted Scores (0-10): Tech ${d.scoreObj.tech.toFixed(1)} | OnChain ${d.scoreObj.onchain.toFixed(1)} | Sent ${d.scoreObj.sentiment.toFixed(1)} | Macro ${d.scoreObj.macro.toFixed(1)} | News ${d.scoreObj.news.toFixed(1)}
 ${plan && plan.action !== 'wait' && !plan.blocked ? `- Trade-Plan: ${plan.action.toUpperCase()} Entry $${fmt(plan.entry)} | SL $${fmt(plan.sl)} | TP1 $${fmt(plan.tp1)} | TP2 $${fmt(plan.tp2)} | RR ${plan.rr1?.toFixed(1)}:1` : '- Kein klares Trade-Setup (MTF nicht aligned oder Guardrails aktiv)'}
 - Konto: $${ctx.account} | Risiko: ${ctx.riskPct}% | Tages-PnL: ${ctx.dailyPnl}%
 
