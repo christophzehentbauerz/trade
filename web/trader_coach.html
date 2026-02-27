@@ -587,6 +587,53 @@
     .ind-val {
       font-weight: 500
     }
+
+    .src-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .src-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0a1120;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 6px 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .src-chip {
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .2px;
+      color: var(--text);
+    }
+
+    .src-chip.live {
+      color: var(--green);
+      border-color: rgba(52, 217, 139, .35);
+      background: rgba(52, 217, 139, .1);
+    }
+
+    .src-chip.proxy {
+      color: var(--yellow);
+      border-color: rgba(245, 197, 66, .35);
+      background: rgba(245, 197, 66, .1);
+    }
+
+    .src-chip.static {
+      color: var(--red);
+      border-color: rgba(255, 107, 107, .35);
+      background: rgba(255, 107, 107, .1);
+    }
   </style>
 </head>
 
@@ -731,6 +778,14 @@
           </div>
         </div>
       </div>
+      <div class="card">
+        <div class="card-head">🔎 Faktor-Check</div>
+        <div class="card-body">
+          <ul class="src-list" id="srcAuditCoach">
+            <li class="src-item"><span>BTC Preis</span><span class="src-chip">--</span></li>
+          </ul>
+        </div>
+      </div>
     </div>
 
     <!-- Right: Chat -->
@@ -799,6 +854,13 @@
       const r = await fetch(url);
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
+    }
+    async function fetchSafe(url, fallback) {
+      try {
+        return { ok: true, data: await fetchJSON(url) };
+      } catch (_) {
+        return { ok: false, data: fallback };
+      }
     }
 
     function calcEMA(p, n) {
@@ -906,19 +968,20 @@
 
     async function loadMarketData() {
       try {
-        const [d1h, d4h, d1d, d24, fgData, fundingData, oiNow, oiHist, lsData, newsData, aggTrades] = await Promise.all([
+        const [d1h, d4h, d1d, d24, fgRes, fundingRes, oiNowRes, oiHistRes, lsRes, newsRes, aggRes] = await Promise.all([
           fetchJSON('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=1000'),
           fetchJSON('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=500&aggregate=4'),
           fetchJSON('https://min-api.cryptocompare.com/data/v2/histoday?fsym=BTC&tsym=USD&limit=300'),
           fetchJSON('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=24'),
-          fetchJSON('https://api.alternative.me/fng/?limit=1').catch(() => ({ data: [{ value: '50' }] })),
-          fetchJSON('https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&limit=1').catch(() => [{ fundingRate: 0 }]),
-          fetchJSON('https://fapi.binance.com/fapi/v1/openInterest?symbol=BTCUSDT').catch(() => ({ openInterest: 0 })),
-          fetchJSON('https://fapi.binance.com/futures/data/openInterestHist?symbol=BTCUSDT&period=1h&limit=24').catch(() => []),
-          fetchJSON('https://fapi.binance.com/fapi/v1/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1').catch(() => [{ longShortRatio: 1 }]),
-          fetchJSON('https://min-api.cryptocompare.com/data/v2/news/?lang=EN&categories=BTC,Regulation,Market&excludeCategories=Sponsored').catch(() => ({ Data: [] })),
-          fetchJSON('https://api.binance.com/api/v3/aggTrades?symbol=BTCUSDT&limit=1000').catch(() => [])
+          fetchSafe('https://api.alternative.me/fng/?limit=1', { data: [{ value: '50' }] }),
+          fetchSafe('https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&limit=1', [{ fundingRate: 0 }]),
+          fetchSafe('https://fapi.binance.com/fapi/v1/openInterest?symbol=BTCUSDT', { openInterest: 0 }),
+          fetchSafe('https://fapi.binance.com/futures/data/openInterestHist?symbol=BTCUSDT&period=1h&limit=24', []),
+          fetchSafe('https://fapi.binance.com/fapi/v1/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1', [{ longShortRatio: 1 }]),
+          fetchSafe('https://min-api.cryptocompare.com/data/v2/news/?lang=EN&categories=BTC,Regulation,Market&excludeCategories=Sponsored', { Data: [] }),
+          fetchSafe('https://api.binance.com/api/v3/aggTrades?symbol=BTCUSDT&limit=1000', [])
         ]);
+        const fgData = fgRes.data, fundingData = fundingRes.data, oiNow = oiNowRes.data, oiHist = oiHistRes.data, lsData = lsRes.data, newsData = newsRes.data, aggTrades = aggRes.data;
         const c1h = d1h.Data.Data, c4h = d4h.Data.Data, c1d = d1d.Data.Data;
         const cl = c1h.map(c => c.close), price = cl[cl.length - 1];
         const ema15 = calcEMA(cl, 15), ema300 = calcEMA(cl, 300), ema800 = calcEMA(cl, 800);
@@ -953,7 +1016,21 @@
         const shortThreshold = 100 - minScore;
         const sig = sc >= minScore ? 'LONG' : sc <= shortThreshold ? 'SHORT' : (!goldenCross ? 'EXIT' : 'NEUTRAL');
         const change24 = ((price - d24.Data.Data[0].open) / d24.Data.Data[0].open * 100);
-        mktData = { price, ema15, ema300, ema800, rsi, atr, macd, goldenCross, htfFilter, rsiZone, strength, signal: sig, score: sc, scoreObj: scObj, mtf, change24, fg, funding, oi: parseFloat(oiNow?.openInterest || 0), oiChange, lsLong, lsShort, news, onchain, cycle, closes: cl };
+        mktData = {
+          price, ema15, ema300, ema800, rsi, atr, macd, goldenCross, htfFilter, rsiZone, strength, signal: sig, score: sc, scoreObj: scObj,
+          mtf, change24, fg, funding, oi: parseFloat(oiNow?.openInterest || 0), oiChange, lsLong, lsShort, news, onchain, cycle, closes: cl,
+          sourceFlags: {
+            price: true,
+            fearGreed: fgRes.ok,
+            funding: fundingRes.ok,
+            oi: oiNowRes.ok && oiHistRes.ok,
+            ls: lsRes.ok,
+            news: newsRes.ok,
+            macd: true,
+            onchain: aggRes.ok,
+            cycle: true
+          }
+        };
         updateUI();
       } catch (e) {
         document.getElementById('statusDot').className = 'status-dot err';
@@ -999,6 +1076,27 @@
       document.getElementById('iCycle').textContent = d.cycle.phase;
       document.getElementById('iOnchain').textContent = `Whales ${d.onchain.whaleTrades}, Flow ${d.onchain.exchangeFlowPct.toFixed(1)}%`;
       document.getElementById('lastUpdated').textContent = 'Update ' + new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+      updateSourceAudit();
+    }
+
+    function updateSourceAudit() {
+      const d = mktData;
+      const list = document.getElementById('srcAuditCoach');
+      if (!d || !list) return;
+      const rows = [
+        ['BTC Preis', d.sourceFlags.price ? 'live' : 'static'],
+        ['Fear & Greed', d.sourceFlags.fearGreed ? 'live' : 'static'],
+        ['Funding', d.sourceFlags.funding ? 'live' : 'static'],
+        ['Open Interest', d.sourceFlags.oi ? 'live' : 'static'],
+        ['L/S Ratio', d.sourceFlags.ls ? 'live' : 'static'],
+        ['News', d.sourceFlags.news ? 'live' : 'static'],
+        ['MACD', d.sourceFlags.macd ? 'live' : 'static'],
+        ['On-Chain Proxy', d.sourceFlags.onchain ? 'proxy' : 'static'],
+        ['Cycle', d.sourceFlags.cycle ? 'static' : 'static']
+      ];
+      list.innerHTML = rows.map(([name, st]) =>
+        `<li class="src-item"><span>${name}</span><span class="src-chip ${st}">${st.toUpperCase()}</span></li>`
+      ).join('');
     }
 
     // ─── BUILT-IN COACH ───
