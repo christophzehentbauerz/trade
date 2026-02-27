@@ -608,9 +608,16 @@
   <!-- GPT KEY BANNER -->
   <div class="gpt-banner">
     <div class="gpt-banner-inner">
-      <span class="gpt-badge">🧠 GPT-4o</span>
+      <span class="gpt-badge">🧠 KI-Modell</span>
       <span id="gptStatus">Kein API-Key — Coach antwortet mit eingebautem Regelwerk</span>
-      <input type="password" id="gptKeyInput" placeholder="sk-... OpenAI API Key eingeben" autocomplete="off" />
+      <select id="gptModel"
+        style="background:#0a1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:inherit;font-size:12px;outline:none;max-width:160px;">
+        <option value="gpt-4o-mini" selected>⚡ gpt-4o-mini (günstig)</option>
+        <option value="gpt-4o">🧠 gpt-4o (besser)</option>
+        <option value="o3-mini">🔬 o3-mini (Reasoning)</option>
+      </select>
+      <input type="password" id="gptKeyInput" placeholder="sk-... OpenAI API Key" autocomplete="off"
+        style="min-width:160px;" />
       <button class="btn-sm btn-purple" id="gptSaveBtn">Speichern</button>
       <button class="btn-sm" id="gptClearBtn"
         style="background:#1a2740;color:var(--muted);border:1px solid var(--border);">Löschen</button>
@@ -927,7 +934,7 @@ WICHTIG: Gib keine Anlageberatung. Weise immer auf Risiken hin. Antworte prägna
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${gptKey}` },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: document.getElementById('gptModel')?.value || 'gpt-4o-mini',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: question }
