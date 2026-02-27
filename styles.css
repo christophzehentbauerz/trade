@@ -1,4 +1,4 @@
-/* =====================================================
+﻿/* =====================================================
    BTC Market Intelligence Dashboard - Styles
    ===================================================== */
 
@@ -4546,4 +4546,50 @@ body::after {
 
 .spot-action-box:hover {
     border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+
+/* Added: Coach Extensions (On-Chain/Risk/Paper/Audit) */
+.risk-settings-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-bottom:10px; }
+.risk-setting { display:flex; flex-direction:column; gap:6px; font-size:.8rem; color:var(--text-secondary); }
+.risk-setting input { background:var(--bg-secondary); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-sm); padding:8px 10px; }
+.risk-setting input[type="checkbox"] { width:20px; height:20px; padding:0; accent-color:var(--accent-secondary); }
+.risk-gate-status { font-size:.8rem; padding:8px 10px; border-radius:var(--radius-sm); border:1px solid var(--border-color); background:var(--bg-secondary); color:var(--text-secondary); }
+.risk-gate-status.active { color:var(--bullish); border-color:rgba(16,185,129,.35); }
+.risk-gate-status.blocked { color:var(--bearish); border-color:rgba(239,68,68,.35); }
+
+.onchain-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.onchain-item { background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px; display:flex; flex-direction:column; gap:4px; }
+.onchain-label { font-size:.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.04em; }
+.onchain-value { font-size:1rem; font-weight:700; color:var(--text-primary); }
+.onchain-sub { font-size:.8rem; color:var(--text-secondary); }
+
+.paper-controls { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-bottom:12px; }
+.paper-controls label { display:flex; flex-direction:column; gap:6px; font-size:.8rem; color:var(--text-secondary); }
+.paper-controls input { background:var(--bg-secondary); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-sm); padding:8px 10px; }
+.paper-controls input[type="checkbox"] { width:20px; height:20px; accent-color:var(--accent-secondary); }
+.paper-actions { display:flex; gap:8px; align-items:end; }
+.paper-btn { border:1px solid var(--border-color); background:var(--bg-secondary); color:var(--text-primary); border-radius:var(--radius-sm); padding:8px 10px; cursor:pointer; }
+.paper-btn.danger { border-color:rgba(239,68,68,.35); color:var(--bearish); }
+.paper-status { border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:8px 10px; margin-bottom:10px; font-size:.85rem; background:var(--bg-secondary); }
+.paper-status.active { color:var(--bullish); border-color:rgba(16,185,129,.35); }
+.paper-status.idle { color:var(--text-secondary); }
+.paper-metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-bottom:12px; }
+.paper-metrics div { background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:10px; display:flex; flex-direction:column; gap:4px; }
+.paper-metrics span { font-size:.75rem; color:var(--text-muted); }
+.paper-metrics strong { font-size:.9rem; color:var(--text-primary); }
+.paper-journal h3 { font-size:.85rem; margin-bottom:8px; color:var(--text-secondary); }
+.paper-journal ul { list-style:none; display:flex; flex-direction:column; gap:6px; }
+.paper-journal li { background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:8px 10px; display:grid; grid-template-columns:1fr auto auto; gap:8px; font-size:.78rem; color:var(--text-secondary); }
+
+.source-list { list-style:none; display:flex; flex-direction:column; gap:8px; }
+.source-list li { display:flex; justify-content:space-between; align-items:center; gap:10px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:8px 10px; font-size:.82rem; color:var(--text-secondary); }
+.source-chip { border-radius:999px; padding:3px 8px; font-size:.7rem; font-weight:700; letter-spacing:.02em; border:1px solid var(--border-color); color:var(--text-primary); }
+.source-chip.live { color:var(--bullish); border-color:rgba(16,185,129,.35); background:rgba(16,185,129,.1); }
+.source-chip.proxy { color:#f59e0b; border-color:rgba(245,158,11,.35); background:rgba(245,158,11,.1); }
+.source-chip.static { color:var(--bearish); border-color:rgba(239,68,68,.35); background:rgba(239,68,68,.1); }
+
+@media (max-width: 640px) {
+  .onchain-grid, .risk-settings-grid, .paper-controls, .paper-metrics { grid-template-columns:1fr; }
+  .paper-journal li { grid-template-columns:1fr; }
 }

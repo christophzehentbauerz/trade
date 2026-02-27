@@ -13,13 +13,28 @@ const CONFIG = {
         coinGecko: 'https://api.coingecko.com/api/v3',
         fearGreed: 'https://api.alternative.me/fng/',
         binance: 'https://api.binance.com/api/v3',
-        binanceFutures: 'https://fapi.binance.com/fapi/v1'
+        binanceFutures: 'https://fapi.binance.com/fapi/v1',
+        cryptoCompareNews: 'https://min-api.cryptocompare.com/data/v2/news/'
     },
     weights: {
-        technical: 0.35,
-        onchain: 0.25,
-        sentiment: 0.20,
-        macro: 0.20
+        technical: 0.32,
+        onchain: 0.22,
+        sentiment: 0.18,
+        macro: 0.18,
+        news: 0.10
+    },
+    riskDefaults: {
+        enabled: true,
+        riskPercent: 1.0,
+        dailyPnl: 0.0,
+        dailyLossLimit: -2.0,
+        minScore: 6.5
+    },
+    paperDefaults: {
+        enabled: true,
+        autoExecute: false,
+        startingBalance: 10000,
+        feeRate: 0.0004
     }
 };
 
@@ -38,17 +53,72 @@ let state = {
     fearGreedHistory: [],
     fundingRate: null,
     openInterest: null,
+    openInterestChangePct: 0,
+    openInterestHistory: [],
     longShortRatio: { long: 50, short: 50 },
     priceHistory: [],
     volumeHistory: [],
+    marketCandles1h: [],
+    macd: { value: 0, signal: 0, histogram: 0, trend: 'neutral' },
+    onchainMetrics: {
+        whaleTrades: 0,
+        whaleBuySellBias: 0,
+        whaleVolumeUsd: 0,
+        exchangeFlowPct: 0,
+        exchangeFlowSignal: 'neutral'
+    },
+    cycle: {
+        phase: 'Unknown',
+        progressPct: 0,
+        daysToNextHalving: null,
+        score: 5
+    },
+    newsItems: [],
+    newsSentiment: {
+        score: 5,
+        bullish: 0,
+        bearish: 0,
+        highImpact: 0
+    },
     scores: {
         technical: 5,
         onchain: 5,
         sentiment: 5,
-        macro: 5
+        macro: 5,
+        news: 5
     },
     signal: 'NEUTRAL',
     confidence: 50,
+    riskGateBlocked: false,
+    riskGateReason: '',
+    riskSettings: { ...CONFIG.riskDefaults },
+    paper: {
+        ...CONFIG.paperDefaults,
+        balance: CONFIG.paperDefaults.startingBalance,
+        equity: CONFIG.paperDefaults.startingBalance,
+        openPnl: 0,
+        dailyPnlPct: 0,
+        totalPnlPct: 0,
+        dayKey: '',
+        dayStartEquity: CONFIG.paperDefaults.startingBalance,
+        position: null,
+        trades: [],
+        signalStats: {
+            total: 0,
+            wins: 0,
+            losses: 0
+        }
+    },
+    dataFlags: {
+        priceLive: false,
+        fearGreedLive: false,
+        fundingLive: false,
+        oiLive: false,
+        lsLive: false,
+        newsLive: false,
+        candlesLive: false,
+        onchainProxyLive: false
+    },
     lastUpdate: null
 };
 
@@ -313,10 +383,12 @@ async function fetchPriceData() {
         state.volume24h = data.market_data.total_volume.usd;
         state.ath = data.market_data.ath.usd;
         state.athChange = data.market_data.ath_change_percentage.usd;
+        state.dataFlags.priceLive = true;
 
         return true;
     } catch (error) {
         console.error('Error fetching price data:', error);
+        state.dataFlags.priceLive = false;
         return false;
     }
 }
@@ -354,9 +426,11 @@ async function fetchFearGreedIndex() {
                 timestamp: d.timestamp
             }));
         }
+        state.dataFlags.fearGreedLive = true;
         return true;
     } catch (error) {
         console.error('Error fetching Fear & Greed:', error);
+        state.dataFlags.fearGreedLive = false;
         return false;
     }
 }
@@ -370,27 +444,42 @@ async function fetchFundingRate() {
         if (data && data.length > 0) {
             state.fundingRate = parseFloat(data[0].fundingRate) * 100;
         }
+        state.dataFlags.fundingLive = true;
         return true;
     } catch (error) {
         console.error('Error fetching funding rate:', error);
         // Set a mock value for demo
         state.fundingRate = -0.005;
+        state.dataFlags.fundingLive = false;
         return false;
     }
 }
 
 async function fetchOpenInterest() {
     try {
-        const data = await fetchWithTimeout(
-            `${CONFIG.apis.binanceFutures}/openInterest?symbol=BTCUSDT`
-        );
+        const [oiNow, oiHist] = await Promise.all([
+            fetchWithTimeout(`${CONFIG.apis.binanceFutures}/openInterest?symbol=BTCUSDT`),
+            fetchWithTimeout(`${CONFIG.apis.binanceFutures.replace('/fapi/v1', '')}/futures/data/openInterestHist?symbol=BTCUSDT&period=1h&limit=24`)
+        ]);
 
-        if (data) {
-            state.openInterest = parseFloat(data.openInterest) * state.price;
+        if (oiNow) {
+            state.openInterest = parseFloat(oiNow.openInterest) * state.price;
         }
+
+        if (Array.isArray(oiHist) && oiHist.length >= 2) {
+            state.openInterestHistory = oiHist.map(item => parseFloat(item.sumOpenInterestValue || item.sumOpenInterest || 0));
+            const first = state.openInterestHistory[0];
+            const last = state.openInterestHistory[state.openInterestHistory.length - 1];
+            state.openInterestChangePct = first > 0 ? ((last - first) / first) * 100 : 0;
+        } else {
+            state.openInterestChangePct = 0;
+        }
+        state.dataFlags.oiLive = true;
         return true;
     } catch (error) {
         console.error('Error fetching open interest:', error);
+        state.openInterestChangePct = 0;
+        state.dataFlags.oiLive = false;
         return false;
     }
 }
@@ -409,13 +498,438 @@ async function fetchLongShortRatio() {
                 short: 100 - longPercent
             };
         }
+        state.dataFlags.lsLive = true;
         return true;
     } catch (error) {
         console.error('Error fetching L/S ratio:', error);
         // Mock data
         state.longShortRatio = { long: 48.5, short: 51.5 };
+        state.dataFlags.lsLive = false;
         return false;
     }
+}
+
+async function fetchOnChainProxies() {
+    try {
+        const aggTrades = await fetchWithTimeout(`${CONFIG.apis.binance}/aggTrades?symbol=BTCUSDT&limit=1000`);
+        const whaleThresholdUsd = 1500000;
+        let whaleTrades = 0;
+        let whaleVolumeUsd = 0;
+        let whaleBias = 0;
+
+        for (const t of (aggTrades || [])) {
+            const notional = (parseFloat(t.p) || 0) * (parseFloat(t.q) || 0);
+            if (notional >= whaleThresholdUsd) {
+                whaleTrades += 1;
+                whaleVolumeUsd += notional;
+                whaleBias += t.m ? -1 : 1;
+            }
+        }
+
+        let buyQuote = 0;
+        let totalQuote = 0;
+        for (const candle of state.marketCandles1h.slice(-24)) {
+            totalQuote += candle.quoteVolume || 0;
+            buyQuote += candle.takerBuyQuoteVolume || 0;
+        }
+        const sellQuote = Math.max(0, totalQuote - buyQuote);
+        const flowPct = totalQuote > 0 ? ((buyQuote - sellQuote) / totalQuote) * 100 : 0;
+
+        state.onchainMetrics = {
+            whaleTrades,
+            whaleBuySellBias: whaleBias,
+            whaleVolumeUsd,
+            exchangeFlowPct: flowPct,
+            exchangeFlowSignal: flowPct > 4 ? 'bullish' : flowPct < -4 ? 'bearish' : 'neutral'
+        };
+        state.dataFlags.onchainProxyLive = true;
+        return true;
+    } catch (error) {
+        console.error('Error fetching on-chain proxies:', error);
+        state.onchainMetrics = {
+            whaleTrades: 0,
+            whaleBuySellBias: 0,
+            whaleVolumeUsd: 0,
+            exchangeFlowPct: 0,
+            exchangeFlowSignal: 'neutral'
+        };
+        state.dataFlags.onchainProxyLive = false;
+        return false;
+    }
+}
+
+async function fetchMarketStructureData() {
+    try {
+        const klines = await fetchWithTimeout(
+            `${CONFIG.apis.binance}/klines?symbol=BTCUSDT&interval=1h&limit=300`
+        );
+
+        state.marketCandles1h = (klines || []).map(k => ({
+            openTime: k[0],
+            close: parseFloat(k[4]),
+            quoteVolume: parseFloat(k[7]),
+            takerBuyQuoteVolume: parseFloat(k[10])
+        }));
+        state.dataFlags.candlesLive = true;
+        return true;
+    } catch (error) {
+        console.error('Error fetching market structure candles:', error);
+        state.marketCandles1h = [];
+        state.dataFlags.candlesLive = false;
+        return false;
+    }
+}
+
+function analyzeNewsSentiment(newsItems) {
+    const bullishKeywords = [
+        'etf inflow', 'institutional buy', 'accumulation', 'adoption',
+        'approval', 'upgrade', 'surge', 'bullish', 'record high'
+    ];
+    const bearishKeywords = [
+        'etf outflow', 'sell-off', 'hack', 'exploit', 'ban',
+        'lawsuit', 'sec action', 'liquidation', 'bearish', 'crash'
+    ];
+    const highImpactKeywords = [
+        'fed', 'fomc', 'cpi', 'sec', 'etf', 'interest rate',
+        'regulation', 'blackrock', 'grayscale', 'treasury'
+    ];
+
+    let bullish = 0;
+    let bearish = 0;
+    let highImpact = 0;
+
+    for (const item of newsItems) {
+        const title = (item?.title || '').toLowerCase();
+
+        if (bullishKeywords.some(k => title.includes(k))) bullish += 1;
+        if (bearishKeywords.some(k => title.includes(k))) bearish += 1;
+        if (highImpactKeywords.some(k => title.includes(k))) highImpact += 1;
+    }
+
+    const balance = bullish - bearish;
+    const impactBoost = Math.min(1.5, highImpact * 0.25);
+    const score = Math.max(0, Math.min(10, 5 + (balance * 1.2) + impactBoost));
+
+    return { score, bullish, bearish, highImpact };
+}
+
+async function fetchNewsEvents() {
+    try {
+        const data = await fetchWithTimeout(
+            `${CONFIG.apis.cryptoCompareNews}?lang=EN&categories=BTC,Regulation,Market&excludeCategories=Sponsored`
+        );
+
+        const rawItems = data?.Data || [];
+        state.newsItems = rawItems.slice(0, 8).map(item => ({
+            title: item.title,
+            url: item.url,
+            source: item.source_info?.name || 'Unknown',
+            publishedOn: item.published_on
+        }));
+        state.newsSentiment = analyzeNewsSentiment(state.newsItems);
+        state.dataFlags.newsLive = true;
+        return true;
+    } catch (error) {
+        console.error('Error fetching BTC news:', error);
+        state.newsItems = [];
+        state.newsSentiment = { score: 5, bullish: 0, bearish: 0, highImpact: 0 };
+        state.dataFlags.newsLive = false;
+        return false;
+    }
+}
+
+function loadRiskSettings() {
+    const saved = localStorage.getItem('btc-risk-settings');
+    if (!saved) {
+        state.riskSettings = { ...CONFIG.riskDefaults };
+        return;
+    }
+
+    try {
+        const parsed = JSON.parse(saved);
+        state.riskSettings = {
+            ...CONFIG.riskDefaults,
+            ...parsed
+        };
+    } catch (error) {
+        console.warn('Risk settings could not be parsed. Using defaults.', error);
+        state.riskSettings = { ...CONFIG.riskDefaults };
+    }
+}
+
+function saveRiskSettings() {
+    localStorage.setItem('btc-risk-settings', JSON.stringify(state.riskSettings));
+}
+
+function getDayKey(date = new Date()) {
+    return date.toISOString().slice(0, 10);
+}
+
+function loadPaperState() {
+    const saved = localStorage.getItem('btc-paper-state');
+    if (!saved) {
+        state.paper.dayKey = getDayKey();
+        state.paper.dayStartEquity = state.paper.equity;
+        return;
+    }
+
+    try {
+        const parsed = JSON.parse(saved);
+        state.paper = {
+            ...state.paper,
+            ...parsed
+        };
+    } catch (error) {
+        console.warn('Paper state could not be parsed. Using defaults.', error);
+    }
+
+    if (!state.paper.dayKey) {
+        state.paper.dayKey = getDayKey();
+        state.paper.dayStartEquity = state.paper.equity;
+    }
+}
+
+function savePaperState() {
+    localStorage.setItem('btc-paper-state', JSON.stringify(state.paper));
+}
+
+function resetPaperState(startingBalance = CONFIG.paperDefaults.startingBalance) {
+    state.paper = {
+        ...state.paper,
+        balance: startingBalance,
+        equity: startingBalance,
+        openPnl: 0,
+        dailyPnlPct: 0,
+        totalPnlPct: 0,
+        dayKey: getDayKey(),
+        dayStartEquity: startingBalance,
+        position: null,
+        trades: [],
+        signalStats: { total: 0, wins: 0, losses: 0 }
+    };
+    savePaperState();
+}
+
+function updatePaperDayBoundary() {
+    const today = getDayKey();
+    if (state.paper.dayKey !== today) {
+        state.paper.dayKey = today;
+        state.paper.dayStartEquity = state.paper.equity;
+        state.paper.dailyPnlPct = 0;
+    }
+}
+
+function calculateTradeLevelsForSignal(signal, price) {
+    if (signal === 'LONG') {
+        return {
+            stopLoss: price * 0.94,
+            takeProfit: price * 1.08
+        };
+    }
+    if (signal === 'SHORT') {
+        return {
+            stopLoss: price * 1.06,
+            takeProfit: price * 0.92
+        };
+    }
+    return null;
+}
+
+function updatePaperOpenPnl() {
+    if (!state.paper.position || !state.price) {
+        state.paper.openPnl = 0;
+        state.paper.equity = state.paper.balance;
+        return;
+    }
+
+    const p = state.paper.position;
+    const direction = p.side === 'LONG' ? 1 : -1;
+    const raw = (state.price - p.entryPrice) * p.sizeBtc * direction;
+    state.paper.openPnl = raw;
+    state.paper.equity = state.paper.balance + raw;
+}
+
+function closePaperPosition(reason, exitPrice = state.price) {
+    const p = state.paper.position;
+    if (!p || !exitPrice) return;
+
+    const direction = p.side === 'LONG' ? 1 : -1;
+    const grossPnl = (exitPrice - p.entryPrice) * p.sizeBtc * direction;
+    const fee = (p.notionalUsd + (Math.abs(exitPrice * p.sizeBtc))) * state.paper.feeRate;
+    const netPnl = grossPnl - fee;
+
+    state.paper.balance += netPnl;
+    state.paper.position = null;
+    state.paper.openPnl = 0;
+    state.paper.equity = state.paper.balance;
+
+    const trade = {
+        id: Date.now(),
+        side: p.side,
+        entryPrice: p.entryPrice,
+        exitPrice,
+        sizeBtc: p.sizeBtc,
+        pnlUsd: netPnl,
+        pnlPct: p.notionalUsd > 0 ? (netPnl / p.notionalUsd) * 100 : 0,
+        score: p.entryScore,
+        reason,
+        openedAt: p.openedAt,
+        closedAt: new Date().toISOString()
+    };
+
+    state.paper.trades.unshift(trade);
+    state.paper.trades = state.paper.trades.slice(0, 200);
+    state.paper.signalStats.total += 1;
+    if (netPnl >= 0) state.paper.signalStats.wins += 1;
+    else state.paper.signalStats.losses += 1;
+}
+
+function openPaperPosition(side, score) {
+    if (!state.price) return;
+    const levels = calculateTradeLevelsForSignal(side, state.price);
+    if (!levels) return;
+
+    const riskPct = Math.max(0.1, state.riskSettings.riskPercent) / 100;
+    const riskUsd = state.paper.equity * riskPct;
+    const slDistance = Math.abs((state.price - levels.stopLoss) / state.price);
+    if (slDistance <= 0) return;
+
+    const notionalUsd = riskUsd / slDistance;
+    const sizeBtc = notionalUsd / state.price;
+    if (!Number.isFinite(sizeBtc) || sizeBtc <= 0) return;
+
+    state.paper.position = {
+        side,
+        entryPrice: state.price,
+        stopLoss: levels.stopLoss,
+        takeProfit: levels.takeProfit,
+        sizeBtc,
+        notionalUsd,
+        entryScore: score,
+        openedAt: new Date().toISOString()
+    };
+}
+
+function evaluatePaperPositionByPrice() {
+    const p = state.paper.position;
+    if (!p || !state.price) return;
+
+    if (p.side === 'LONG') {
+        if (state.price <= p.stopLoss) {
+            closePaperPosition('Stop Loss');
+            return;
+        }
+        if (state.price >= p.takeProfit) {
+            closePaperPosition('Take Profit');
+            return;
+        }
+    } else {
+        if (state.price >= p.stopLoss) {
+            closePaperPosition('Stop Loss');
+            return;
+        }
+        if (state.price <= p.takeProfit) {
+            closePaperPosition('Take Profit');
+            return;
+        }
+    }
+}
+
+function syncPaperRiskMetrics() {
+    updatePaperDayBoundary();
+    updatePaperOpenPnl();
+    state.paper.dailyPnlPct = state.paper.dayStartEquity > 0
+        ? ((state.paper.equity - state.paper.dayStartEquity) / state.paper.dayStartEquity) * 100
+        : 0;
+    state.paper.totalPnlPct = state.paper.startingBalance > 0
+        ? ((state.paper.equity - state.paper.startingBalance) / state.paper.startingBalance) * 100
+        : 0;
+
+    // Keep risk gate in sync with live paper performance when paper execution is enabled.
+    if (state.paper.enabled) {
+        state.riskSettings.dailyPnl = state.paper.dailyPnlPct;
+    }
+}
+
+function runPaperTradingCycle(weightedScore) {
+    if (!state.paper.enabled) {
+        return;
+    }
+
+    evaluatePaperPositionByPrice();
+    syncPaperRiskMetrics();
+
+    if (!state.paper.autoExecute) {
+        savePaperState();
+        return;
+    }
+
+    if (state.paper.position) {
+        if ((state.paper.position.side === 'LONG' && state.signal === 'SHORT') ||
+            (state.paper.position.side === 'SHORT' && state.signal === 'LONG')) {
+            closePaperPosition('Signal Flip');
+        }
+        syncPaperRiskMetrics();
+        savePaperState();
+        return;
+    }
+
+    if (!state.riskGateBlocked && (state.signal === 'LONG' || state.signal === 'SHORT')) {
+        openPaperPosition(state.signal, weightedScore);
+        syncPaperRiskMetrics();
+    }
+
+    savePaperState();
+}
+
+function calculateHalvingCycle() {
+    const halvingDates = [
+        new Date('2012-11-28T00:00:00Z'),
+        new Date('2016-07-09T00:00:00Z'),
+        new Date('2020-05-11T00:00:00Z'),
+        new Date('2024-04-20T00:00:00Z'),
+        new Date('2028-04-20T00:00:00Z') // Estimated window.
+    ];
+
+    const now = new Date();
+    let lastHalving = halvingDates[0];
+    let nextHalving = halvingDates[halvingDates.length - 1];
+
+    for (let i = 0; i < halvingDates.length - 1; i++) {
+        if (now >= halvingDates[i] && now < halvingDates[i + 1]) {
+            lastHalving = halvingDates[i];
+            nextHalving = halvingDates[i + 1];
+            break;
+        }
+    }
+
+    const cycleDays = Math.max(1, Math.round((nextHalving - lastHalving) / 86400000));
+    const elapsedDays = Math.max(0, Math.round((now - lastHalving) / 86400000));
+    const daysToNext = Math.max(0, Math.round((nextHalving - now) / 86400000));
+    const progressPct = Math.max(0, Math.min(100, (elapsedDays / cycleDays) * 100));
+
+    let phase = 'Early Cycle';
+    let cycleScore = 5;
+    if (progressPct < 25) {
+        phase = 'Post-Halving Expansion';
+        cycleScore = 6.5;
+    } else if (progressPct < 55) {
+        phase = 'Mid-Cycle Trend';
+        cycleScore = 7.2;
+    } else if (progressPct < 80) {
+        phase = 'Late Cycle / Distribution Risk';
+        cycleScore = 4.5;
+    } else {
+        phase = 'Pre-Halving Reset';
+        cycleScore = 5.8;
+    }
+
+    return {
+        phase,
+        progressPct,
+        daysToNextHalving: daysToNext,
+        score: cycleScore
+    };
 }
 
 // =====================================================
@@ -456,6 +970,37 @@ function calculateEMA(prices, period) {
     return ema;
 }
 
+function calculateEMAArray(prices, period) {
+    if (!prices || prices.length === 0) return [];
+    const multiplier = 2 / (period + 1);
+    const result = [prices[0]];
+    for (let i = 1; i < prices.length; i++) {
+        result.push((prices[i] - result[i - 1]) * multiplier + result[i - 1]);
+    }
+    return result;
+}
+
+function calculateMACD(prices, fast = 12, slow = 26, signal = 9) {
+    if (!prices || prices.length < slow + signal) {
+        return { value: 0, signal: 0, histogram: 0, trend: 'neutral' };
+    }
+
+    const fastEma = calculateEMAArray(prices, fast);
+    const slowEma = calculateEMAArray(prices, slow);
+    const macdLine = prices.map((_, i) => (fastEma[i] || 0) - (slowEma[i] || 0));
+    const signalLine = calculateEMAArray(macdLine, signal);
+
+    const value = macdLine[macdLine.length - 1];
+    const signalValue = signalLine[signalLine.length - 1];
+    const histogram = value - signalValue;
+
+    let trend = 'neutral';
+    if (value > signalValue && histogram > 0) trend = 'bullish';
+    if (value < signalValue && histogram < 0) trend = 'bearish';
+
+    return { value, signal: signalValue, histogram, trend };
+}
+
 function calculateVolatility(prices) {
     if (prices.length < 2) return 0;
 
@@ -490,10 +1035,46 @@ function determineTrend(prices) {
 // Score Calculation
 // =====================================================
 
+function applyRiskGates(baseSignal, weightedScore) {
+    state.riskGateBlocked = false;
+    state.riskGateReason = '';
+
+    if (!state.riskSettings.enabled) {
+        return baseSignal;
+    }
+
+    if (state.riskSettings.dailyPnl <= state.riskSettings.dailyLossLimit) {
+        state.riskGateBlocked = true;
+        state.riskGateReason = `Daily-Loss-Limit erreicht (${formatNumber(state.riskSettings.dailyPnl, 2)}%)`;
+        return 'NEUTRAL';
+    }
+
+    const minLong = state.riskSettings.minScore;
+    const maxShort = 10 - state.riskSettings.minScore;
+
+    if (baseSignal === 'LONG' && weightedScore < minLong) {
+        state.riskGateBlocked = true;
+        state.riskGateReason = `Min-Score LONG nicht erreicht (${formatNumber(weightedScore, 2)} < ${formatNumber(minLong, 2)})`;
+        return 'NEUTRAL';
+    }
+
+    if (baseSignal === 'SHORT' && weightedScore > maxShort) {
+        state.riskGateBlocked = true;
+        state.riskGateReason = `Min-Score SHORT nicht erreicht (${formatNumber(weightedScore, 2)} > ${formatNumber(maxShort, 2)})`;
+        return 'NEUTRAL';
+    }
+
+    return baseSignal;
+}
+
 function calculateScores() {
     // Technical Score
     const rsi = calculateRSI(state.priceHistory);
     let techScore = 5;
+    const macdPrices = state.marketCandles1h.length > 60
+        ? state.marketCandles1h.map(c => c.close)
+        : state.priceHistory;
+    state.macd = calculateMACD(macdPrices);
 
     // RSI scoring
     if (rsi < 30) techScore += 2.5; // Oversold = bullish
@@ -509,6 +1090,10 @@ function calculateScores() {
     // ATH distance
     if (state.athChange > -20) techScore += 0.5;
     else if (state.athChange < -40) techScore -= 1;
+
+    // MACD confirmation
+    if (state.macd.trend === 'bullish') techScore += 1.2;
+    if (state.macd.trend === 'bearish') techScore -= 1.2;
 
     state.scores.technical = Math.max(0, Math.min(10, techScore));
 
@@ -531,28 +1116,40 @@ function calculateScores() {
 
     state.scores.sentiment = Math.max(0, Math.min(10, sentimentScore));
 
-    // On-Chain Score (simplified without real on-chain data)
-    // Using price momentum and volume as proxy
+    // On-Chain Score (whale/exchange-flow proxies + OI trend)
     let onchainScore = 5;
 
     if (state.priceChange24h > 5) onchainScore += 1;
     else if (state.priceChange24h < -5) onchainScore -= 1;
 
-    // Volume analysis (higher volume on up days is bullish)
-    if (state.priceChange24h > 0 && state.volume24h > state.marketCap * 0.03) {
-        onchainScore += 0.5;
-    }
+    if (state.onchainMetrics.whaleTrades >= 10) onchainScore += 0.7;
+    if (state.onchainMetrics.whaleBuySellBias > 2) onchainScore += 0.8;
+    else if (state.onchainMetrics.whaleBuySellBias < -2) onchainScore -= 0.8;
+
+    if (state.onchainMetrics.exchangeFlowSignal === 'bullish') onchainScore += 1.0;
+    else if (state.onchainMetrics.exchangeFlowSignal === 'bearish') onchainScore -= 1.0;
+
+    if (state.openInterestChangePct > 8 && state.priceChange24h > 0) onchainScore += 0.7;
+    else if (state.openInterestChangePct > 8 && state.priceChange24h < 0) onchainScore -= 0.7;
+    else if (state.openInterestChangePct < -6) onchainScore -= 0.3;
 
     state.scores.onchain = Math.max(0, Math.min(10, onchainScore));
 
-    // Macro & Volume Score
-    // Replaces pure Macro. Includes OBV, RVOL and ATH distance.
+    // Macro & Volume Score (adds cycle and OI regime)
     let macroScore = 5;
+    state.cycle = calculateHalvingCycle();
 
     // Price relative to ATH (Macro Context)
     if (state.athChange > -15) macroScore += 1;
     else if (state.athChange < -50) macroScore -= 1.5;
     else if (state.athChange < -30) macroScore -= 0.5;
+
+    // Cycle context
+    macroScore += (state.cycle.score - 5) * 0.8;
+
+    // Open interest regime
+    if (state.openInterestChangePct > 5) macroScore += 0.6;
+    if (state.openInterestChangePct < -5) macroScore -= 0.4;
 
     // Volume Analysis (if available)
     if (window.historicalData && window.historicalData.total_volumes && typeof calculateOBV === 'function') {
@@ -579,24 +1176,37 @@ function calculateScores() {
 
     state.scores.macro = Math.max(0, Math.min(10, macroScore));
 
+    // News Score
+    let newsScore = state.newsSentiment.score;
+    if (state.newsSentiment.highImpact >= 2) {
+        // Slightly reduce confidence during heavy news flow to account for event volatility.
+        newsScore -= 0.4;
+    }
+    state.scores.news = Math.max(0, Math.min(10, newsScore));
+
     // Calculate weighted total
     const weightedScore =
         state.scores.technical * CONFIG.weights.technical +
         state.scores.onchain * CONFIG.weights.onchain +
         state.scores.sentiment * CONFIG.weights.sentiment +
-        state.scores.macro * CONFIG.weights.macro;
+        state.scores.macro * CONFIG.weights.macro +
+        state.scores.news * CONFIG.weights.news;
 
-    // Determine signal and confidence
-    if (weightedScore >= 6.5) {
-        state.signal = 'LONG';
-        state.confidence = Math.min(85, 50 + (weightedScore - 5) * 7);
-    } else if (weightedScore <= 3.5) {
-        state.signal = 'SHORT';
-        state.confidence = Math.min(85, 50 + (5 - weightedScore) * 7);
-    } else {
-        state.signal = 'NEUTRAL';
-        state.confidence = 40 + Math.random() * 20;
+    const longThreshold = state.riskSettings.minScore;
+    const shortThreshold = 10 - state.riskSettings.minScore;
+
+    let baseSignal = 'NEUTRAL';
+    if (weightedScore >= longThreshold) {
+        baseSignal = 'LONG';
+    } else if (weightedScore <= shortThreshold) {
+        baseSignal = 'SHORT';
     }
+
+    state.signal = applyRiskGates(baseSignal, weightedScore);
+
+    const confidenceRaw = 50 + Math.abs(weightedScore - 5) * 8;
+    const gatePenalty = state.riskGateBlocked ? 15 : 0;
+    state.confidence = Math.max(30, Math.min(85, confidenceRaw - gatePenalty));
 
     return weightedScore;
 }
@@ -788,6 +1398,12 @@ function updateDerivativesCard() {
 
     // Open Interest
     document.getElementById('openInterest').textContent = formatCurrency(state.openInterest);
+    const oiChangeEl = document.getElementById('oiChange');
+    if (oiChangeEl) {
+        const sign = state.openInterestChangePct >= 0 ? '+' : '';
+        oiChangeEl.textContent = `${sign}${formatNumber(state.openInterestChangePct, 2)}% (24h)`;
+        oiChangeEl.className = `derivative-status ${state.openInterestChangePct > 3 ? 'text-bullish' : state.openInterestChangePct < -3 ? 'text-bearish' : ''}`;
+    }
 
     // Long/Short Ratio
     document.getElementById('lsLong').style.width = `${state.longShortRatio.long}%`;
@@ -805,6 +1421,208 @@ function updateDerivativesCard() {
     const badge = document.getElementById('derivativesBadge');
     const derivScore = (state.fundingRate < 0 ? 6 : 4) + (state.longShortRatio.short > 50 ? 1 : -1);
     badge.textContent = `${formatNumber(derivScore, 1)}/10`;
+}
+
+function updateOnchainCard() {
+    const whaleTradesEl = document.getElementById('whaleTrades');
+    const whaleBiasEl = document.getElementById('whaleBias');
+    const exchangeFlowEl = document.getElementById('exchangeFlow');
+    const macdSignalEl = document.getElementById('macdSignal');
+    const cyclePhaseEl = document.getElementById('cyclePhase');
+    const cycleDaysEl = document.getElementById('daysToHalving');
+    const onchainBadgeEl = document.getElementById('onchainBadge');
+
+    if (!whaleTradesEl || !onchainBadgeEl) return;
+
+    whaleTradesEl.textContent = `${state.onchainMetrics.whaleTrades} / 24h`;
+    const whaleBiasText = state.onchainMetrics.whaleBuySellBias > 0
+        ? `Net Buy (${state.onchainMetrics.whaleBuySellBias})`
+        : state.onchainMetrics.whaleBuySellBias < 0
+            ? `Net Sell (${state.onchainMetrics.whaleBuySellBias})`
+            : 'Neutral';
+    whaleBiasEl.textContent = whaleBiasText;
+    whaleBiasEl.className = `onchain-sub ${state.onchainMetrics.whaleBuySellBias > 0 ? 'text-bullish' : state.onchainMetrics.whaleBuySellBias < 0 ? 'text-bearish' : ''}`;
+
+    const flowSign = state.onchainMetrics.exchangeFlowPct >= 0 ? '+' : '';
+    exchangeFlowEl.textContent = `${flowSign}${formatNumber(state.onchainMetrics.exchangeFlowPct, 2)}%`;
+    exchangeFlowEl.className = `onchain-value ${state.onchainMetrics.exchangeFlowSignal === 'bullish' ? 'text-bullish' : state.onchainMetrics.exchangeFlowSignal === 'bearish' ? 'text-bearish' : ''}`;
+
+    const macdTrend = state.macd.trend === 'bullish' ? 'Bullish' : state.macd.trend === 'bearish' ? 'Bearish' : 'Neutral';
+    macdSignalEl.textContent = `${macdTrend} (${formatNumber(state.macd.histogram, 2)})`;
+    macdSignalEl.className = `onchain-value ${state.macd.trend === 'bullish' ? 'text-bullish' : state.macd.trend === 'bearish' ? 'text-bearish' : ''}`;
+
+    cyclePhaseEl.textContent = state.cycle.phase;
+    cycleDaysEl.textContent = state.cycle.daysToNextHalving === null ? '--' : `${state.cycle.daysToNextHalving} Tage`;
+    onchainBadgeEl.textContent = `${formatNumber(state.scores.onchain, 1)}/10`;
+}
+
+function updateRiskSettingsPanel(weightedScore) {
+    const enabledEl = document.getElementById('riskGateEnabled');
+    const riskPctEl = document.getElementById('riskPercentInput');
+    const dailyPnlEl = document.getElementById('dailyPnlInput');
+    const dailyLimitEl = document.getElementById('dailyLossLimitInput');
+    const minScoreEl = document.getElementById('minScoreInput');
+    const gateStatusEl = document.getElementById('riskGateStatus');
+
+    if (!enabledEl || !riskPctEl || !dailyPnlEl || !dailyLimitEl || !minScoreEl || !gateStatusEl) {
+        return;
+    }
+
+    enabledEl.checked = !!state.riskSettings.enabled;
+    riskPctEl.value = state.riskSettings.riskPercent;
+    dailyPnlEl.value = state.riskSettings.dailyPnl;
+    dailyLimitEl.value = state.riskSettings.dailyLossLimit;
+    minScoreEl.value = state.riskSettings.minScore;
+
+    const status = state.riskGateBlocked
+        ? `BLOCKIERT: ${state.riskGateReason}`
+        : `AKTIV: Score ${formatNumber(weightedScore, 2)} | Risk ${formatNumber(state.riskSettings.riskPercent, 2)}%`;
+    gateStatusEl.textContent = status;
+    gateStatusEl.className = `risk-gate-status ${state.riskGateBlocked ? 'blocked' : 'active'}`;
+}
+
+function setupRiskSettingsControls() {
+    const enabledEl = document.getElementById('riskGateEnabled');
+    const riskPctEl = document.getElementById('riskPercentInput');
+    const dailyPnlEl = document.getElementById('dailyPnlInput');
+    const dailyLimitEl = document.getElementById('dailyLossLimitInput');
+    const minScoreEl = document.getElementById('minScoreInput');
+
+    if (!enabledEl || !riskPctEl || !dailyPnlEl || !dailyLimitEl || !minScoreEl) {
+        return;
+    }
+
+    const clamp = (val, min, max) => Math.min(max, Math.max(min, val));
+    const onChange = () => {
+        state.riskSettings.enabled = enabledEl.checked;
+        state.riskSettings.riskPercent = clamp(parseFloat(riskPctEl.value) || 1, 0.1, 5);
+        state.riskSettings.dailyPnl = clamp(parseFloat(dailyPnlEl.value) || 0, -30, 30);
+        state.riskSettings.dailyLossLimit = clamp(parseFloat(dailyLimitEl.value) || -2, -30, -0.1);
+        state.riskSettings.minScore = clamp(parseFloat(minScoreEl.value) || 6.5, 5.2, 8.5);
+        saveRiskSettings();
+        updateDashboard();
+    };
+
+    enabledEl.addEventListener('change', onChange);
+    riskPctEl.addEventListener('change', onChange);
+    dailyPnlEl.addEventListener('change', onChange);
+    dailyLimitEl.addEventListener('change', onChange);
+    minScoreEl.addEventListener('change', onChange);
+}
+
+function updatePaperTradingPanel() {
+    const enabledEl = document.getElementById('paperEnabled');
+    const autoEl = document.getElementById('paperAutoExecute');
+    const startBalEl = document.getElementById('paperStartingBalance');
+    const statusEl = document.getElementById('paperStatus');
+    const equityEl = document.getElementById('paperEquity');
+    const dailyEl = document.getElementById('paperDailyPnl');
+    const totalEl = document.getElementById('paperTotalPnl');
+    const openEl = document.getElementById('paperOpenPnl');
+    const posEl = document.getElementById('paperPosition');
+    const qualityEl = document.getElementById('signalQuality');
+    const listEl = document.getElementById('paperTradeList');
+
+    if (!enabledEl || !listEl) return;
+
+    enabledEl.checked = !!state.paper.enabled;
+    autoEl.checked = !!state.paper.autoExecute;
+    startBalEl.value = state.paper.startingBalance;
+
+    statusEl.textContent = state.paper.position
+        ? `Position offen: ${state.paper.position.side} @ $${formatNumber(state.paper.position.entryPrice, 0)}`
+        : 'Keine offene Position';
+    statusEl.className = `paper-status ${state.paper.position ? 'active' : 'idle'}`;
+
+    equityEl.textContent = `$${formatNumber(state.paper.equity, 2)}`;
+    dailyEl.textContent = `${state.paper.dailyPnlPct >= 0 ? '+' : ''}${formatNumber(state.paper.dailyPnlPct, 2)}%`;
+    totalEl.textContent = `${state.paper.totalPnlPct >= 0 ? '+' : ''}${formatNumber(state.paper.totalPnlPct, 2)}%`;
+    openEl.textContent = `$${formatNumber(state.paper.openPnl, 2)}`;
+    posEl.textContent = state.paper.position
+        ? `${state.paper.position.side} | Size ${formatNumber(state.paper.position.sizeBtc, 4)} BTC`
+        : '--';
+
+    const winRate = state.paper.signalStats.total > 0
+        ? (state.paper.signalStats.wins / state.paper.signalStats.total) * 100
+        : 0;
+    qualityEl.textContent = `Signals: ${state.paper.signalStats.total} | Winrate: ${formatNumber(winRate, 1)}%`;
+
+    listEl.innerHTML = state.paper.trades.slice(0, 8).map(t => {
+        const cls = t.pnlUsd >= 0 ? 'text-bullish' : 'text-bearish';
+        const date = new Date(t.closedAt).toLocaleString('de-DE');
+        return `<li><span>${date} ${t.side}</span><span class="${cls}">$${formatNumber(t.pnlUsd, 2)}</span><span>${t.reason}</span></li>`;
+    }).join('') || '<li><span>Noch keine Trades</span></li>';
+}
+
+function updateDataSourceAudit() {
+    const listEl = document.getElementById('sourceAuditList');
+    if (!listEl) return;
+
+    const rows = [
+        { name: 'BTC Preis', status: state.dataFlags.priceLive ? 'live' : 'static', note: state.dataFlags.priceLive ? 'CoinGecko' : 'Fallback' },
+        { name: 'Fear & Greed', status: state.dataFlags.fearGreedLive ? 'live' : 'static', note: state.dataFlags.fearGreedLive ? 'alternative.me' : 'Fallback' },
+        { name: 'Funding Rate', status: state.dataFlags.fundingLive ? 'live' : 'static', note: state.dataFlags.fundingLive ? 'Binance Futures' : 'Mock Fallback' },
+        { name: 'Open Interest', status: state.dataFlags.oiLive ? 'live' : 'static', note: state.dataFlags.oiLive ? 'Binance Futures' : 'Fallback' },
+        { name: 'Long/Short Ratio', status: state.dataFlags.lsLive ? 'live' : 'static', note: state.dataFlags.lsLive ? 'Binance Futures' : 'Mock Fallback' },
+        { name: 'News', status: state.dataFlags.newsLive ? 'live' : 'static', note: state.dataFlags.newsLive ? 'CryptoCompare' : 'Fallback' },
+        { name: 'MACD', status: state.dataFlags.candlesLive ? 'live' : 'static', note: state.dataFlags.candlesLive ? 'Binance 1h Candles' : 'No candles' },
+        { name: 'On-Chain (Whale/Flow)', status: state.dataFlags.onchainProxyLive ? 'proxy' : 'static', note: state.dataFlags.onchainProxyLive ? 'Proxy from Binance prints/flow' : 'Fallback' },
+        { name: 'Halving/Zyklus', status: 'static', note: 'Calculated schedule model' }
+    ];
+
+    listEl.innerHTML = rows.map(r =>
+        `<li><span>${r.name} <small style="opacity:.7">${r.note}</small></span><span class="source-chip ${r.status}">${r.status.toUpperCase()}</span></li>`
+    ).join('');
+}
+
+function setupPaperTradingControls() {
+    const enabledEl = document.getElementById('paperEnabled');
+    const autoEl = document.getElementById('paperAutoExecute');
+    const startBalEl = document.getElementById('paperStartingBalance');
+    const resetEl = document.getElementById('paperResetBtn');
+    const closeEl = document.getElementById('paperCloseBtn');
+
+    if (!enabledEl || !autoEl || !startBalEl || !resetEl || !closeEl) {
+        return;
+    }
+
+    enabledEl.addEventListener('change', () => {
+        state.paper.enabled = enabledEl.checked;
+        savePaperState();
+        updateDashboard();
+    });
+
+    autoEl.addEventListener('change', () => {
+        state.paper.autoExecute = autoEl.checked;
+        savePaperState();
+        updateDashboard();
+    });
+
+    startBalEl.addEventListener('change', () => {
+        const value = Math.max(100, parseFloat(startBalEl.value) || CONFIG.paperDefaults.startingBalance);
+        state.paper.startingBalance = value;
+        if (!state.paper.position && state.paper.trades.length === 0) {
+            state.paper.balance = value;
+            state.paper.equity = value;
+            state.paper.dayStartEquity = value;
+        }
+        savePaperState();
+        updateDashboard();
+    });
+
+    resetEl.addEventListener('click', () => {
+        resetPaperState(Math.max(100, parseFloat(startBalEl.value) || CONFIG.paperDefaults.startingBalance));
+        updateDashboard();
+    });
+
+    closeEl.addEventListener('click', () => {
+        if (state.paper.position) {
+            closePaperPosition('Manual Close');
+            syncPaperRiskMetrics();
+            savePaperState();
+            updateDashboard();
+        }
+    });
 }
 
 function updateSentimentCard() {
@@ -850,6 +1668,24 @@ function updateSentimentCard() {
     } else {
         lsSignal.textContent = 'Neutral';
         lsSignal.className = 'factor-signal neutral';
+    }
+
+    const newsSignal = document.getElementById('newsSignal');
+    const newsIcon = document.getElementById('newsIcon');
+    if (newsSignal && newsIcon) {
+        if (state.newsSentiment.bullish > state.newsSentiment.bearish) {
+            newsSignal.textContent = 'Bullish';
+            newsSignal.className = 'factor-signal bullish';
+            newsIcon.textContent = '📰';
+        } else if (state.newsSentiment.bearish > state.newsSentiment.bullish) {
+            newsSignal.textContent = 'Bearish';
+            newsSignal.className = 'factor-signal bearish';
+            newsIcon.textContent = '🗞️';
+        } else {
+            newsSignal.textContent = 'Neutral';
+            newsSignal.className = 'factor-signal neutral';
+            newsIcon.textContent = '📰';
+        }
     }
 
     // Badge
@@ -917,7 +1753,7 @@ function updateTradeSetup() {
     }
 
     // Recommendations
-    const positionSize = state.confidence > 70 ? '3%' : state.confidence > 55 ? '2%' : '1%';
+    const positionSize = `${formatNumber(state.riskSettings.riskPercent, 1)}%`;
     const maxLeverage = state.confidence > 70 ? '5x' : state.confidence > 55 ? '3x' : '2x';
 
     document.getElementById('positionSize').textContent = positionSize;
@@ -971,31 +1807,49 @@ function updateRiskFactors() {
         invalidations.push('Extreme Sentiment-Veränderung');
     }
 
+    if (state.riskGateBlocked && state.riskGateReason) {
+        invalidations.unshift(`Risk-Gate aktiv: ${state.riskGateReason}`);
+    }
+
     document.getElementById('invalidationList').innerHTML = invalidations.map(i =>
         `<li>${i}</li>`
     ).join('');
 
-    // Upcoming events
-    const events = [
-        'FOMC Meeting - Zinsentscheid',
-        'US CPI Daten - Inflation',
-        'ETF Flow Report - Wöchentlich'
-    ];
+    // Upcoming / current events from live news headlines
+    let events = [];
+    if (state.newsItems.length > 0) {
+        events = state.newsItems.slice(0, 4).map(item => {
+            const ts = item.publishedOn ? new Date(item.publishedOn * 1000) : null;
+            const dateLabel = ts && !Number.isNaN(ts.getTime())
+                ? ts.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
+                : '--';
+            const source = item.source || 'News';
+            return `${dateLabel} | ${source}: ${item.title}`;
+        });
+    }
+    if (events.length === 0) {
+        events = [
+            'FOMC Meeting - Zinsentscheid',
+            'US CPI Daten - Inflation',
+            'ETF Flow Report - Wöchentlich'
+        ];
+    }
 
     document.getElementById('eventsList').innerHTML = events.map(e =>
         `<li>${e}</li>`
     ).join('');
 }
 
-function updateScoreCard() {
-    const weightedScore = calculateScores();
+function updateScoreCard(weightedScore = null) {
+    const resolvedScore = weightedScore === null ? calculateScores() : weightedScore;
 
     // Individual scores
     const scores = [
         { id: 'tech', value: state.scores.technical },
         { id: 'onchain', value: state.scores.onchain },
         { id: 'sentiment', value: state.scores.sentiment },
-        { id: 'macro', value: state.scores.macro }
+        { id: 'macro', value: state.scores.macro },
+        { id: 'news', value: state.scores.news }
     ];
 
     scores.forEach(s => {
@@ -1010,7 +1864,8 @@ function updateScoreCard() {
     });
 
     // Total score
-    document.getElementById('totalScore').textContent = `${formatNumber(weightedScore, 1)}/10`;
+    document.getElementById('totalScore').textContent = `${formatNumber(resolvedScore, 1)}/10`;
+    return resolvedScore;
 }
 
 function updateSignalBanner() {
@@ -1030,28 +1885,35 @@ function updateSignalBanner() {
     let summaryText = '';
     let explanationText = '';
 
+    const longThreshold = state.riskSettings.minScore;
+    const shortThreshold = 10 - state.riskSettings.minScore;
+
     if (state.signal === 'LONG') {
-        summaryText = `Überverkaufte Bedingungen (RSI, F&G: ${state.fearGreedIndex}) und negative Funding Rates signalisieren Rebound-Potenzial.`;
+        summaryText = `Überverkaufte Bedingungen (RSI, F&G: ${state.fearGreedIndex}), Futures-Daten und News-Flow signalisieren Rebound-Potenzial.`;
         explanationText = `<strong>LONG bedeutet:</strong> Die Daten deuten auf steigende Preise hin. 
-            Der Gesamtscore liegt bei ${formatNumber(calculateWeightedScore(), 1)}/10 (≥6.5 = LONG). 
+            Der Gesamtscore liegt bei ${formatNumber(calculateWeightedScore(), 1)}/10 (≥${formatNumber(longThreshold, 1)} = LONG). 
             <br><br><strong>Warum LONG?</strong><br>
             • Fear & Greed ist bei ${state.fearGreedIndex} - ${state.fearGreedIndex < 35 ? 'Angst im Markt ist historisch ein Kaufsignal (Kontraindikator)' : 'nicht extrem, aber andere Faktoren sind bullish'}<br>
             • RSI zeigt ${calculateRSI(state.priceHistory) < 40 ? 'überverkaufte Bedingungen' : 'neutralen bis bullischen Trend'}<br>
-            • Funding Rate ist ${state.fundingRate < 0 ? 'negativ → Shorts zahlen → bullish' : 'neutral'}`;
+            • Funding Rate ist ${state.fundingRate < 0 ? 'negativ → Shorts zahlen → bullish' : 'neutral'}<br>
+            • News-Bias: ${state.newsSentiment.bullish > state.newsSentiment.bearish ? 'bullish' : state.newsSentiment.bearish > state.newsSentiment.bullish ? 'bearish' : 'neutral'} (${state.newsSentiment.highImpact} High-Impact Headlines)`;
     } else if (state.signal === 'SHORT') {
-        summaryText = `Überkaufte Bedingungen und hohe Gier im Markt deuten auf Korrektur-Risiko hin.`;
+        summaryText = `Überkaufte Bedingungen, hohe Gier und negativer News-Flow deuten auf Korrektur-Risiko hin.`;
         explanationText = `<strong>SHORT bedeutet:</strong> Die Daten deuten auf fallende Preise hin. 
-            Der Gesamtscore liegt bei ${formatNumber(calculateWeightedScore(), 1)}/10 (≤3.5 = SHORT). 
+            Der Gesamtscore liegt bei ${formatNumber(calculateWeightedScore(), 1)}/10 (≤${formatNumber(shortThreshold, 1)} = SHORT). 
             <br><br><strong>Warum SHORT?</strong><br>
             • Fear & Greed ist bei ${state.fearGreedIndex} - ${state.fearGreedIndex > 65 ? 'Extreme Gier ist historisch ein Verkaufssignal (Kontraindikator)' : 'andere Faktoren sind bearish'}<br>
             • RSI zeigt ${calculateRSI(state.priceHistory) > 60 ? 'überkaufte Bedingungen' : 'neutralen bis bearischen Trend'}<br>
-            • Viele Trader sind long positioniert → Kontraindikator`;
+            • Viele Trader sind long positioniert → Kontraindikator<br>
+            • News-Bias: ${state.newsSentiment.bullish > state.newsSentiment.bearish ? 'bullish' : state.newsSentiment.bearish > state.newsSentiment.bullish ? 'bearish' : 'neutral'} (${state.newsSentiment.highImpact} High-Impact Headlines)`;
     } else {
-        summaryText = `Gemischte Signale - kein klarer Vorteil für Long oder Short. Abwarten empfohlen.`;
+        summaryText = state.riskGateBlocked
+            ? `Risk-Gate blockiert neue Trades: ${state.riskGateReason}`
+            : `Gemischte Signale - kein klarer Vorteil für Long oder Short. Abwarten empfohlen.`;
         explanationText = `<strong>NEUTRAL bedeutet:</strong> Kein Trade empfohlen. 
-            Der Gesamtscore liegt bei ${formatNumber(calculateWeightedScore(), 1)}/10 (zwischen 3.5 und 6.5 = NEUTRAL).
+            Der Gesamtscore liegt bei ${formatNumber(calculateWeightedScore(), 1)}/10 (zwischen ${formatNumber(shortThreshold, 1)} und ${formatNumber(longThreshold, 1)} = NEUTRAL).
             <br><br><strong>Warum kein Trade?</strong><br>
-            Die Indikatoren geben widersprüchliche Signale. Ein Trade ohne klaren Edge ist Glücksspiel.`;
+            ${state.riskGateBlocked ? `Risk-Filter aktiv: ${state.riskGateReason}.` : 'Die Indikatoren und News-Daten geben widersprüchliche Signale. Ein Trade ohne klaren Edge ist Glücksspiel.'}`;
     }
 
     summary.textContent = summaryText;
@@ -1071,7 +1933,8 @@ function calculateWeightedScore() {
     return state.scores.technical * CONFIG.weights.technical +
         state.scores.onchain * CONFIG.weights.onchain +
         state.scores.sentiment * CONFIG.weights.sentiment +
-        state.scores.macro * CONFIG.weights.macro;
+        state.scores.macro * CONFIG.weights.macro +
+        state.scores.news * CONFIG.weights.news;
 }
 
 function updateNoTradeWarning() {
@@ -1084,9 +1947,11 @@ function updateNoTradeWarning() {
         const reasons = [];
         const score = calculateWeightedScore();
         const rsi = calculateRSI(state.priceHistory);
+        const longThreshold = state.riskSettings.minScore;
+        const shortThreshold = 10 - state.riskSettings.minScore;
 
         // Collect all the reasons why no trade is recommended
-        reasons.push(`<strong>Score ist ${formatNumber(score, 1)}/10</strong> - liegt zwischen 3.5 und 6.5, also im neutralen Bereich`);
+        reasons.push(`<strong>Score ist ${formatNumber(score, 1)}/10</strong> - liegt zwischen ${formatNumber(shortThreshold, 1)} und ${formatNumber(longThreshold, 1)}, also im neutralen Bereich`);
 
         if (rsi >= 40 && rsi <= 60) {
             reasons.push(`<strong>RSI ist bei ${formatNumber(rsi, 0)}</strong> - weder überkauft noch überverkauft (neutral Zone)`);
@@ -1109,6 +1974,14 @@ function updateNoTradeWarning() {
             reasons.push(`<strong>Long/Short Ratio ist ausgeglichen</strong> (${formatNumber(state.longShortRatio.long, 0)}/${formatNumber(state.longShortRatio.short, 0)}) - keine extreme Positionierung`);
         }
 
+        if (state.riskGateBlocked) {
+            reasons.push(`<strong>Risk-Gate blockiert Entry</strong> - ${state.riskGateReason}`);
+        }
+
+        if (state.newsSentiment.highImpact >= 2) {
+            reasons.push(`<strong>Erhöhte News-Volatilität</strong> - ${state.newsSentiment.highImpact} wichtige Headlines können schnelle Richtungswechsel auslösen`);
+        }
+
         reasons.push(`<strong>Empfehlung:</strong> Warte auf eindeutigere Signale. Ein guter Trade hat einen klaren statistischen Vorteil.`);
 
         reasonsEl.innerHTML = '<ul>' + reasons.map(r => `<li>${r}</li>`).join('') + '</ul>';
@@ -1120,25 +1993,27 @@ function updateNoTradeWarning() {
 function updateScoreInterpretation() {
     const interpretEl = document.getElementById('scoreInterpretation');
     const score = calculateWeightedScore();
+    const longThreshold = state.riskSettings.minScore;
+    const shortThreshold = 10 - state.riskSettings.minScore;
 
     let html = '';
     let cssClass = '';
 
-    if (score >= 6.5) {
+    if (score >= longThreshold) {
         cssClass = 'bullish';
-        html = `<strong>Score ≥ 6.5 = LONG Signal</strong><br>
+        html = `<strong>Score ≥ ${formatNumber(longThreshold, 1)} = LONG Signal</strong><br>
                 Alle Faktoren zusammen ergeben einen bullischen Bias. 
                 Je höher der Score, desto stärker das Signal.`;
-    } else if (score <= 3.5) {
+    } else if (score <= shortThreshold) {
         cssClass = 'bearish';
-        html = `<strong>Score ≤ 3.5 = SHORT Signal</strong><br>
+        html = `<strong>Score ≤ ${formatNumber(shortThreshold, 1)} = SHORT Signal</strong><br>
                 Alle Faktoren zusammen ergeben einen bearischen Bias. 
                 Je niedriger der Score, desto stärker das Signal.`;
     } else {
         cssClass = 'neutral';
-        html = `<strong>Score zwischen 3.5 und 6.5 = KEIN TRADE</strong><br>
+        html = `<strong>Score zwischen ${formatNumber(shortThreshold, 1)} und ${formatNumber(longThreshold, 1)} = KEIN TRADE</strong><br>
                 Die Indikatoren sind zu gemischt für eine klare Empfehlung. 
-                Warte auf extremere Werte (Score unter 3.5 oder über 6.5).`;
+                Warte auf extremere Werte (Score unter ${formatNumber(shortThreshold, 1)} oder über ${formatNumber(longThreshold, 1)}).`;
     }
 
     interpretEl.className = `score-interpretation ${cssClass}`;
@@ -1164,25 +2039,34 @@ async function updateDashboard() {
         await Promise.all([
             fetchPriceData(),
             fetchPriceHistory(),
+            fetchMarketStructureData(),
             fetchFearGreedIndex(),
             fetchFundingRate(),
             fetchOpenInterest(),
-            fetchLongShortRatio()
+            fetchLongShortRatio(),
+            fetchNewsEvents()
         ]);
+        await fetchOnChainProxies();
 
-        // Calculate scores
-        calculateScores();
+        syncPaperRiskMetrics();
+        const weightedScore = calculateScores();
+        runPaperTradingCycle(weightedScore);
+        const finalScore = calculateScores();
 
         // Update all UI components
         updatePriceCard();
         updateFearGreedCard();
         updateTechnicalCard();
         updateDerivativesCard();
+        updateOnchainCard();
         updateSentimentCard();
+        updateScoreCard(finalScore);
+        updateRiskSettingsPanel(finalScore);
+        updatePaperTradingPanel();
+        updateDataSourceAudit();
         updateTradeSetup();
         updateKeyLevels();
         updateRiskFactors();
-        updateScoreCard();
         updateSignalBanner();
         updateLastUpdate();
 
@@ -1356,6 +2240,10 @@ function displayBacktestResults(results) {
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize notification system
     NotificationSystem.init();
+    loadRiskSettings();
+    loadPaperState();
+    setupRiskSettingsControls();
+    setupPaperTradingControls();
 
     // Initial load
     updateDashboard();
