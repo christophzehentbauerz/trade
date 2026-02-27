@@ -1,9 +1,10 @@
 ﻿# Trade Suite
 
-Dieses Repository kombiniert zwei Bereiche:
+Dieses Repository kombiniert drei Bereiche:
 
 1. BTC Market Intelligence Dashboard (Web-App)
 2. BTC Smart Money Backtester (Python)
+3. Trading Chat API (lokaler Coach-Endpoint)
 
 ## Web Dashboard
 
@@ -37,6 +38,34 @@ Beispiele:
 python backtest_runner.py --plot
 python backtest_runner.py --optimize
 python advanced_analysis.py
+```
+
+## Trading Chat API
+
+Server starten:
+```bash
+python trading_chat_api.py
+```
+
+Endpoint:
+- `POST http://127.0.0.1:8787/chat`
+
+Body-Beispiel:
+```json
+{"question":"Bei welchem Preis triggert EMA 800?"}
+```
+
+Optional mit Kontext:
+```json
+{
+  "question": "Gib mir einen Plan fuer heute",
+  "context": {
+    "account_size_usdt": 5000,
+    "risk_per_trade_pct": 1.0,
+    "allow_short": true,
+    "timeframe": "1h"
+  }
+}
 ```
 
 ## Output

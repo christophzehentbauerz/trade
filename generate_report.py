@@ -1,27 +1,41 @@
-import pandas as pd
 import os
+import pandas as pd
 
-# Paths
-spec_path = r"C:\Users\Chris\.gemini\antigravity\brain\821c897f-9b6c-45d2-aff1-4b356c9e93ae\strategy_spec.md"
 trades_path = "results/trades.csv"
 output_path = "results/FINAL_STRATEGY_AND_TRADES.md"
 
-def generate_report():
-    # 1. Read Strategy Spec
-    with open(spec_path, "r", encoding="utf-8") as f:
-        spec_content = f.read()
 
-    # 2. Read Trades
+def resolve_spec_path():
+    candidates = [
+        os.getenv("STRATEGY_SPEC_PATH"),
+        "strategy_spec.md",
+        "results/COMPLETE_STRATEGY_DOCUMENTATION.md",
+    ]
+    for path in candidates:
+        if path and os.path.exists(path):
+            return path
+    return None
+
+
+def generate_report():
+    spec_path = resolve_spec_path()
+
+    # 1. Read strategy spec if available
+    if spec_path:
+        with open(spec_path, "r", encoding="utf-8") as f:
+            spec_content = f.read()
+    else:
+        spec_content = "# Strategy Specification\n\nNo strategy spec file found."
+
+    # 2. Read trades
     df = pd.read_csv(trades_path)
-    df['EntryTime'] = pd.to_datetime(df['EntryTime'])
-    df['Type'] = df['Size'].apply(lambda x: 'LONG' if x > 0 else 'SHORT')
-    df['Result'] = df['ReturnPct'].apply(lambda x: 'WIN' if x > 0 else 'LOSS')
-    df['ReturnPct'] = (df['ReturnPct'] * 100).round(2)
-    
-    # Format Columns
-    df_clean = df[['EntryTime', 'Type', 'EntryPrice', 'ExitPrice', 'ReturnPct', 'Result']]
-    
-    # Convert to Markdown Table
+    df["EntryTime"] = pd.to_datetime(df["EntryTime"])
+    df["Type"] = df["Size"].apply(lambda x: "LONG" if x > 0 else "SHORT")
+    df["Result"] = df["ReturnPct"].apply(lambda x: "WIN" if x > 0 else "LOSS")
+    df["ReturnPct"] = (df["ReturnPct"] * 100).round(2)
+
+    # Format columns
+    df_clean = df[["EntryTime", "Type", "EntryPrice", "ExitPrice", "ReturnPct", "Result"]]
     trades_md = df_clean.to_markdown(index=False)
 
     # 3. Combine
@@ -29,7 +43,7 @@ def generate_report():
 
 ---
 
-# 📊 Full Trade History (2022 - 2025)
+# Full Trade History (2022 - 2025)
 
 Here is the complete list of all **{len(df)} Trades** executed by the strategy.
 
@@ -38,8 +52,9 @@ Here is the complete list of all **{len(df)} Trades** executed by the strategy.
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(final_content)
-    
+
     print(f"Successfully created {output_path}")
+
 
 if __name__ == "__main__":
     generate_report()

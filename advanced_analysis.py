@@ -2,14 +2,7 @@ import pandas as pd
 import numpy as np
 from backtesting import Backtest
 from strategy import SmartMoneyStrategy
-from data_loader import load_or_fetch_data # We need to expose this in data_loader or import from backtest_runner
-import matplotlib.pyplot as plt
-import seaborn as sns
 import os
-
-# Ensure we can import properly
-import sys
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from backtest_runner import load_or_fetch_data
 
@@ -41,8 +34,7 @@ def walk_forward_analysis(data, segments=4):
         stats_train = bt_train.optimize(
             swing_length=[8, 10, 12, 15],
             regime_buffer=[0.005, 0.01],
-            maximize='Profit Factor',
-            verbose=False
+            maximize='Profit Factor'
         )
         best_params = stats_train._strategy
         print(f"  Best Params: Swing={best_params.swing_length}, Buffer={best_params.regime_buffer}")
@@ -63,25 +55,21 @@ def walk_forward_analysis(data, segments=4):
             'test_sharpe': stats_test['Sharpe Ratio'],
             'test_trades': stats_test['# Trades']
         })
-        print(f"  Test Result: Return={stats_test['Return [%]:.2f']}%, Sharpe={stats_test['Sharpe Ratio']:.2f}")
+        print(f"  Test Result: Return={stats_test['Return [%]']:.2f}%, Sharpe={stats_test['Sharpe Ratio']:.2f}")
 
     return pd.DataFrame(results)
 
-def monte_carlo_simulation(trades_df, simulations=1000):
+def monte_carlo_simulation(returns_series, simulations=1000):
     """
     Resample trades to generate probability cones for equity.
     """
     print(f"\n--- Starting Monte Carlo Simulation ({simulations} runs) ---")
-    
-    if len(trades_df) < 10:
+
+    returns = pd.Series(returns_series).dropna().to_numpy()
+    if len(returns) < 10:
         print("Not enough trades for Monte Carlo.")
         return
 
-    returns = trades_df['ReturnPct'] # We need to ensure strategy records this or calculate from PnL
-    # Backtesting.py trades object has 'ReturnPct' usually
-    
-    # If using standard backtesting.py stats['_trades'], it has 'ReturnPct'
-    
     # Simulation
     final_equities = []
     max_drawdowns = []
@@ -91,17 +79,7 @@ def monte_carlo_simulation(trades_df, simulations=1000):
     for i in range(simulations):
         # Shuffle returns with replacement
         sim_returns = np.random.choice(returns, size=len(returns), replace=True)
-        equity_curve = [start_equity]
-        
-        peak = start_equity
-        max_dd = 0
-        
-        for ret in sim_returns:
-            # ret is fractional e.g. 0.05 for 5%
-            # backtesting.py returns are usually ratio? Check.
-            # actually let's use PnL absolute for checking
-            pass
-            
+
         # Simplified: Just accumulate PnL pct for equity curve approx
         # Using cumprod for compound
         cum_ret = (1 + sim_returns).cumprod()
@@ -137,7 +115,6 @@ def run_advanced():
     
     # 3. Monte Carlo
     if not trades.empty and 'ReturnPct' in trades.columns:
-        # trades['ReturnPct'] is usually present
         monte_carlo_simulation(trades['ReturnPct'], simulations=1000)
     else:
         print("No trades generated or missing ReturnPct column.")
