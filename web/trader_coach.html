@@ -1,558 +1,1011 @@
 <!doctype html>
 <html lang="de">
+
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TraderCoach — BTC Smart Money</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg:      #080e1a;
-      --panel:   #0f1829;
-      --panel2:  #0b1220;
-      --border:  #1e2f4d;
-      --text:    #e2eaf8;
-      --muted:   #8aa0cc;
-      --brand:   #4f8eff;
-      --green:   #34d98b;
-      --yellow:  #f5c542;
-      --red:     #ff6b6b;
-      --grad:    linear-gradient(135deg,#1a2f5a,#0d1e3a);
+      --bg: #080e1a;
+      --panel: #0f1829;
+      --panel2: #0b1220;
+      --border: #1e2f4d;
+      --text: #e2eaf8;
+      --muted: #8aa0cc;
+      --brand: #4f8eff;
+      --green: #34d98b;
+      --yellow: #f5c542;
+      --red: #ff6b6b;
+      --purple: #a78bfa;
     }
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{
-      font-family:'Inter',sans-serif;
-      background:radial-gradient(ellipse 1400px 700px at 20% -10%,#112248 0%,var(--bg) 55%);
-      color:var(--text);min-height:100vh;
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
     }
-    /* NAV */
-    nav{
-      display:flex;align-items:center;justify-content:space-between;
-      padding:16px 32px;
-      border-bottom:1px solid var(--border);
-      background:rgba(8,14,26,.8);backdrop-filter:blur(12px);
-      position:sticky;top:0;z-index:100;
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: radial-gradient(ellipse 1400px 700px at 20% -10%, #112248 0%, var(--bg) 55%);
+      color: var(--text);
+      min-height: 100vh;
     }
-    .logo{font-size:20px;font-weight:700;color:var(--brand);letter-spacing:-.3px}
-    .logo span{color:var(--text);font-weight:400}
-    nav a{color:var(--muted);text-decoration:none;font-size:14px;margin-left:20px;transition:color .2s}
-    nav a:hover{color:var(--text)}
-    /* HERO */
-    .hero{text-align:center;padding:60px 20px 40px;max-width:760px;margin:0 auto}
-    .hero h1{font-size:clamp(28px,5vw,52px);font-weight:700;line-height:1.15;
-      background:linear-gradient(135deg,#fff 30%,var(--brand));
-      -webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:14px}
-    .hero p{color:var(--muted);font-size:16px;line-height:1.6}
-    /* LIVE TICKER */
-    .ticker-bar{
-      display:flex;gap:24px;justify-content:center;flex-wrap:wrap;
-      padding:16px 24px;
-      background:var(--panel);border:1px solid var(--border);border-radius:16px;
-      margin:0 auto 32px;max-width:900px;
+
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 28px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(8, 14, 26, .85);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
-    .tick{text-align:center}
-    .tick-label{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
-    .tick-value{font-size:18px;font-weight:600}
-    .tick-value.up{color:var(--green)}
-    .tick-value.down{color:var(--red)}
-    /* SCORE BAR */
-    .score-wrap{max-width:900px;margin:0 auto 24px;padding:0 16px}
-    .score-card{
-      background:var(--panel);border:1px solid var(--border);border-radius:16px;
-      padding:20px 24px;display:flex;gap:20px;align-items:center;flex-wrap:wrap
+
+    .logo {
+      font-size: 19px;
+      font-weight: 700;
+      color: var(--brand)
     }
-    .score-num{font-size:48px;font-weight:700;line-height:1;min-width:64px}
-    .score-num.high{color:var(--green)}
-    .score-num.mid{color:var(--yellow)}
-    .score-num.low{color:var(--red)}
-    .score-detail{flex:1;min-width:200px}
-    .score-detail h3{font-size:14px;font-weight:600;margin-bottom:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
-    .bar-track{height:8px;background:#1a2d50;border-radius:4px;overflow:hidden;margin-bottom:6px}
-    .bar-fill{height:100%;border-radius:4px;transition:width .8s ease}
-    .bar-fill.green{background:var(--green)}
-    .bar-fill.yellow{background:var(--yellow)}
-    .bar-fill.red{background:var(--red)}
-    .mtf-row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
-    .mtf-badge{padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500}
-    .mtf-badge.bull{background:rgba(52,217,139,.15);color:var(--green);border:1px solid rgba(52,217,139,.3)}
-    .mtf-badge.bear{background:rgba(255,107,107,.15);color:var(--red);border:1px solid rgba(255,107,107,.3)}
-    .mtf-badge.neutral{background:rgba(138,160,204,.12);color:var(--muted);border:1px solid var(--border)}
+
+    .logo span {
+      color: var(--text);
+      font-weight: 400
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 13px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      transition: all .2s;
+    }
+
+    .nav-links a:hover {
+      background: rgba(79, 142, 255, .12);
+      color: var(--text);
+    }
+
+    .nav-links a.active {
+      color: var(--brand);
+      background: rgba(79, 142, 255, .1);
+    }
+
+    .hero {
+      text-align: center;
+      padding: 44px 20px 28px;
+      max-width: 760px;
+      margin: 0 auto
+    }
+
+    .hero h1 {
+      font-size: clamp(24px, 4vw, 44px);
+      font-weight: 700;
+      line-height: 1.15;
+      background: linear-gradient(135deg, #fff 30%, var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px
+    }
+
+    .hero p {
+      color: var(--muted);
+      font-size: 15px
+    }
+
+    /* GPT KEY BANNER */
+    .gpt-banner {
+      max-width: 900px;
+      margin: 0 auto 16px;
+      padding: 0 16px;
+    }
+
+    .gpt-banner-inner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, rgba(107, 79, 245, .15), rgba(61, 47, 160, .1));
+      border: 1px solid rgba(107, 79, 245, .35);
+      border-radius: 12px;
+      flex-wrap: wrap;
+    }
+
+    .gpt-badge {
+      background: rgba(107, 79, 245, .25);
+      color: var(--purple);
+      border: 1px solid rgba(107, 79, 245, .4);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .gpt-banner-inner span {
+      color: var(--muted);
+      font-size: 13px;
+      flex: 1;
+    }
+
+    .gpt-banner-inner input {
+      flex: 1;
+      min-width: 180px;
+      background: #0a1120;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .gpt-banner-inner input:focus {
+      border-color: var(--purple);
+    }
+
+    .btn-sm {
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      border: none;
+      transition: opacity .2s;
+    }
+
+    .btn-purple {
+      background: linear-gradient(135deg, #6b4ff5, #3d2fa0);
+      color: #fff;
+    }
+
+    .btn-sm:hover {
+      opacity: .82
+    }
+
+    /* TICKER */
+    .ticker-bar {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+      padding: 14px 20px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      margin: 0 auto 20px;
+      max-width: 900px;
+    }
+
+    .tick {
+      text-align: center
+    }
+
+    .tick-label {
+      color: var(--muted);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      margin-bottom: 3px
+    }
+
+    .tick-value {
+      font-size: 17px;
+      font-weight: 600
+    }
+
+    .tick-value.up {
+      color: var(--green)
+    }
+
+    .tick-value.down {
+      color: var(--red)
+    }
+
+    /* SCORE CARD */
+    .score-wrap {
+      max-width: 900px;
+      margin: 0 auto 20px;
+      padding: 0 16px
+    }
+
+    .score-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 22px;
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      flex-wrap: wrap
+    }
+
+    .score-num {
+      font-size: 46px;
+      font-weight: 700;
+      line-height: 1;
+      min-width: 62px
+    }
+
+    .score-num.high {
+      color: var(--green)
+    }
+
+    .score-num.mid {
+      color: var(--yellow)
+    }
+
+    .score-num.low {
+      color: var(--red)
+    }
+
+    .score-detail {
+      flex: 1;
+      min-width: 180px
+    }
+
+    .score-detail h3 {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 7px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .6px
+    }
+
+    .bar-track {
+      height: 7px;
+      background: #1a2d50;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 7px
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width .8s ease
+    }
+
+    .bar-fill.green {
+      background: var(--green)
+    }
+
+    .bar-fill.yellow {
+      background: var(--yellow)
+    }
+
+    .bar-fill.red {
+      background: var(--red)
+    }
+
+    .mtf-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap
+    }
+
+    .mtf-badge {
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500
+    }
+
+    .mtf-badge.bull {
+      background: rgba(52, 217, 139, .15);
+      color: var(--green);
+      border: 1px solid rgba(52, 217, 139, .3)
+    }
+
+    .mtf-badge.bear {
+      background: rgba(255, 107, 107, .15);
+      color: var(--red);
+      border: 1px solid rgba(255, 107, 107, .3)
+    }
+
+    .mtf-badge.neutral {
+      background: rgba(138, 160, 204, .12);
+      color: var(--muted);
+      border: 1px solid var(--border)
+    }
+
     /* GRID */
-    .grid{display:grid;grid-template-columns:320px 1fr;gap:24px;max-width:900px;margin:0 auto;padding:0 16px 40px}
-    @media(max-width:720px){.grid{grid-template-columns:1fr}}
-    /* CARDS */
-    .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow:hidden}
-    .card-head{padding:14px 18px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
-    .card-body{padding:16px}
-    /* CONFIG */
-    .cfg label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:12px}
-    .cfg input,.cfg select{
-      width:100%;margin-top:5px;
-      background:#0a1120;color:var(--text);
-      border:1px solid var(--border);border-radius:8px;padding:9px 10px;
-      font-family:inherit;font-size:14px;outline:none;transition:border .2s
+    .grid {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 16px 40px
     }
-    .cfg input:focus,.cfg select:focus{border-color:var(--brand)}
+
+    @media(max-width:700px) {
+      .grid {
+        grid-template-columns: 1fr
+      }
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden
+    }
+
+    .card-head {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .6px
+    }
+
+    .card-body {
+      padding: 14px
+    }
+
+    /* CFG */
+    .cfg label {
+      display: block;
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-top: 10px
+    }
+
+    .cfg input,
+    .cfg select {
+      width: 100%;
+      margin-top: 4px;
+      background: #0a1120;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 8px 10px;
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+      transition: border .2s
+    }
+
+    .cfg input:focus,
+    .cfg select:focus {
+      border-color: var(--brand)
+    }
+
     /* CHAT */
-    .chat{display:flex;flex-direction:column;height:560px}
-    .messages{flex:1;overflow-y:auto;padding:12px;scroll-behavior:smooth}
-    .messages::-webkit-scrollbar{width:4px}
-    .messages::-webkit-scrollbar-track{background:transparent}
-    .messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
-    .bubble{
-      padding:10px 14px;border-radius:12px;
-      max-width:90%;margin:6px 0;font-size:14px;line-height:1.5;white-space:pre-wrap;word-break:break-word
+    .chat-card {
+      display: flex;
+      flex-direction: column;
+      height: 580px
     }
-    .bubble.user{margin-left:auto;background:linear-gradient(135deg,#1e3f7a,#152c5a);border-bottom-right-radius:3px}
-    .bubble.bot{background:#111e35;border:1px solid var(--border);border-bottom-left-radius:3px}
-    .bubble.loading{color:var(--muted);animation:pulse 1.4s infinite}
-    @keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
-    .quick{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;border-top:1px solid var(--border)}
-    .quick button{
-      background:#0f1e38;border:1px solid #1e3060;color:var(--muted);
-      border-radius:20px;padding:5px 12px;font-size:12px;cursor:pointer;
-      font-family:inherit;transition:all .2s
+
+    .gpt-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      background: linear-gradient(135deg, rgba(107, 79, 245, .12), transparent);
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--purple);
     }
-    .quick button:hover{background:#1a2f52;color:var(--text);border-color:var(--brand)}
-    .input-row{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--border)}
-    .input-row input{
-      flex:1;background:#0a1120;color:var(--text);
-      border:1px solid var(--border);border-radius:8px;padding:10px 12px;
-      font-family:inherit;font-size:14px;outline:none;transition:border .2s
+
+    .gpt-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--purple);
+      animation: blink 2s infinite;
     }
-    .input-row input:focus{border-color:var(--brand)}
-    .input-row button{
-      background:linear-gradient(135deg,#2f5fcc,#1e3f8f);
-      border:none;color:#fff;border-radius:8px;padding:10px 18px;
-      cursor:pointer;font-family:inherit;font-weight:600;font-size:14px;
-      transition:opacity .2s
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .2
+      }
     }
-    .input-row button:hover{opacity:.85}
-    /* STATUS DOT */
-    .status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;animation:blink 2s infinite}
-    .status-dot.ok{background:var(--green)}
-    .status-dot.err{background:var(--red);animation:none}
-    @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-    /* INDICATORS */
-    .ind-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #111e35;font-size:13px}
-    .ind-row:last-child{border-bottom:none}
-    .ind-label{color:var(--muted)}
-    .ind-val{font-weight:500}
-    /* BADGE */
-    .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600}
-    .badge.long{background:rgba(52,217,139,.15);color:var(--green)}
-    .badge.exit{background:rgba(255,107,107,.15);color:var(--red)}
-    .badge.neutral{background:rgba(138,160,204,.12);color:var(--muted)}
+
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      scroll-behavior: smooth
+    }
+
+    .messages::-webkit-scrollbar {
+      width: 4px
+    }
+
+    .messages::-webkit-scrollbar-track {
+      background: transparent
+    }
+
+    .messages::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px
+    }
+
+    .bubble {
+      padding: 10px 13px;
+      border-radius: 12px;
+      max-width: 92%;
+      margin: 5px 0;
+      font-size: 13px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word
+    }
+
+    .bubble.user {
+      margin-left: auto;
+      background: linear-gradient(135deg, #1e3f7a, #152c5a);
+      border-bottom-right-radius: 3px
+    }
+
+    .bubble.bot {
+      background: #111e35;
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 3px
+    }
+
+    .bubble.gpt-reply {
+      background: linear-gradient(135deg, #160e2e, #0f0820);
+      border: 1px solid rgba(107, 79, 245, .3);
+      border-bottom-left-radius: 3px
+    }
+
+    .bubble.loading {
+      color: var(--muted);
+      font-style: italic
+    }
+
+    .quick {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 8px 12px;
+      border-top: 1px solid var(--border)
+    }
+
+    .quick button {
+      background: #0f1e38;
+      border: 1px solid #1e3060;
+      color: var(--muted);
+      border-radius: 18px;
+      padding: 5px 11px;
+      font-size: 11px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all .2s
+    }
+
+    .quick button:hover {
+      background: #1a2f52;
+      color: var(--text);
+      border-color: var(--brand)
+    }
+
+    .input-row {
+      display: flex;
+      gap: 7px;
+      padding: 10px 12px;
+      border-top: 1px solid var(--border)
+    }
+
+    .input-row input {
+      flex: 1;
+      background: #0a1120;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+      transition: border .2s
+    }
+
+    .input-row input:focus {
+      border-color: var(--brand)
+    }
+
+    .input-row button {
+      background: linear-gradient(135deg, #2f5fcc, #1e3f8f);
+      border: none;
+      color: #fff;
+      border-radius: 8px;
+      padding: 9px 16px;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 13px;
+      transition: opacity .2s
+    }
+
+    .input-row button:hover {
+      opacity: .84
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      margin-right: 5px
+    }
+
+    .status-dot.ok {
+      background: var(--green);
+      animation: blink 2s infinite
+    }
+
+    .status-dot.err {
+      background: var(--red)
+    }
+
+    .ind-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      border-bottom: 1px solid #111e35;
+      font-size: 12px
+    }
+
+    .ind-row:last-child {
+      border-bottom: none
+    }
+
+    .ind-label {
+      color: var(--muted)
+    }
+
+    .ind-val {
+      font-weight: 500
+    }
   </style>
 </head>
+
 <body>
 
-<nav>
-  <div class="logo">BTC<span>Coach</span></div>
-  <div>
-    <a href="index.html">Dashboard</a>
-    <a href="trader_coach.html" style="color:var(--brand)">Coach</a>
+  <nav>
+    <div class="logo">BTC<span>Coach</span></div>
+    <div class="nav-links">
+      <a href="../index.html" id="navDashboard">← Dashboard</a>
+      <a href="trader_coach.html" class="active">🤖 Coach</a>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <h1>Dein BTC Trading Coach</h1>
+    <p>Live Daten · Signal-Score · Trade-Plan · GPT-4o powered</p>
   </div>
-</nav>
 
-<div class="hero">
-  <h1>Dein BTC Trading Coach</h1>
-  <p>Live Marktdaten · Signal-Score · Trade-Pläne · Multi-Timeframe Analyse</p>
-</div>
+  <!-- GPT KEY BANNER -->
+  <div class="gpt-banner">
+    <div class="gpt-banner-inner">
+      <span class="gpt-badge">🧠 GPT-4o</span>
+      <span id="gptStatus">Kein API-Key — Coach antwortet mit eingebautem Regelwerk</span>
+      <input type="password" id="gptKeyInput" placeholder="sk-... OpenAI API Key eingeben" autocomplete="off" />
+      <button class="btn-sm btn-purple" id="gptSaveBtn">Speichern</button>
+      <button class="btn-sm" id="gptClearBtn"
+        style="background:#1a2740;color:var(--muted);border:1px solid var(--border);">Löschen</button>
+    </div>
+  </div>
 
-<!-- TICKER -->
-<div class="ticker-bar" id="tickerBar">
-  <div class="tick"><div class="tick-label">BTC Preis</div><div class="tick-value" id="tPrice">---</div></div>
-  <div class="tick"><div class="tick-label">24h Change</div><div class="tick-value" id="tChange">---</div></div>
-  <div class="tick"><div class="tick-label">Signal</div><div class="tick-value" id="tSignal">---</div></div>
-  <div class="tick"><div class="tick-label">Score</div><div class="tick-value" id="tScore">---</div></div>
-  <div class="tick"><div class="tick-label">RSI 14</div><div class="tick-value" id="tRsi">---</div></div>
-  <div class="tick"><div class="tick-label">EMA 800</div><div class="tick-value" id="tEma800">---</div></div>
-</div>
+  <!-- TICKER -->
+  <div class="ticker-bar">
+    <div class="tick">
+      <div class="tick-label">BTC Preis</div>
+      <div class="tick-value" id="tPrice">---</div>
+    </div>
+    <div class="tick">
+      <div class="tick-label">24h</div>
+      <div class="tick-value" id="tChange">---</div>
+    </div>
+    <div class="tick">
+      <div class="tick-label">Signal</div>
+      <div class="tick-value" id="tSignal">---</div>
+    </div>
+    <div class="tick">
+      <div class="tick-label">Score</div>
+      <div class="tick-value" id="tScore">---</div>
+    </div>
+    <div class="tick">
+      <div class="tick-label">RSI 14</div>
+      <div class="tick-value" id="tRsi">---</div>
+    </div>
+    <div class="tick">
+      <div class="tick-label">EMA 800</div>
+      <div class="tick-value" id="tEma800">---</div>
+    </div>
+  </div>
 
-<!-- SCORE BAR -->
-<div class="score-wrap">
-  <div class="score-card">
-    <div class="score-num" id="scoreNum">--</div>
-    <div class="score-detail">
-      <h3>Signal Score</h3>
-      <div class="bar-track"><div class="bar-fill" id="scoreBar" style="width:0%"></div></div>
-      <div class="mtf-row">
-        <span class="mtf-badge neutral" id="mtf1h">1h: --</span>
-        <span class="mtf-badge neutral" id="mtf4h">4h: --</span>
-        <span class="mtf-badge neutral" id="mtf1d">1d: --</span>
-        <span class="mtf-badge neutral" id="mtfAlign">Align: --</span>
+  <!-- SCORE -->
+  <div class="score-wrap">
+    <div class="score-card">
+      <div class="score-num" id="scoreNum">--</div>
+      <div class="score-detail">
+        <h3>Signal Score</h3>
+        <div class="bar-track">
+          <div class="bar-fill" id="scoreBar" style="width:0%"></div>
+        </div>
+        <div class="mtf-row">
+          <span class="mtf-badge neutral" id="mtf1h">1h: --</span>
+          <span class="mtf-badge neutral" id="mtf4h">4h: --</span>
+          <span class="mtf-badge neutral" id="mtf1d">1d: --</span>
+          <span class="mtf-badge neutral" id="mtfAlign">Align: --</span>
+        </div>
+      </div>
+      <div style="text-align:center;min-width:120px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:5px"><span class="status-dot ok"
+            id="statusDot"></span>Live</div>
+        <div style="font-size:11px;color:var(--muted)" id="lastUpdated">Lade...</div>
       </div>
     </div>
-    <div style="text-align:center;min-width:140px">
-      <div style="font-size:13px;color:var(--muted);margin-bottom:6px">
-        <span class="status-dot ok" id="statusDot"></span>Live Daten
+  </div>
+
+  <!-- GRID -->
+  <div class="grid">
+    <!-- Left: Config + Indicators -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div class="card">
+        <div class="card-head">⚙️ Einstellungen</div>
+        <div class="card-body cfg">
+          <label>Konto (USDT)</label>
+          <input id="cfgAccount" type="number" value="5000" />
+          <label>Risiko/Trade (%)</label>
+          <input id="cfgRisk" type="number" step="0.1" value="1.0" />
+          <label>Min Score</label>
+          <input id="cfgMinScore" type="number" value="60" />
+          <label>Tages-PnL (%)</label>
+          <input id="cfgDailyPnl" type="number" step="0.1" value="0" />
+          <label>Open Risk (%)</label>
+          <input id="cfgOpenRisk" type="number" step="0.1" value="0" />
+        </div>
       </div>
-      <div style="font-size:11px;color:var(--muted)" id="lastUpdated">Lade...</div>
+      <div class="card">
+        <div class="card-head">📊 Indikatoren</div>
+        <div class="card-body">
+          <div class="ind-row"><span class="ind-label">EMA 15</span><span class="ind-val" id="iEma15">---</span></div>
+          <div class="ind-row"><span class="ind-label">EMA 300</span><span class="ind-val" id="iEma300">---</span></div>
+          <div class="ind-row"><span class="ind-label">EMA 800</span><span class="ind-val" id="iEma800">---</span></div>
+          <div class="ind-row"><span class="ind-label">RSI 14</span><span class="ind-val" id="iRsi">---</span></div>
+          <div class="ind-row"><span class="ind-label">ATR 14</span><span class="ind-val" id="iAtr">---</span></div>
+          <div class="ind-row"><span class="ind-label">Golden Cross</span><span class="ind-val" id="iGc">---</span>
+          </div>
+          <div class="ind-row"><span class="ind-label">Über EMA 800</span><span class="ind-val" id="iHtf">---</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Chat -->
+    <div class="card chat-card">
+      <div class="gpt-indicator" id="gptIndicator" style="display:none">
+        <span class="gpt-dot"></span> GPT-4o aktiv — intelligente Antworten eingeschaltet
+      </div>
+      <div class="quick">
+        <button data-q="Gib mir einen Trade-Plan">📋 Plan</button>
+        <button data-q="Wie ist der Signal-Score gerade?">📊 Score</button>
+        <button data-q="EMA 800 Analyse und Trigger">📏 EMA 800</button>
+        <button data-q="Live Status alle Indikatoren">📡 Status</button>
+        <button data-q="Soll ich jetzt kaufen oder warten?">💬 Kaufen?</button>
+      </div>
+      <div class="messages" id="messages"></div>
+      <div class="input-row">
+        <input id="question" type="text" placeholder="Frage stellen... z.B. 'Ist jetzt ein guter Einstieg?'"
+          autocomplete="off" />
+        <button id="sendBtn">Senden</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- MAIN GRID -->
-<div class="grid">
-  <!-- Config -->
-  <div class="card">
-    <div class="card-head">⚙️ Konto-Einstellungen</div>
-    <div class="card-body cfg">
-      <label>Kontogröße (USDT)</label>
-      <input id="cfgAccount" type="number" value="5000"/>
-      <label>Risiko pro Trade (%)</label>
-      <input id="cfgRisk" type="number" step="0.1" value="1.0"/>
-      <label>Mindest Signal-Score</label>
-      <input id="cfgMinScore" type="number" value="60"/>
-      <label>Tages-PnL (%)</label>
-      <input id="cfgDailyPnl" type="number" step="0.1" value="0"/>
-      <label>Open Risk (%)</label>
-      <input id="cfgOpenRisk" type="number" step="0.1" value="0"/>
-    </div>
-    <div class="card-head" style="margin-top:8px">📊 Indikatoren</div>
-    <div class="card-body" id="indicators">
-      <div class="ind-row"><span class="ind-label">EMA 15</span><span class="ind-val" id="iEma15">---</span></div>
-      <div class="ind-row"><span class="ind-label">EMA 300</span><span class="ind-val" id="iEma300">---</span></div>
-      <div class="ind-row"><span class="ind-label">EMA 800</span><span class="ind-val" id="iEma800">---</span></div>
-      <div class="ind-row"><span class="ind-label">RSI 14</span><span class="ind-val" id="iRsi">---</span></div>
-      <div class="ind-row"><span class="ind-label">ATR 14</span><span class="ind-val" id="iAtr">---</span></div>
-      <div class="ind-row"><span class="ind-label">Golden Cross</span><span class="ind-val" id="iGc">---</span></div>
-      <div class="ind-row"><span class="ind-label">Über EMA800</span><span class="ind-val" id="iHtf">---</span></div>
-    </div>
-  </div>
+  <script>
+    // ─── GPT KEY MANAGEMENT ───
+    let gptKey = localStorage.getItem('coach_gpt_key') || '';
+    function updateGptUI() {
+      const hasKey = !!gptKey;
+      document.getElementById('gptStatus').textContent = hasKey
+        ? '🧠 GPT-4o aktiv — alle Fragen werden intelligent beantwortet'
+        : 'Kein API-Key — Coach antwortet mit eingebautem Regelwerk';
+      document.getElementById('gptStatus').style.color = hasKey ? 'var(--green)' : 'var(--muted)';
+      document.getElementById('gptIndicator').style.display = hasKey ? 'flex' : 'none';
+      if (hasKey) document.getElementById('gptKeyInput').placeholder = 'API-Key gespeichert ✓';
+    }
+    document.getElementById('gptSaveBtn').addEventListener('click', () => {
+      const val = document.getElementById('gptKeyInput').value.trim();
+      if (val.startsWith('sk-')) {
+        gptKey = val;
+        localStorage.setItem('coach_gpt_key', val);
+        document.getElementById('gptKeyInput').value = '';
+        updateGptUI();
+        addMsg('bot', '✅ GPT-4o API-Key gespeichert! Deine nächsten Fragen werden von GPT-4o beantwortet.');
+      } else {
+        addMsg('bot', '❌ Ungültiger Key — muss mit sk- beginnen. Key findest du unter: platform.openai.com/api-keys');
+      }
+    });
+    document.getElementById('gptClearBtn').addEventListener('click', () => {
+      gptKey = '';
+      localStorage.removeItem('coach_gpt_key');
+      document.getElementById('gptKeyInput').placeholder = 'sk-... OpenAI API Key eingeben';
+      updateGptUI();
+      addMsg('bot', '🗑️ API-Key gelöscht. Coach läuft wieder im Regelwerk-Modus.');
+    });
+    updateGptUI();
 
-  <!-- Chat -->
-  <div class="card chat">
-    <div class="quick">
-      <button data-q="Gib mir einen Plan für heute">📋 Plan</button>
-      <button data-q="Wie ist der Signal-Score?">📊 Score</button>
-      <button data-q="EMA 800 Analyse">📏 EMA 800</button>
-      <button data-q="Live Status">📡 Status</button>
-      <button data-q="Hilfe">❓ Hilfe</button>
-    </div>
-    <div class="messages" id="messages"></div>
-    <div class="input-row">
-      <input id="question" type="text" placeholder="Frage stellen, z.B. 'Ist jetzt ein guter Einstieg?'" autocomplete="off"/>
-      <button id="sendBtn">Senden</button>
-    </div>
-  </div>
-</div>
+    // ─── MARKET DATA ───
+    let mktData = null;
 
-<script>
-// ─── Market data (fetched from CryptoCompare) ───
-let mktData = null;
+    async function fetchJSON(url) {
+      const r = await fetch(url);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }
 
-async function fetchJSON(url) {
-  const r = await fetch(url);
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  return r.json();
-}
+    function calcEMA(p, n) {
+      if (p.length < n) return null;
+      const k = 2 / (n + 1);
+      let e = p.slice(0, n).reduce((a, b) => a + b, 0) / n;
+      for (let i = n; i < p.length; i++) e = p[i] * k + e * (1 - k);
+      return e;
+    }
+    function calcRSI(p, n = 14) {
+      if (p.length < n + 1) return 50;
+      let g = 0, l = 0;
+      for (let i = 1; i <= n; i++) { const d = p[i] - p[i - 1]; d > 0 ? g += d : l -= d; }
+      let ag = g / n, al = l / n;
+      for (let i = n + 1; i < p.length; i++) { const d = p[i] - p[i - 1]; if (d > 0) { ag = (ag * (n - 1) + d) / n; al = al * (n - 1) / n; } else { ag = ag * (n - 1) / n; al = (al * (n - 1) - d) / n; } }
+      return al === 0 ? 100 : 100 - 100 / (1 + ag / al);
+    }
+    function calcATR(c, n = 14) {
+      const tr = [];
+      for (let i = 1; i < c.length; i++) { const h = c[i].high, l = c[i].low, pc = c[i - 1].close; tr.push(Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc))); }
+      if (tr.length < n) return 0;
+      const k = 2 / (n + 1); let a = tr.slice(0, n).reduce((a, b) => a + b, 0) / n;
+      for (let i = n; i < tr.length; i++)a = tr[i] * k + a * (1 - k);
+      return a;
+    }
+    function trend(p) {
+      if (p.length < 50) return 'neutral';
+      const e50 = calcEMA(p, 50), e200 = calcEMA(p, Math.min(200, p.length - 1));
+      if (!e50 || !e200) return 'neutral';
+      const v = p[p.length - 1];
+      if (v > e50 && e50 > e200) return 'bull';
+      if (v < e50 && e50 < e200) return 'bear';
+      return 'neutral';
+    }
+    function score(d) {
+      let s = 0;
+      const { mtf, rsi, price, ema800, atr, goldenCross } = d;
+      s += mtf.aligned === 'bull' || mtf.aligned === 'bear' ? 40 : mtf.t1h === mtf.t4h && mtf.t1h !== 'neutral' ? 22 : 5;
+      s += rsi >= 45 && rsi <= 65 ? 20 : (rsi >= 35 && rsi < 45) || (rsi > 65 && rsi <= 75) ? 11 : 3;
+      const dist = ema800 ? Math.abs((price - ema800) / ema800 * 100) : 99;
+      s += dist <= 2 ? 15 : dist <= 5 ? 8 : 2;
+      const ap = price > 0 ? atr / price * 100 : 0;
+      s += ap >= 0.8 && ap <= 3 ? 15 : ap >= 0.4 && ap <= 4.5 ? 8 : 2;
+      if (goldenCross) s += 10;
+      return Math.max(0, Math.min(100, Math.round(s)));
+    }
 
-function calcEMA(prices, p) {
-  if (prices.length < p) return null;
-  const k = 2/(p+1);
-  let e = prices.slice(0,p).reduce((a,b)=>a+b,0)/p;
-  for (let i=p;i<prices.length;i++) e = prices[i]*k + e*(1-k);
-  return e;
-}
+    async function loadMarketData() {
+      try {
+        const [d1h, d4h, d1d, d24] = await Promise.all([
+          fetchJSON('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=1000'),
+          fetchJSON('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=500&aggregate=4'),
+          fetchJSON('https://min-api.cryptocompare.com/data/v2/histoday?fsym=BTC&tsym=USD&limit=300'),
+          fetchJSON('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=24')
+        ]);
+        const c1h = d1h.Data.Data, c4h = d4h.Data.Data, c1d = d1d.Data.Data;
+        const cl = c1h.map(c => c.close), price = cl[cl.length - 1];
+        const ema15 = calcEMA(cl, 15), ema300 = calcEMA(cl, 300), ema800 = calcEMA(cl, 800);
+        const rsi = calcRSI(cl, 14), atr = calcATR(c1h.map(c => ({ high: c.high, low: c.low, close: c.close })), 14);
+        const t1h = trend(cl), t4h = trend(c4h.map(c => c.close)), t1d = trend(c1d.map(c => c.close));
+        const aligned = t1h === t4h && t4h === t1d && t1h !== 'neutral' ? t1h : 'mixed';
+        const mtf = { t1h, t4h, t1d, aligned };
+        const goldenCross = ema15 > ema300, htfFilter = price > ema800, rsiZone = rsi >= 45 && rsi <= 70;
+        const strength = (goldenCross ? 1 : 0) + (htfFilter ? 1 : 0) + (rsiZone ? 1 : 0);
+        const sig = goldenCross && htfFilter && rsiZone ? 'LONG' : !goldenCross ? 'EXIT' : 'NEUTRAL';
+        const sc = score({ mtf, rsi, price, ema800, atr, goldenCross });
+        const change24 = ((price - d24.Data.Data[0].open) / d24.Data.Data[0].open * 100);
+        mktData = { price, ema15, ema300, ema800, rsi, atr, goldenCross, htfFilter, rsiZone, strength, signal: sig, score: sc, mtf, change24, closes: cl };
+        updateUI();
+      } catch (e) {
+        document.getElementById('statusDot').className = 'status-dot err';
+        document.getElementById('lastUpdated').textContent = 'Fehler';
+        console.error(e);
+      }
+    }
 
-function calcRSI(prices, p=14) {
-  if (prices.length < p+1) return 50;
-  let g=0,l=0;
-  for (let i=1;i<=p;i++){const d=prices[i]-prices[i-1];d>0?g+=d:l-=d;}
-  let ag=g/p,al=l/p;
-  for (let i=p+1;i<prices.length;i++){
-    const d=prices[i]-prices[i-1];
-    if(d>0){ag=(ag*(p-1)+d)/p;al=al*(p-1)/p;}
-    else{ag=ag*(p-1)/p;al=(al*(p-1)-d)/p;}
-  }
-  return al===0?100:100-100/(1+ag/al);
-}
+    const fmt = n => Math.round(n).toLocaleString('de-DE');
 
-function calcATR(candles, p=14) {
-  const trs=[];
-  for(let i=1;i<candles.length;i++){
-    const h=candles[i].high,l=candles[i].low,pc=candles[i-1].close;
-    trs.push(Math.max(h-l,Math.abs(h-pc),Math.abs(l-pc)));
-  }
-  if(trs.length<p)return 0;
-  const k=2/(p+1);
-  let atr=trs.slice(0,p).reduce((a,b)=>a+b,0)/p;
-  for(let i=p;i<trs.length;i++)atr=trs[i]*k+atr*(1-k);
-  return atr;
-}
+    function updateUI() {
+      if (!mktData) return;
+      const d = mktData;
+      document.getElementById('tPrice').textContent = '$' + fmt(d.price);
+      document.getElementById('tChange').textContent = (d.change24 >= 0 ? '+' : '') + d.change24.toFixed(2) + '%';
+      document.getElementById('tChange').className = 'tick-value ' + (d.change24 >= 0 ? 'up' : 'down');
+      document.getElementById('tSignal').textContent = d.signal;
+      document.getElementById('tSignal').className = 'tick-value ' + (d.signal === 'LONG' ? 'up' : d.signal === 'EXIT' ? 'down' : '');
+      document.getElementById('tScore').textContent = d.score + '/100';
+      document.getElementById('tRsi').textContent = d.rsi.toFixed(1);
+      document.getElementById('tEma800').textContent = '$' + fmt(d.ema800);
+      const sn = document.getElementById('scoreNum');
+      sn.textContent = d.score; sn.className = 'score-num ' + (d.score >= 65 ? 'high' : d.score >= 40 ? 'mid' : 'low');
+      const sb = document.getElementById('scoreBar');
+      sb.style.width = d.score + '%'; sb.className = 'bar-fill ' + (d.score >= 65 ? 'green' : d.score >= 40 ? 'yellow' : 'red');
+      function setBadge(id, val) { const el = document.getElementById(id); el.textContent = id.includes('Align') ? 'Align: ' + val : id.replace('mtf', '') + 'h: ' + val; el.className = 'mtf-badge ' + (val === 'bull' ? 'bull' : val === 'bear' ? 'bear' : 'neutral'); }
+      setBadge('mtf1h', d.mtf.t1h); setBadge('mtf4h', d.mtf.t4h); setBadge('mtf1d', d.mtf.t1d);
+      const al = document.getElementById('mtfAlign'); al.textContent = 'Align: ' + d.mtf.aligned; al.className = 'mtf-badge ' + (d.mtf.aligned === 'bull' ? 'bull' : d.mtf.aligned === 'bear' ? 'bear' : 'neutral');
+      document.getElementById('iEma15').textContent = '$' + fmt(d.ema15);
+      document.getElementById('iEma300').textContent = '$' + fmt(d.ema300);
+      document.getElementById('iEma800').textContent = '$' + fmt(d.ema800);
+      document.getElementById('iRsi').textContent = d.rsi.toFixed(1);
+      document.getElementById('iAtr').textContent = '$' + fmt(d.atr);
+      document.getElementById('iGc').textContent = d.goldenCross ? '✅ Ja' : '❌ Nein';
+      document.getElementById('iHtf').textContent = d.htfFilter ? '✅ Ja' : '❌ Nein';
+      document.getElementById('lastUpdated').textContent = 'Update ' + new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    }
 
-function trendFromPrices(prices) {
-  if(prices.length<50) return 'neutral';
-  const ema50=calcEMA(prices,50);
-  const ema200=calcEMA(prices,Math.min(200,prices.length-1));
-  if(!ema50||!ema200) return 'neutral';
-  const p=prices[prices.length-1];
-  if(p>ema50&&ema50>ema200) return 'bull';
-  if(p<ema50&&ema50<ema200) return 'bear';
-  return 'neutral';
-}
+    // ─── BUILT-IN COACH ───
+    function getCtx() { return { account: +document.getElementById('cfgAccount').value || 5000, riskPct: +document.getElementById('cfgRisk').value || 1, minScore: +document.getElementById('cfgMinScore').value || 60, dailyPnl: +document.getElementById('cfgDailyPnl').value || 0, openRisk: +document.getElementById('cfgOpenRisk').value || 0 }; }
 
-function calcScore(data) {
-  const {mtf, rsi, price, ema800, atr} = data;
-  let s=0;
-  if(mtf.aligned==='bull'||mtf.aligned==='bear') s+=40;
-  else if(mtf.t1h===mtf.t4h&&mtf.t1h!=='neutral') s+=22;
-  else s+=5;
-  if(rsi>=45&&rsi<=65) s+=20;
-  else if((rsi>=35&&rsi<45)||(rsi>65&&rsi<=75)) s+=11;
-  else s+=3;
-  const dist=ema800?Math.abs((price-ema800)/ema800*100):99;
-  s+=dist<=2?15:dist<=5?8:2;
-  const ap=price>0?atr/price*100:0;
-  s+=ap>=0.8&&ap<=3?15:ap>=0.4&&ap<=4.5?8:2;
-  if(data.goldenCross) s+=10;
-  return Math.max(0,Math.min(100,Math.round(s)));
-}
+    function buildPlan(ctx) {
+      if (!mktData) return null;
+      const { price, ema300, atr, rsi, mtf, score } = mktData;
+      const guards = [];
+      if (score < ctx.minScore) guards.push(`Score ${score} < Min ${ctx.minScore}`);
+      if (ctx.dailyPnl <= -3) guards.push('Daily-Loss-Limit erreicht');
+      if (ctx.openRisk >= 2.5) guards.push('Open-Risk-Limit erreicht');
+      const blocked = guards.length > 0;
+      let action = 'wait', entry = null, sl = null, tp1 = null, tp2 = null;
+      if (!blocked && mtf.aligned === 'bull' && rsi < 72) { action = 'long'; entry = price; sl = Math.min(ema300, price - 1.5 * atr); const r = Math.max(entry - sl, .0001); tp1 = entry + 2 * r; tp2 = entry + 3.5 * r; }
+      else if (!blocked && mtf.aligned === 'bear' && rsi > 28) { action = 'short'; entry = price; sl = Math.max(ema300, price + 1.5 * atr); const r = Math.max(sl - entry, .0001); tp1 = entry - 2 * r; tp2 = entry - 3.5 * r; }
+      let rr1 = null, rr2 = null, size = null;
+      if (entry && sl) { const ru = action === 'long' ? Math.max(entry - sl, .0001) : Math.max(sl - entry, .0001); rr1 = action === 'long' ? (tp1 - entry) / ru : (entry - tp1) / ru; rr2 = action === 'long' ? (tp2 - entry) / ru : (entry - tp2) / ru; size = (ctx.account * ctx.riskPct / 100) / ru; }
+      return { action, entry, sl, tp1, tp2, rr1, rr2, size, score, blocked, guards };
+    }
 
-async function loadMarketData() {
-  try {
-    const [h1Data, h4Data, dayData, fg24] = await Promise.all([
-      fetchJSON('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=1000'),
-      fetchJSON('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=500&aggregate=4'),
-      fetchJSON('https://min-api.cryptocompare.com/data/v2/histoday?fsym=BTC&tsym=USD&limit=300'),
-      fetchJSON('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=24')
-    ]);
+    function builtinAnswer(q) {
+      const d = mktData;
+      const { price, ema800, rsi, atr, mtf, goldenCross, htfFilter, rsiZone, signal, score, change24 } = d;
+      const ctx = getCtx();
+      q = q.toLowerCase();
+      if (/ema|800|trigger/.test(q)) { const dist = ((price - ema800) / ema800 * 100); return `📏 EMA 800\n\nEMA 800: $${fmt(ema800)}\nBTC: $${fmt(price)}\n\n${price >= ema800 ? '✅ Preis ÜBER EMA 800 → bullisch' : '❌ Preis UNTER EMA 800 → bearisch'}\nAbstand: ${dist >= 0 ? '+' : ''}${dist.toFixed(2)}%\n\n${price >= ema800 ? 'Trigger fällt unter $' + fmt(ema800) : 'Bull-Signal: Close über $' + fmt(ema800)}`; }
+      if (/score|qualit|stärk/.test(q)) { const bar = '█'.repeat(Math.round(score / 10)) + '░'.repeat(10 - Math.round(score / 10)); return `📊 Signal-Score\n\n${score}/100\n${bar}\n\nMTF: 1h=${mtf.t1h} | 4h=${mtf.t4h} | 1d=${mtf.t1d}\nAlignment: ${mtf.aligned}\nRSI: ${rsi.toFixed(1)}\n\n${score >= 70 ? '🟢 Starkes Setup' : score >= 50 ? '🟡 Mittleres Setup' : '🔴 Schwaches Signal — abwarten'}`; }
+      if (/plan|entry|setup|long|short|stop|tp|trade|kauf/.test(q)) { const plan = buildPlan(ctx); if (!plan) return '⏳'; if (plan.blocked) return `🚫 No Trade\n\n${plan.guards.map(g => '• ' + g).join('\n')}\n\nScore: ${plan.score}/100`; if (plan.action === 'wait') return `⏸️ Kein Signal\n\nMTF: ${mtf.t1h}/${mtf.t4h}/${mtf.t1d}\nScore: ${plan.score}/100`; const dir = plan.action === 'long' ? '📈 LONG' : '📉 SHORT'; return `${plan.action === 'long' ? '🟢' : '🔴'} ${dir}\n\nEntry: $${fmt(plan.entry)}\nStop:  $${fmt(plan.sl)}\nTP1:   $${fmt(plan.tp1)} (${plan.rr1?.toFixed(1)}:1)\nTP2:   $${fmt(plan.tp2)} (${plan.rr2?.toFixed(1)}:1)\n\nGröße: ${plan.size?.toFixed(5)} BTC\n(${ctx.riskPct}% Risiko · $${ctx.account.toLocaleString('de-DE')} Konto)\n\nScore: ${plan.score}/100 | ${mtf.aligned}`; }
+      if (/status|preis|live|rsi|indi/.test(q)) { return `📡 Live Status\n\nBTC: $${fmt(price)} (${change24 >= 0 ? '+' : ''}${change24.toFixed(2)}% 24h)\n\nEMA 15:  $${fmt(d.ema15)}\nEMA 300: $${fmt(d.ema300)}\nEMA 800: $${fmt(ema800)}\nRSI 14:  ${rsi.toFixed(1)} | ATR: $${fmt(atr)}\n\nSignal: ${signal} (${d.strength}/3) | Score: ${score}/100\n${goldenCross ? '✅' : '❌'} Golden Cross · ${htfFilter ? '✅' : '❌'} Über EMA800 · ${rsiZone ? '✅' : '❌'} RSI`; }
+      return `🤖 TraderCoach\n\nFrag mich:\n• "Gib mir einen Trade-Plan"\n• "Wie ist der Score?"\n• "EMA 800 Analyse"\n• "Live Status"\n• "Soll ich kaufen?"\n\nScore: ${score}/100 | ${signal}`;
+    }
 
-    const c1h = h1Data.Data.Data;
-    const c4h = h4Data.Data.Data;
-    const c1d = dayData.Data.Data;
+    // ─── GPT-4o CALL ───
+    async function askGPT(question) {
+      if (!mktData) return null;
+      const d = mktData;
+      const ctx = getCtx();
+      const plan = buildPlan(ctx);
 
-    const closes1h = c1h.map(c=>c.close);
-    const price    = closes1h[closes1h.length-1];
-    const price24  = fg24.Data.Data[0].open;
+      const systemPrompt = `Du bist TraderCoach, ein professioneller BTC Trading-Coach. Du antwortest präzise, direkt und auf Deutsch.
 
-    const ema15  = calcEMA(closes1h, 15);
-    const ema300 = calcEMA(closes1h, 300);
-    const ema800 = calcEMA(closes1h, 800);
-    const rsi    = calcRSI(closes1h, 14);
-    const atr    = calcATR(c1h.map(c=>({high:c.high,low:c.low,close:c.close})), 14);
+AKTUELLE MARKTDATEN (Live):
+- BTC Preis: $${fmt(d.price)} (${d.change24 >= 0 ? '+' : ''}${d.change24.toFixed(2)}% 24h)
+- Signal: ${d.signal} | Score: ${d.score}/100
+- RSI 14: ${d.rsi.toFixed(1)} | ATR: $${fmt(d.atr)}
+- EMA 15: $${fmt(d.ema15)} | EMA 300: $${fmt(d.ema300)} | EMA 800: $${fmt(d.ema800)}
+- Golden Cross: ${d.goldenCross ? 'JA' : 'NEIN'} | Über EMA800: ${d.htfFilter ? 'JA' : 'NEIN'} | RSI Zone: ${d.rsiZone ? 'JA' : 'NEIN'}
+- MTF: 1h=${d.mtf.t1h} / 4h=${d.mtf.t4h} / 1d=${d.mtf.t1d} → Alignment: ${d.mtf.aligned}
+${plan && plan.action !== 'wait' && !plan.blocked ? `- Trade-Plan: ${plan.action.toUpperCase()} Entry $${fmt(plan.entry)} | SL $${fmt(plan.sl)} | TP1 $${fmt(plan.tp1)} | TP2 $${fmt(plan.tp2)} | RR ${plan.rr1?.toFixed(1)}:1` : '- Kein klares Trade-Setup (MTF nicht aligned oder Guardrails aktiv)'}
+- Konto: $${ctx.account} | Risiko: ${ctx.riskPct}% | Tages-PnL: ${ctx.dailyPnl}%
 
-    const t1h = trendFromPrices(closes1h);
-    const t4h = trendFromPrices(c4h.map(c=>c.close));
-    const t1d = trendFromPrices(c1d.map(c=>c.close));
-    const aligned = (t1h===t4h&&t4h===t1d&&t1h!=='neutral') ? t1h : 'mixed';
-    const mtf = {t1h, t4h, t1d, aligned};
+WICHTIG: Gib keine Anlageberatung. Weise immer auf Risiken hin. Antworte prägnant (max 200 Wörter).`;
 
-    const goldenCross = ema15 > ema300;
-    const htfFilter   = price > ema800;
-    const rsiZone     = rsi >= 45 && rsi <= 70;
-    const strength    = (goldenCross?1:0)+(htfFilter?1:0)+(rsiZone?1:0);
-    const signal      = goldenCross&&htfFilter&&rsiZone ? 'LONG' : !goldenCross ? 'EXIT' : 'NEUTRAL';
-    const score       = calcScore({mtf, rsi, price, ema800, atr, goldenCross});
-    const change24h   = ((price - price24) / price24 * 100);
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${gptKey}` },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: question }
+          ],
+          max_tokens: 400,
+          temperature: 0.4
+        })
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error?.message || 'OpenAI API Fehler');
+      }
+      const data = await response.json();
+      return data.choices[0].message.content;
+    }
 
-    mktData = { price, ema15, ema300, ema800, rsi, atr, goldenCross, htfFilter, rsiZone, strength, signal, score, mtf, change24h, closes1h };
-    updateUI();
-    return mktData;
-  } catch(e) {
-    document.getElementById('statusDot').className='status-dot err';
-    document.getElementById('lastUpdated').textContent='Fehler beim Laden';
-    console.error(e);
-    return null;
-  }
-}
+    // ─── CHAT ───
+    const msgsEl = document.getElementById('messages');
+    const qEl = document.getElementById('question');
 
-function fmt(n) { return Math.round(n).toLocaleString('de-DE'); }
+    function addMsg(role, text, cssClass) {
+      const d = document.createElement('div');
+      d.className = `bubble ${cssClass || role}`;
+      d.textContent = text;
+      msgsEl.appendChild(d);
+      msgsEl.scrollTop = msgsEl.scrollHeight;
+      return d;
+    }
 
-function updateUI() {
-  if(!mktData) return;
-  const d = mktData;
+    async function ask(q) {
+      const question = (q || qEl.value || '').trim();
+      if (!question) return;
+      addMsg('user', question);
+      qEl.value = '';
 
-  document.getElementById('tPrice').textContent  = '$'+fmt(d.price);
-  document.getElementById('tPrice').className    = 'tick-value';
-  document.getElementById('tChange').textContent = (d.change24h>=0?'+':'')+d.change24h.toFixed(2)+'%';
-  document.getElementById('tChange').className   = 'tick-value '+(d.change24h>=0?'up':'down');
-  document.getElementById('tSignal').textContent = d.signal;
-  document.getElementById('tSignal').className   = 'tick-value '+(d.signal==='LONG'?'up':d.signal==='EXIT'?'down':'');
-  document.getElementById('tScore').textContent  = d.score+'/100';
-  document.getElementById('tScore').className    = 'tick-value '+(d.score>=65?'up':d.score>=40?'':'down');
-  document.getElementById('tRsi').textContent    = d.rsi.toFixed(1);
-  document.getElementById('tEma800').textContent = '$'+fmt(d.ema800);
+      if (!mktData) {
+        const ld = addMsg('bot', '⏳ Lade Marktdaten...');
+        await loadMarketData();
+        ld.remove();
+        if (!mktData) { addMsg('bot', '⚠️ Daten konnten nicht geladen werden.'); return; }
+      }
 
-  const sn = document.getElementById('scoreNum');
-  sn.textContent = d.score;
-  sn.className   = 'score-num '+(d.score>=65?'high':d.score>=40?'mid':'low');
-  const sb = document.getElementById('scoreBar');
-  sb.style.width = d.score+'%';
-  sb.className   = 'bar-fill '+(d.score>=65?'green':d.score>=40?'yellow':'red');
+      if (gptKey) {
+        const ld = addMsg('bot', '🧠 GPT-4o denkt nach...', 'loading');
+        try {
+          const reply = await askGPT(question);
+          ld.remove();
+          addMsg('bot', reply, 'gpt-reply');
+        } catch (e) {
+          ld.remove();
+          addMsg('bot', `⚠️ GPT-Fehler: ${e.message}\n\nFallback auf Regelwerk:`, 'bot');
+          addMsg('bot', builtinAnswer(question));
+        }
+      } else {
+        addMsg('bot', builtinAnswer(question));
+      }
+    }
 
-  function setBadge(id, val) {
-    const el=document.getElementById(id);
-    el.textContent = id.replace('mtf','').replace('Align','Align: ')+': '+val;
-    el.className   = 'mtf-badge '+(val==='bull'?'bull':val==='bear'?'bear':'neutral');
-  }
-  setBadge('mtf1h', d.mtf.t1h); setBadge('mtf4h', d.mtf.t4h); setBadge('mtf1d', d.mtf.t1d);
-  const al=document.getElementById('mtfAlign');
-  al.textContent='Align: '+d.mtf.aligned;
-  al.className='mtf-badge '+(d.mtf.aligned==='bull'?'bull':d.mtf.aligned==='bear'?'bear':'neutral');
+    document.getElementById('sendBtn').addEventListener('click', () => ask());
+    qEl.addEventListener('keydown', e => { if (e.key === 'Enter') ask(); });
+    document.querySelectorAll('.quick button').forEach(b => {
+      b.addEventListener('click', () => ask(b.dataset.q || ''));
+    });
 
-  document.getElementById('iEma15').textContent  = '$'+fmt(d.ema15);
-  document.getElementById('iEma300').textContent = '$'+fmt(d.ema300);
-  document.getElementById('iEma800').textContent = '$'+fmt(d.ema800);
-  document.getElementById('iRsi').textContent    = d.rsi.toFixed(1);
-  document.getElementById('iAtr').textContent    = '$'+fmt(d.atr);
-  document.getElementById('iGc').textContent     = d.goldenCross ? '✅ Ja' : '❌ Nein';
-  document.getElementById('iHtf').textContent    = d.htfFilter   ? '✅ Ja' : '❌ Nein';
-  document.getElementById('lastUpdated').textContent = 'Aktualisiert '+new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
-}
+    // ─── INIT ───
+    (async () => {
+      addMsg('bot', '👋 Hallo! Ich bin dein BTC TraderCoach.\n\nLade Live-Daten...');
+      await loadMarketData();
+      if (mktData) {
+        const gptHint = gptKey ? '\n🧠 GPT-4o ist aktiv — stell mir jede Frage!' : '\n💡 Tipp: Gib deinen OpenAI API-Key ein für noch intelligentere Antworten!';
+        addMsg('bot', `✅ Marktdaten geladen!\n\nBTC: $${fmt(mktData.price)} | Score: ${mktData.score}/100 | Signal: ${mktData.signal}\nMTF: ${mktData.mtf.t1h}/${mktData.mtf.t4h}/${mktData.mtf.t1d}${gptHint}`);
+      } else {
+        addMsg('bot', '⚠️ Daten konnten nicht geladen werden. Seite neu laden.');
+      }
+    })();
 
-// ─── COACH LOGIC ───
-function getContext() {
-  return {
-    account:  +document.getElementById('cfgAccount').value   || 5000,
-    riskPct:  +document.getElementById('cfgRisk').value      || 1.0,
-    minScore: +document.getElementById('cfgMinScore').value  || 60,
-    dailyPnl: +document.getElementById('cfgDailyPnl').value || 0,
-    openRisk: +document.getElementById('cfgOpenRisk').value  || 0
-  };
-}
-
-function buildPlan(ctx) {
-  if(!mktData) return null;
-  const {price,ema300,ema800,atr,rsi,mtf,goldenCross,score} = mktData;
-  const guards=[];
-  if(score < ctx.minScore) guards.push(`Score ${score} < Min ${ctx.minScore}`);
-  if(ctx.dailyPnl <= -3)   guards.push(`Daily-Loss-Limit erreicht`);
-  if(ctx.openRisk >= 2.5)  guards.push(`Open-Risk-Limit erreicht`);
-  const blocked = guards.length>0;
-
-  let action='wait',entry=null,sl=null,tp1=null,tp2=null;
-  if(!blocked && mtf.aligned==='bull' && rsi<72) {
-    action='long'; entry=price; sl=Math.min(ema300,price-1.5*atr);
-    const r=Math.max(entry-sl,.0001); tp1=entry+2*r; tp2=entry+3.5*r;
-  } else if(!blocked && mtf.aligned==='bear' && rsi>28) {
-    action='short'; entry=price; sl=Math.max(ema300,price+1.5*atr);
-    const r=Math.max(sl-entry,.0001); tp1=entry-2*r; tp2=entry-3.5*r;
-  }
-
-  let rr1=null,rr2=null,size=null;
-  if(entry&&sl) {
-    const ru=action==='long'?Math.max(entry-sl,.0001):Math.max(sl-entry,.0001);
-    rr1=action==='long'?(tp1-entry)/ru:(entry-tp1)/ru;
-    rr2=action==='long'?(tp2-entry)/ru:(entry-tp2)/ru;
-    size=(ctx.account*ctx.riskPct/100)/ru;
-  }
-  return {action,entry,sl,tp1,tp2,rr1,rr2,size,score,blocked,guards};
-}
-
-function answerForQuestion(q) {
-  if(!mktData) return '⏳ Lade Marktdaten...';
-  const {price,ema800,rsi,atr,mtf,goldenCross,htfFilter,rsiZone,signal,score,change24h} = mktData;
-  const ctx = getContext();
-  q = q.toLowerCase();
-
-  if(/ema|800|trigger/.test(q)) {
-    const dist=((price-ema800)/ema800*100);
-    return `📏 EMA 800 Analyse\n\n`+
-      `EMA 800: $${fmt(ema800)}\n`+
-      `BTC Preis: $${fmt(price)}\n\n`+
-      `${price>=ema800?'✅ Preis ÜBER EMA 800 → bullisch':'❌ Preis UNTER EMA 800 → bearisch'}\n`+
-      `Abstand: ${dist>=0?'+':''}${dist.toFixed(2)}%\n\n`+
-      `${price>=ema800?'⚠️ Bullischer Trigger bricht unter $'+fmt(ema800):'🔑 Bull-Signal: Close über $'+fmt(ema800)}`;
-  }
-
-  if(/score|qualit|stärk|analysis/.test(q)) {
-    const bar='█'.repeat(Math.round(score/10))+'░'.repeat(10-Math.round(score/10));
-    return `📊 Signal-Score\n\n`+
-      `Score: ${score}/100\n${bar}\n\n`+
-      `MTF: 1h=${mtf.t1h} | 4h=${mtf.t4h} | 1d=${mtf.t1d}\n`+
-      `Alignment: ${mtf.aligned}\n\n`+
-      `RSI(14): ${rsi.toFixed(1)}\n`+
-      `ATR(14): $${fmt(atr)}\n\n`+
-      `${score>=70?'🟢 Starkes Setup':'`'+(score>=50?'🟡 Mittleres Setup':'🔴 Schwaches — abwarten')}`;
-  }
-
-  if(/plan|entry|setup|long|short|stop|tp|trade/.test(q)) {
-    const plan=buildPlan(ctx);
-    if(!plan) return '⏳ Lade...';
-    if(plan.blocked) return `🚫 Kein Trade-Setup\n\nGuardrails:\n${plan.guards.map(g=>'• '+g).join('\n')}\n\nScore: ${plan.score}/100`;
-    if(plan.action==='wait') return `⏸️ Kein Signal — Abwarten\n\nMTF: ${mtf.t1h}/${mtf.t4h}/${mtf.t1d}\nScore: ${plan.score}/100\n\nKein klares Setup.`;
-    const dir=plan.action==='long'?'📈 LONG':'📉 SHORT';
-    return `${plan.action==='long'?'🟢':'🔴'} Trade-Plan: ${dir}\n\n`+
-      `Entry:  $${fmt(plan.entry)}\n`+
-      `Stop:   $${fmt(plan.sl)}\n`+
-      `TP1:    $${fmt(plan.tp1)} (${plan.rr1?.toFixed(1)}:1)\n`+
-      `TP2:    $${fmt(plan.tp2)} (${plan.rr2?.toFixed(1)}:1)\n\n`+
-      `Größe (${ctx.riskPct}% Risiko):\n${plan.size?.toFixed(5)} BTC bei $${ctx.account.toLocaleString('de-DE')}\n\n`+
-      `Score: ${plan.score}/100 | MTF: ${mtf.aligned}`;
-  }
-
-  if(/status|preis|price|rsi|live/.test(q)) {
-    return `📡 Live Status\n\n`+
-      `💰 BTC: $${fmt(price)} (${change24h>=0?'+':''}${change24h.toFixed(2)}% 24h)\n\n`+
-      `EMA 15:  $${fmt(mktData.ema15)}\n`+
-      `EMA 300: $${fmt(mktData.ema300)}\n`+
-      `EMA 800: $${fmt(ema800)}\n`+
-      `RSI 14:  ${rsi.toFixed(1)}\n`+
-      `ATR 14:  $${fmt(atr)}\n\n`+
-      `Signal: ${signal} (${mktData.strength}/3)\n`+
-      `Score:  ${score}/100\n\n`+
-      `${goldenCross?'✅':'❌'} Golden Cross\n`+
-      `${htfFilter?'✅':'❌'} Über EMA 800\n`+
-      `${rsiZone?'✅':'❌'} RSI in Zone`;
-  }
-
-  // Default help
-  return `🤖 TraderCoach — Befehle\n\n`+
-    `📋 Plan heute\n📊 Signal-Score\n📏 EMA 800\n📡 Live Status\n\n`+
-    `Oder einfach fragen:\n`+
-    `"Soll ich jetzt kaufen?"\n`+
-    `"Wie ist der Trend?"\n`+
-    `"Welcher Entry wäre gut?"\n\n`+
-    `Score: ${score}/100 | Signal: ${signal}`;
-}
-
-// ─── CHAT ───
-const msgsEl = document.getElementById('messages');
-const qEl    = document.getElementById('question');
-
-function addMsg(role, text) {
-  const d=document.createElement('div');
-  d.className=`bubble ${role}`;
-  d.textContent=text;
-  msgsEl.appendChild(d);
-  msgsEl.scrollTop=msgsEl.scrollHeight;
-  return d;
-}
-
-async function ask(q) {
-  const question=(q||qEl.value||'').trim();
-  if(!question) return;
-  addMsg('user',question);
-  qEl.value='';
-  if(!mktData) {
-    const load=addMsg('bot','⏳ Lade Marktdaten...');
-    await loadMarketData();
-    load.remove();
-  }
-  const reply=answerForQuestion(question);
-  addMsg('bot',reply);
-}
-
-document.getElementById('sendBtn').addEventListener('click',()=>ask());
-qEl.addEventListener('keydown',e=>{if(e.key==='Enter')ask();});
-document.querySelectorAll('.quick button').forEach(b=>{
-  b.addEventListener('click',()=>ask(b.dataset.q||''));
-});
-
-// ─── INIT ───
-addMsg('bot','👋 Hallo! Ich bin dein BTC TraderCoach.\n\nIch lade gerade die Marktdaten...');
-loadMarketData().then(()=>{
-  addMsg('bot', mktData
-    ? `✅ Daten geladen!\n\nBTC: $${fmt(mktData.price)} | Score: ${mktData.score}/100 | Signal: ${mktData.signal}\n\nFrag mich nach einem Plan, Score, EMA 800 oder Status!`
-    : '⚠️ Daten konnten nicht geladen werden. Bitte Seite neu laden.');
-});
-
-// Auto-refresh alle 5 Minuten
-setInterval(()=>loadMarketData(), 5*60*1000);
-</script>
+    setInterval(() => loadMarketData(), 5 * 60 * 1000);
+  </script>
 </body>
+
 </html>
