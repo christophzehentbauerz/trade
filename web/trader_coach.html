@@ -733,7 +733,12 @@
   </div>
 
   <script>
+    // __OPENAI_KEY_INJECT__  ← GitHub Actions replaces this line with the key
     // ─── GPT KEY MANAGEMENT ───
+    // Auto-save injected key to localStorage on first load
+    if (typeof _presetKey !== 'undefined' && _presetKey && !localStorage.getItem('coach_gpt_key')) {
+      localStorage.setItem('coach_gpt_key', _presetKey);
+    }
     let gptKey = localStorage.getItem('coach_gpt_key') || '';
     function updateGptUI() {
       const hasKey = !!gptKey;

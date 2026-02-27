@@ -1,0 +1,52 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Inject OpenAI API Key into Coach
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -n "$OPENAI_API_KEY" ]; then
+            echo "✅ Injecting OpenAI key into trader_coach.html..."
+            # Replace the placeholder comment with the actual key init script
+            sed -i "s|// __OPENAI_KEY_INJECT__|const _presetKey = '${OPENAI_API_KEY}';|g" web/trader_coach.html
+            echo "✅ Key injected successfully"
+          else
+            echo "⚠️ No OPENAI_API_KEY secret set — coach runs without preset key"
+            sed -i "s|// __OPENAI_KEY_INJECT__|const _presetKey = '';|g" web/trader_coach.html
+          fi
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
