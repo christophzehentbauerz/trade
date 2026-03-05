@@ -78,19 +78,6 @@ async function ensureAnalysisDataReady() {
     if (!hasCoreData && typeof updateDashboard === 'function') {
         await updateDashboard();
     }
-
-    const hasSmartMoney =
-        typeof SmartMoneySignal !== 'undefined' &&
-        SmartMoneySignal.state &&
-        SmartMoneySignal.state.lastUpdate;
-
-    if (!hasSmartMoney && typeof SmartMoneySignal !== 'undefined' && typeof SmartMoneySignal.updateSignal === 'function') {
-        try {
-            await SmartMoneySignal.updateSignal();
-        } catch (error) {
-            console.warn('Smart Money refresh failed before analysis:', error);
-        }
-    }
 }
 
 async function generateLiveAnalysis() {
@@ -110,11 +97,10 @@ async function generateLiveAnalysis() {
     // Detect Support/Resistance
     const sr = detectSupportResistance(priceWindow, currentPrice);
 
-    // Get Smart Money Strategy data if available
-    let smartMoneyData = null;
-    if (typeof SmartMoneySignal !== 'undefined' && SmartMoneySignal.state.lastUpdate) {
-        smartMoneyData = SmartMoneySignal.getState();
-    }
+    // Use unified coach recommendation if available (source-of-truth)
+    const unifiedRecommendation = typeof getUnifiedTradeRecommendation === 'function'
+        ? getUnifiedTradeRecommendation()
+        : null;
 
     // VOLUME ANALYSIS - Robust Data Fetching
     let volumeAnalysis = null;
@@ -157,33 +143,18 @@ async function generateLiveAnalysis() {
         volatility
     );
 
-    // Determine signal - prioritize Smart Money Strategy if available
+    // Determine signal from unified coach recommendation (fallback to confluence)
     let signal = 'ABWARTEN';
-    let confidence = confluenceScore.total * 10;
-    let useSmartMoney = false;
+    let confidence = Math.round(confluenceScore.total * 10);
 
     // Store confluence score globally for display
     window.lastConfluenceScore = confluenceScore;
 
-    // If Smart Money Strategy data available, use it as primary signal
-    if (smartMoneyData && smartMoneyData.signal) {
-        useSmartMoney = true;
-        if (smartMoneyData.signal === 'LONG') {
-            signal = 'LONG';
-            confidence = (smartMoneyData.signalStrength / 3) * 100;
-        } else if (smartMoneyData.signal === 'EXIT') {
-            signal = 'EXIT';
-            confidence = 80;
-        } else {
-            // NEUTRAL from Smart Money, fall back to confluence
-            if (confluenceScore.total >= 6 && confluenceScore.direction === 'LONG') {
-                signal = 'LONG';
-            } else if (confluenceScore.total >= 6 && confluenceScore.direction === 'SHORT') {
-                signal = 'SHORT';
-            }
-        }
+    if (unifiedRecommendation) {
+        signal = unifiedRecommendation.signal === 'NEUTRAL' ? 'ABWARTEN' : unifiedRecommendation.signal;
+        confidence = Math.round(unifiedRecommendation.confidence ?? confidence);
     } else {
-        // No Smart Money data, use confluence scoring
+        // Fallback: pure confluence
         if (confluenceScore.total >= 6 && confluenceScore.direction === 'LONG') {
             signal = 'LONG';
         } else if (confluenceScore.total >= 6 && confluenceScore.direction === 'SHORT') {
@@ -191,37 +162,29 @@ async function generateLiveAnalysis() {
         }
     }
 
-    // Calculate Entry/SL/TP
+    // Calculate Entry/SL/TP (prefer unified coach recommendation)
     let entry, stopLoss, takeProfit, slPercent, tpPercent;
 
     if (signal === 'LONG' || signal === 'SHORT') {
-        entry = currentPrice;
-
-        // Use Smart Money ATR-based stop loss if available, otherwise use volatility
-        if (smartMoneyData && smartMoneyData.atr) {
-            stopLoss = smartMoneyData.stopLoss;
-            slPercent = ((currentPrice - stopLoss) / currentPrice);
+        if (unifiedRecommendation && unifiedRecommendation.entryZone && unifiedRecommendation.stopLoss && unifiedRecommendation.tp1) {
+            entry = signal === 'LONG' ? unifiedRecommendation.entryZone[1] : unifiedRecommendation.entryZone[0];
+            stopLoss = unifiedRecommendation.stopLoss;
+            takeProfit = unifiedRecommendation.tp1;
+            slPercent = unifiedRecommendation.slPercent / 100;
+            tpPercent = signal === 'LONG'
+                ? ((takeProfit - entry) / entry)
+                : ((entry - takeProfit) / entry);
         } else {
+            entry = currentPrice;
             slPercent = Math.min(0.03, volatility * 1.5);
             stopLoss = signal === 'LONG' ? entry * (1 - slPercent) : entry * (1 + slPercent);
-        }
-
-        // Take Profit from Smart Money levels if available
-        if (signal === 'LONG' && smartMoneyData?.takeProfit1) {
-            takeProfit = smartMoneyData.takeProfit1;
-            tpPercent = (takeProfit - entry) / entry;
-        } else if (signal === 'SHORT') {
             tpPercent = slPercent * 2.5;
-            takeProfit = entry * (1 - tpPercent);
-        } else {
-            tpPercent = slPercent * 2.5;
-            if (!smartMoneyData?.atr) stopLoss = entry * (1 - slPercent);
-            takeProfit = entry * (1 + tpPercent);
+            takeProfit = signal === 'LONG' ? entry * (1 + tpPercent) : entry * (1 - tpPercent);
         }
     }
 
     // Generate reasons
-    const reasons = generateReasons(confluenceScore, rsi, trend, fearGreed, sr, smartMoneyData);
+    const reasons = generateReasons(confluenceScore, rsi, trend, fearGreed, sr, null);
 
     // Format output
     const now = new Date();
@@ -281,8 +244,8 @@ ${reasons.map(r => `- ${r}`).join('\n')}
 
     // Store data for display
     window.lastAnalysisData = {
-        smartMoneyData,
-        useSmartMoney,
+        smartMoneyData: null,
+        useSmartMoney: false,
         signal,
         confidence,
         entry,

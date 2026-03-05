@@ -136,20 +136,20 @@ const NotificationSystem = {
 
         if (notifBtn) {
             notifBtn.classList.toggle('active', this.notificationsEnabled);
-            notifBtn.textContent = this.notificationsEnabled ? 'ðŸ”” Benachrichtigungen AN' : 'ðŸ”• Benachrichtigungen AUS';
+            notifBtn.textContent = this.notificationsEnabled ? '🔔 Benachrichtigungen AN' : '🔕 Benachrichtigungen AUS';
         }
 
         if (soundBtn) {
             soundBtn.classList.toggle('active', this.soundEnabled);
-            soundBtn.textContent = this.soundEnabled ? 'ðŸ”Š Sound AN' : 'ðŸ”‡ Sound AUS';
+            soundBtn.textContent = this.soundEnabled ? '🔊 Sound AN' : '🔇 Sound AUS';
         }
 
         if (statusEl) {
             if (this.notificationsEnabled || this.soundEnabled) {
-                statusEl.textContent = 'âœ… Du wirst benachrichtigt wenn ein Trade-Signal erscheint';
+                statusEl.textContent = '✅ Du wirst benachrichtigt wenn ein Trade-Signal erscheint';
                 statusEl.className = 'notification-status active';
             } else {
-                statusEl.textContent = 'âš ï¸ Aktiviere Benachrichtigungen um informiert zu werden';
+                statusEl.textContent = '⚠️ Aktiviere Benachrichtigungen um informiert zu werden';
                 statusEl.className = 'notification-status inactive';
             }
         }
@@ -201,12 +201,12 @@ const NotificationSystem = {
     sendNotification(title, body, type = 'signal') {
         if (!this.notificationsEnabled || Notification.permission !== 'granted') return;
 
-        const icon = type === 'long' ? 'ðŸŸ¢' : type === 'short' ? 'ðŸ”´' : 'ðŸ“Š';
+        const icon = type === 'long' ? '🟢' : type === 'short' ? '🔴' : '📊';
 
         const notification = new Notification(title, {
             body: body,
             icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">' + icon + '</text></svg>',
-            badge: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">â‚¿</text></svg>',
+            badge: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">₿</text></svg>',
             tag: 'btc-signal',
             requireInteraction: true
         });
@@ -232,7 +232,7 @@ const NotificationSystem = {
 
         // Notify on LONG or SHORT signal
         if (newSignal === 'LONG') {
-            const title = 'ðŸŸ¢ LONG Signal erkannt!';
+            const title = '🟢 LONG Signal erkannt!';
             const body = `BTC: $${price.toLocaleString()} | Konfidenz: ${Math.round(confidence)}%`;
 
             this.playSound('long');
@@ -240,7 +240,7 @@ const NotificationSystem = {
             this.showInPageAlert('long', confidence, price);
 
         } else if (newSignal === 'SHORT') {
-            const title = 'ðŸ”´ SHORT Signal erkannt!';
+            const title = '🔴 SHORT Signal erkannt!';
             const body = `BTC: $${price.toLocaleString()} | Konfidenz: ${Math.round(confidence)}%`;
 
             this.playSound('short');
@@ -249,7 +249,7 @@ const NotificationSystem = {
 
         } else if (newSignal === 'NEUTRAL' && (oldSignal === 'LONG' || oldSignal === 'SHORT')) {
             // Signal changed from active to neutral
-            const title = 'âšª Signal zurÃ¼ckgesetzt';
+            const title = '⚪ Signal zurückgesetzt';
             const body = 'Das aktive Signal ist wieder neutral geworden.';
 
             this.sendNotification(title, body, 'neutral');
@@ -261,7 +261,7 @@ const NotificationSystem = {
         const alertBox = document.getElementById('signalAlert');
         if (!alertBox) return;
 
-        const emoji = type === 'long' ? 'ðŸŸ¢' : 'ðŸ”´';
+        const emoji = type === 'long' ? '🟢' : '🔴';
         const signal = type === 'long' ? 'LONG' : 'SHORT';
         const color = type === 'long' ? 'bullish' : 'bearish';
 
@@ -273,7 +273,7 @@ const NotificationSystem = {
                     <div class="alert-title">Neues ${signal} Signal!</div>
                     <div class="alert-details">BTC: $${price.toLocaleString()} | Konfidenz: ${Math.round(confidence)}%</div>
                 </div>
-                <button class="alert-close" onclick="document.getElementById('signalAlert').classList.remove('show')">âœ•</button>
+                <button class="alert-close" onclick="document.getElementById('signalAlert').classList.remove('show')">✕</button>
             </div>
         `;
         alertBox.classList.add('show');
@@ -773,15 +773,15 @@ function updateFearGreedCard() {
     // Interpretation
     let interpretation = '';
     if (value <= 20) {
-        interpretation = 'âš¡ Extreme Angst = Historisch oft Kaufgelegenheit (Kontraindikator)';
+        interpretation = '⚡ Extreme Angst = Historisch oft Kaufgelegenheit (Kontraindikator)';
     } else if (value <= 35) {
-        interpretation = 'ðŸ“‰ Angst im Markt - Potenzielle Akkumulationszone';
+        interpretation = '📉 Angst im Markt - Potenzielle Akkumulationszone';
     } else if (value <= 65) {
-        interpretation = 'âš–ï¸ Neutrales Sentiment - Keine klare Richtung';
+        interpretation = '⚖️ Neutrales Sentiment - Keine klare Richtung';
     } else if (value <= 80) {
-        interpretation = 'ðŸ“ˆ Gier im Markt - Vorsicht vor FOMO';
+        interpretation = '📈 Gier im Markt - Vorsicht vor FOMO';
     } else {
-        interpretation = 'âš ï¸ Extreme Gier = Historisch oft Verkaufssignal (Kontraindikator)';
+        interpretation = '⚠️ Extreme Gier = Historisch oft Verkaufssignal (Kontraindikator)';
     }
     document.getElementById('fearGreedInterpretation').textContent = `${interpretation} | Quelle: ${state.fearGreedSource}`;
 }
@@ -809,13 +809,13 @@ function updateTechnicalCard() {
     const trendArrow = document.querySelector('.trend-arrow');
 
     trendArrow.className = 'trend-arrow ' + (trend === 'up' ? 'up' : trend === 'down' ? 'down' : 'sideways');
-    trendValue.textContent = trend === 'up' ? 'Bullish' : trend === 'down' ? 'Bearish' : 'SeitwÃ¤rts';
+    trendValue.textContent = trend === 'up' ? 'Bullish' : trend === 'down' ? 'Bearish' : 'Seitwärts';
     trendValue.className = `indicator-value text-${trend === 'up' ? 'bullish' : trend === 'down' ? 'bearish' : 'neutral'}`;
 
     // EMA
     const emaPosition = document.getElementById('emaPosition');
     const aboveEma = state.price > ema;
-    emaPosition.textContent = aboveEma ? 'ÃœBER EMA' : 'UNTER EMA';
+    emaPosition.textContent = aboveEma ? 'ÜBER EMA' : 'UNTER EMA';
     emaPosition.className = `ema-position ${aboveEma ? 'above' : 'below'}`;
     document.getElementById('emaValue').textContent = formatCurrency(ema);
 
@@ -869,9 +869,9 @@ function updateDerivativesCard() {
 
     const fundingStatus = document.getElementById('fundingStatus');
     if (state.fundingRate < -0.01) {
-        fundingStatus.textContent = 'Shorts zahlen Longs â†’ Bullish';
+        fundingStatus.textContent = 'Shorts zahlen Longs → Bullish';
     } else if (state.fundingRate > 0.03) {
-        fundingStatus.textContent = 'Longs zahlen Shorts â†’ Bearish';
+        fundingStatus.textContent = 'Longs zahlen Shorts → Bearish';
     } else {
         fundingStatus.textContent = 'Neutral';
     }
@@ -907,15 +907,15 @@ function updateSentimentCard() {
     if (state.fearGreedIndex <= 25) {
         fgSignal.textContent = 'Bullish';
         fgSignal.className = 'factor-signal bullish';
-        document.getElementById('fgIcon').textContent = 'ðŸ˜±';
+        document.getElementById('fgIcon').textContent = '😱';
     } else if (state.fearGreedIndex >= 75) {
         fgSignal.textContent = 'Bearish';
         fgSignal.className = 'factor-signal bearish';
-        document.getElementById('fgIcon').textContent = 'ðŸ¤‘';
+        document.getElementById('fgIcon').textContent = '🤑';
     } else {
         fgSignal.textContent = 'Neutral';
         fgSignal.className = 'factor-signal neutral';
-        document.getElementById('fgIcon').textContent = 'ðŸ˜';
+        document.getElementById('fgIcon').textContent = '😐';
     }
 
     const fundingSignal = document.getElementById('fundingSignal');
@@ -1073,7 +1073,7 @@ function getUnifiedTradeRecommendation() {
 
     if (signal !== 'NEUTRAL' && isHighVolatility && confidence < 70) {
         signal = 'NEUTRAL';
-        blockedReasons.push('Setup verworfen: Volatilität zu hoch für aktuelle Konfidenz');
+        blockedReasons.push('Setup verworfen: Volatilit�t zu hoch f�r aktuelle Konfidenz');
     }
 
     const weightedRR = rr
@@ -1166,7 +1166,7 @@ function updateKeyLevels() {
     const resistances = [
         { price: price * 1.03, desc: 'Kurzfristig' },
         { price: price * 1.06, desc: 'Psychologisch' },
-        { price: price * 1.10, desc: 'WÃ¶chentlich' },
+        { price: price * 1.10, desc: 'Wöchentlich' },
         { price: state.ath, desc: 'ATH' }
     ].sort((a, b) => a.price - b.price);
 
@@ -1177,8 +1177,8 @@ function updateKeyLevels() {
     // Supports
     const supports = [
         { price: price * 0.97, desc: 'Kurzfristig' },
-        { price: price * 0.94, desc: 'TÃ¤glich' },
-        { price: price * 0.90, desc: 'WÃ¶chentlich' },
+        { price: price * 0.94, desc: 'Täglich' },
+        { price: price * 0.90, desc: 'Wöchentlich' },
         { price: price * 0.85, desc: 'Major Support' }
     ].sort((a, b) => b.price - a.price);
 
@@ -1195,15 +1195,15 @@ function updateRiskFactors() {
 
     if (state.signal === 'LONG') {
         invalidations.push(`Daily Close unter $${formatNumber(price * 0.94, 0)}`);
-        invalidations.push('Fear & Greed steigt Ã¼ber 60 ohne Preisanstieg');
+        invalidations.push('Fear & Greed steigt über 60 ohne Preisanstieg');
         invalidations.push('Funding Rate wird stark positiv (>0.05%)');
     } else if (state.signal === 'SHORT') {
-        invalidations.push(`Daily Close Ã¼ber $${formatNumber(price * 1.06, 0)}`);
-        invalidations.push('Fear & Greed fÃ¤llt unter 25');
-        invalidations.push('Massive ETF-ZuflÃ¼sse');
+        invalidations.push(`Daily Close über $${formatNumber(price * 1.06, 0)}`);
+        invalidations.push('Fear & Greed fällt unter 25');
+        invalidations.push('Massive ETF-Zuflüsse');
     } else {
         invalidations.push('Klarer Ausbruch aus der Range');
-        invalidations.push('Extreme Sentiment-VerÃ¤nderung');
+        invalidations.push('Extreme Sentiment-Veränderung');
     }
 
     document.getElementById('invalidationList').innerHTML = invalidations.map(i =>
@@ -1214,7 +1214,7 @@ function updateRiskFactors() {
     const events = [
         'FOMC Meeting - Zinsentscheid',
         'US CPI Daten - Inflation',
-        'ETF Flow Report - WÃ¶chentlich'
+        'ETF Flow Report - Wöchentlich'
     ];
 
     document.getElementById('eventsList').innerHTML = events.map(e =>
@@ -1319,7 +1319,7 @@ function updateNoTradeWarning() {
         reasons.push(`<strong>Confluence Score ist ${formatNumber(score, 1)}/10</strong> - aktuell kein statistischer Vorteil`);
 
         if (rsi >= 40 && rsi <= 60) {
-            reasons.push(`<strong>RSI ist bei ${formatNumber(rsi, 0)}</strong> - weder überkauft noch überverkauft`);
+            reasons.push(`<strong>RSI ist bei ${formatNumber(rsi, 0)}</strong> - weder �berkauft noch �berverkauft`);
         }
 
         if (state.fearGreedIndex >= 35 && state.fearGreedIndex <= 65) {
@@ -1332,7 +1332,7 @@ function updateNoTradeWarning() {
 
         const trend = determineTrend(state.priceHistory);
         if (trend === 'sideways') {
-            reasons.push('<strong>Trend ist seitwärts</strong> - keine klare Richtung');
+            reasons.push('<strong>Trend ist seitw�rts</strong> - keine klare Richtung');
         }
 
         if (state.longShortRatio.long >= 45 && state.longShortRatio.long <= 55) {
@@ -1340,10 +1340,10 @@ function updateNoTradeWarning() {
         }
 
         if (unified?.blockedReasons?.length) {
-            unified.blockedReasons.forEach(reason => reasons.push(`<strong>Qualitätsfilter:</strong> ${reason}`));
+            unified.blockedReasons.forEach(reason => reasons.push(`<strong>Qualit�tsfilter:</strong> ${reason}`));
         }
 
-        reasons.push('<strong>Empfehlung:</strong> Warte auf ein klar bestätigtes Setup mit besserem Edge.');
+        reasons.push('<strong>Empfehlung:</strong> Warte auf ein klar best�tigtes Setup mit besserem Edge.');
 
         reasonsEl.innerHTML = '<ul>' + reasons.map(r => `<li>${r}</li>`).join('') + '</ul>';
     } else {
@@ -1359,19 +1359,19 @@ function updateScoreInterpretation() {
 
     if (score >= 6.5) {
         cssClass = 'bullish';
-        html = `<strong>Score â‰¥ 6.5 = LONG Signal</strong><br>
+        html = `<strong>Score ≥ 6.5 = LONG Signal</strong><br>
                 Alle Faktoren zusammen ergeben einen bullischen Bias. 
-                Je hÃ¶her der Score, desto stÃ¤rker das Signal.`;
+                Je höher der Score, desto stärker das Signal.`;
     } else if (score <= 3.5) {
         cssClass = 'bearish';
-        html = `<strong>Score â‰¤ 3.5 = SHORT Signal</strong><br>
+        html = `<strong>Score ≤ 3.5 = SHORT Signal</strong><br>
                 Alle Faktoren zusammen ergeben einen bearischen Bias. 
-                Je niedriger der Score, desto stÃ¤rker das Signal.`;
+                Je niedriger der Score, desto stärker das Signal.`;
     } else {
         cssClass = 'neutral';
         html = `<strong>Score zwischen 3.5 und 6.5 = KEIN TRADE</strong><br>
-                Die Indikatoren sind zu gemischt fÃ¼r eine klare Empfehlung. 
-                Warte auf extremere Werte (Score unter 3.5 oder Ã¼ber 6.5).`;
+                Die Indikatoren sind zu gemischt für eine klare Empfehlung. 
+                Warte auf extremere Werte (Score unter 3.5 oder über 6.5).`;
     }
 
     interpretEl.className = `score-interpretation ${cssClass}`;
@@ -1495,7 +1495,7 @@ async function runBacktestAndDisplay() {
     resultsEl.style.display = 'none';
     emptyEl.style.display = 'none';
     btnEl.disabled = true;
-    btnEl.textContent = 'â³ LÃ¤uft...';
+    btnEl.textContent = '⏳ Läuft...';
 
     try {
         // Run backtest with 30 trades
@@ -1506,11 +1506,11 @@ async function runBacktestAndDisplay() {
         }
 
         // Log all signal dates to console
-        console.log('ðŸ“Š Backtest Signal History:');
+        console.log('📊 Backtest Signal History:');
         results.trades.forEach((trade, i) => {
-            const icon = trade.direction === 'LONG' ? 'ðŸŸ¢' : 'ðŸ”´';
-            const outcome = trade.outcome === 'WIN' ? 'âœ…' : trade.outcome === 'LOSS' ? 'âŒ' : 'â±ï¸';
-            console.log(`${i + 1}. ${icon} ${trade.direction} am ${trade.date} â†’ ${outcome} ${trade.profit.toFixed(2)}%`);
+            const icon = trade.direction === 'LONG' ? '🟢' : '🔴';
+            const outcome = trade.outcome === 'WIN' ? '✅' : trade.outcome === 'LOSS' ? '❌' : '⏱️';
+            console.log(`${i + 1}. ${icon} ${trade.direction} am ${trade.date} → ${outcome} ${trade.profit.toFixed(2)}%`);
         });
 
         // Hide loading, show results
@@ -1522,12 +1522,12 @@ async function runBacktestAndDisplay() {
 
     } catch (error) {
         console.error('Backtest error:', error);
-        alert('Backtest fehlgeschlagen. Bitte versuche es spÃ¤ter erneut.');
+        alert('Backtest fehlgeschlagen. Bitte versuche es später erneut.');
         loadingEl.style.display = 'none';
         emptyEl.style.display = 'block';
     } finally {
         btnEl.disabled = false;
-        btnEl.textContent = 'ðŸ”¬ Backtest Starten';
+        btnEl.textContent = '🔬 Backtest Starten';
     }
 }
 
@@ -1575,7 +1575,7 @@ function displayBacktestResults(results) {
 
     tradeListEl.innerHTML = sortedTrades.map((trade, i) => {
         const profitClass = trade.profit > 0 ? 'text-bullish' : 'text-bearish';
-        const outcomeIcon = trade.outcome === 'WIN' ? 'âœ…' : trade.outcome === 'LOSS' ? 'âŒ' : 'â±ï¸';
+        const outcomeIcon = trade.outcome === 'WIN' ? '✅' : trade.outcome === 'LOSS' ? '❌' : '⏱️';
         const confScore = trade.confluenceScore || 0;
         const confClass = confScore >= 7 ? 'text-bullish' : confScore >= 5 ? 'text-secondary' : 'text-muted';
 
@@ -1586,12 +1586,12 @@ function displayBacktestResults(results) {
                     <div class="trade-main">
                         <span class="trade-direction ${trade.direction.toLowerCase()}">${trade.direction}</span>
                         <span class="trade-date">${trade.date}</span>
-                        <span class="${confClass}" style="font-size: 0.7rem; font-weight: 600;">â­${confScore}/10</span>
+                        <span class="${confClass}" style="font-size: 0.7rem; font-weight: 600;">⭐${confScore}/10</span>
                     </div>
                     <div class="trade-levels" style="font-size: 0.75rem; color: var(--text-secondary); margin: 4px 0;">
-                        <span>ðŸ“ Entry: $${formatNumber(trade.entryPrice, 0)}</span>
-                        <span style="margin-left: 12px;">ðŸ›‘ SL: $${formatNumber(trade.stopLoss, 0)}</span>
-                        <span style="margin-left: 12px;">ðŸŽ¯ TP: $${formatNumber(trade.tp1, 0)}</span>
+                        <span>📍 Entry: $${formatNumber(trade.entryPrice, 0)}</span>
+                        <span style="margin-left: 12px;">🛑 SL: $${formatNumber(trade.stopLoss, 0)}</span>
+                        <span style="margin-left: 12px;">🎯 TP: $${formatNumber(trade.tp1, 0)}</span>
                     </div>
                     <div class="trade-result">
                         <span class="trade-outcome">${outcomeIcon} ${trade.outcome}</span>
@@ -1674,6 +1674,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Trade Analysis button
+    const tradeAnalysisBtn = document.getElementById('tradeAnalysisBtn');
+    if (tradeAnalysisBtn) {
+        tradeAnalysisBtn.addEventListener('click', async () => {
+            await showLiveAnalysis();
+        });
+    }
+
     // Backtest button
     const backtestBtn = document.getElementById('runBacktestBtn');
     if (backtestBtn) {
@@ -1729,7 +1737,7 @@ function initSmartMoneyTrades() {
                 <div class="trade-item ${isWin ? 'win' : 'loss'}">
                     <span class="trade-rank">#${trade.id}</span>
                     <span class="trade-date">${trade.entry}</span>
-                    <span class="trade-prices">$${trade.entryPrice.toLocaleString()} â†’ $${trade.exitPrice.toLocaleString()}</span>
+                    <span class="trade-prices">$${trade.entryPrice.toLocaleString()} → $${trade.exitPrice.toLocaleString()}</span>
                     <span class="trade-return ${returnClass}">${returnSign}${trade.return.toFixed(2)}%</span>
                     <span class="trade-duration">${duration}</span>
                 </div>
