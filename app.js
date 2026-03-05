@@ -948,19 +948,6 @@ function updateSentimentCard() {
     badge.className = `card-badge ${state.scores.sentiment >= 6 ? 'bullish' : state.scores.sentiment <= 4 ? 'bearish' : ''}`;
 }
 
-function getSmartMoneySnapshot(maxAgeMinutes = 30) {
-    if (typeof SmartMoneySignal === 'undefined' || !SmartMoneySignal.state?.lastUpdate) {
-        return null;
-    }
-
-    const smState = SmartMoneySignal.getState();
-    const lastUpdate = new Date(smState.lastUpdate);
-    const ageMs = Date.now() - lastUpdate.getTime();
-    const isFresh = Number.isFinite(ageMs) && ageMs <= maxAgeMinutes * 60 * 1000;
-
-    return isFresh ? smState : null;
-}
-
 function getUnifiedTradeRecommendation() {
     if (!Number.isFinite(state.price) || state.price <= 0) {
         return null;
@@ -994,19 +981,12 @@ function getUnifiedTradeRecommendation() {
         );
     }
 
-    const smartMoney = getSmartMoneySnapshot();
     const blockedReasons = [];
 
     let signal = 'NEUTRAL';
     let confidence = Math.round(Math.max(35, Math.min(85, confluence.total * 10)));
 
-    if (smartMoney?.signal === 'LONG') {
-        signal = 'LONG';
-        confidence = Math.round((smartMoney.signalStrength / 3) * 100);
-    } else if (smartMoney?.signal === 'EXIT') {
-        signal = 'NEUTRAL';
-        confidence = Math.max(confidence, 70);
-    } else if (confluence.total >= 6 && confluence.direction === 'LONG') {
+    if (confluence.total >= 6 && confluence.direction === 'LONG') {
         signal = 'LONG';
     } else if (confluence.total >= 6 && confluence.direction === 'SHORT') {
         signal = 'SHORT';
@@ -1024,15 +1004,13 @@ function getUnifiedTradeRecommendation() {
     let rr = null;
 
     if (signal === 'LONG') {
-        stopLoss = (smartMoney?.stopLoss && smartMoney.stopLoss < price)
-            ? smartMoney.stopLoss
-            : price * (1 - volatilityPercent);
+        stopLoss = price * (1 - volatilityPercent);
 
         const risk = price - stopLoss;
         if (risk > 0) {
-            tp1 = (smartMoney?.takeProfit1 && smartMoney.takeProfit1 > price) ? smartMoney.takeProfit1 : price + risk * 1.5;
-            tp2 = (smartMoney?.takeProfit2 && smartMoney.takeProfit2 > tp1) ? smartMoney.takeProfit2 : price + risk * 2.5;
-            tp3 = (smartMoney?.takeProfit3 && smartMoney.takeProfit3 > tp2) ? smartMoney.takeProfit3 : price + risk * 4.0;
+            tp1 = price + risk * 1.5;
+            tp2 = price + risk * 2.5;
+            tp3 = price + risk * 4.0;
 
             slPercent = (risk / price) * 100;
             entryZone = [price * (1 - zonePercent), price];
@@ -1124,7 +1102,6 @@ function getUnifiedTradeRecommendation() {
         signal,
         confidence,
         confluence,
-        smartMoney,
         entryZone,
         stopLoss,
         tp1,
@@ -1292,11 +1269,10 @@ function updateSignalBanner() {
     let explanationText = '';
 
     if (activeSignal === 'LONG') {
-        summaryText = 'Coach-Konfluenz und Smart Money zeigen ein bullisches Setup.';
+        summaryText = 'Coach-Konfluenz zeigt ein bullisches Setup.';
         explanationText = `<strong>LONG bedeutet:</strong> Die Daten deuten auf steigende Preise hin.
             <br><br><strong>Konfidenz:</strong> ${Math.round(activeConfidence)}%
             <br><strong>Confluence Score:</strong> ${formatNumber(unified?.confluence?.total ?? calculateWeightedScore(), 1)}/10
-            <br><strong>Smart Money:</strong> ${unified?.smartMoney?.signal || 'NEUTRAL'} (${unified?.smartMoney?.signalStrength ?? 0}/3)
             <br><strong>Gewichtetes Ziel-R:R:</strong> 1:${formatNumber(unified?.weightedRR ?? 0, 2)}`;
     } else if (activeSignal === 'SHORT') {
         summaryText = 'Coach-Konfluenz zeigt ein bearishes Setup mit klarem Risiko-Management.';
@@ -1361,10 +1337,6 @@ function updateNoTradeWarning() {
 
         if (state.longShortRatio.long >= 45 && state.longShortRatio.long <= 55) {
             reasons.push(`<strong>Long/Short Ratio ist ausgeglichen</strong> (${formatNumber(state.longShortRatio.long, 0)}/${formatNumber(state.longShortRatio.short, 0)})`);
-        }
-
-        if (unified?.smartMoney?.signal && unified.smartMoney.signal !== 'LONG') {
-            reasons.push(`<strong>Smart Money ist ${unified.smartMoney.signal}</strong> - kein bestätigtes LONG-Setup`);
         }
 
         if (unified?.blockedReasons?.length) {
@@ -1683,14 +1655,6 @@ document.addEventListener('DOMContentLoaded', () => {
         testBtn.addEventListener('click', () => {
             NotificationSystem.playSound('long');
             NotificationSystem.showInPageAlert('long', 75, state.price || 100000);
-        });
-    }
-
-    // Trade Analysis button
-    const tradeAnalysisBtn = document.getElementById('tradeAnalysisBtn');
-    if (tradeAnalysisBtn) {
-        tradeAnalysisBtn.addEventListener('click', async () => {
-            await showLiveAnalysis();
         });
     }
 
