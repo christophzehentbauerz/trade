@@ -850,16 +850,83 @@
     // ─── MARKET DATA ───
     let mktData = null;
 
-    async function fetchJSON(url) {
-      const r = await fetch(url);
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
+    async function fetchJSON(url, timeoutMs = 12000) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const r = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+    async function fetchJSONWithRetry(url, retries = 2, timeoutMs = 12000) {
+      let lastErr = null;
+      for (let i = 0; i <= retries; i++) {
+        try {
+          return await fetchJSON(url, timeoutMs);
+        } catch (err) {
+          lastErr = err;
+          if (i < retries) {
+            await new Promise(resolve => setTimeout(resolve, 500 * (i + 1)));
+          }
+        }
+      }
+      throw lastErr || new Error('fetch failed');
     }
     async function fetchSafe(url, fallback) {
       try {
-        return { ok: true, data: await fetchJSON(url) };
+        return { ok: true, data: await fetchJSONWithRetry(url, 1, 10000) };
       } catch (_) {
         return { ok: false, data: fallback };
+      }
+    }
+
+    function mapBinanceKlines(rows) {
+      return (rows || []).map(c => ({
+        time: parseInt(c[0], 10),
+        open: parseFloat(c[1]),
+        high: parseFloat(c[2]),
+        low: parseFloat(c[3]),
+        close: parseFloat(c[4]),
+        volumeto: parseFloat(c[5]) * parseFloat(c[4])
+      }));
+    }
+
+    async function loadPrimaryCandles() {
+      try {
+        const [d1h, d4h, d1d, d24] = await Promise.all([
+          fetchJSONWithRetry('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=1000'),
+          fetchJSONWithRetry('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=500&aggregate=4'),
+          fetchJSONWithRetry('https://min-api.cryptocompare.com/data/v2/histoday?fsym=BTC&tsym=USD&limit=300'),
+          fetchJSONWithRetry('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=24')
+        ]);
+        return {
+          source: 'cryptocompare',
+          c1h: d1h?.Data?.Data || [],
+          c4h: d4h?.Data?.Data || [],
+          c1d: d1d?.Data?.Data || [],
+          dayOpen: d24?.Data?.Data?.[0]?.open || 0
+        };
+      } catch (_) {
+        const [b1h, b4h, b1d, b24] = await Promise.all([
+          fetchJSONWithRetry('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=1000'),
+          fetchJSONWithRetry('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=4h&limit=500'),
+          fetchJSONWithRetry('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=300'),
+          fetchJSONWithRetry('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT')
+        ]);
+        const c1h = mapBinanceKlines(b1h);
+        const c4h = mapBinanceKlines(b4h);
+        const c1d = mapBinanceKlines(b1d);
+        const fallbackOpen = c1h.length >= 24 ? c1h[c1h.length - 24].open : c1h[0]?.open || 0;
+        return {
+          source: 'binance',
+          c1h,
+          c4h,
+          c1d,
+          dayOpen: parseFloat(b24?.openPrice || fallbackOpen || 0)
+        };
       }
     }
 
@@ -966,13 +1033,13 @@
       return { total: Math.round(weighted10 * 10), tech, onchain, sentiment, macro, news };
     }
 
+    let marketDataLoading = false;
     async function loadMarketData() {
+      if (marketDataLoading) return;
+      marketDataLoading = true;
       try {
-        const [d1h, d4h, d1d, d24, fgRes, fundingRes, oiNowRes, oiHistRes, lsRes, newsRes, aggRes] = await Promise.all([
-          fetchJSON('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=1000'),
-          fetchJSON('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=500&aggregate=4'),
-          fetchJSON('https://min-api.cryptocompare.com/data/v2/histoday?fsym=BTC&tsym=USD&limit=300'),
-          fetchJSON('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=24'),
+        const candlePack = await loadPrimaryCandles();
+        const [fgRes, fundingRes, oiNowRes, oiHistRes, lsRes, newsRes, aggRes] = await Promise.all([
           fetchSafe('https://api.alternative.me/fng/?limit=1', { data: [{ value: '50' }] }),
           fetchSafe('https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&limit=1', [{ fundingRate: 0 }]),
           fetchSafe('https://fapi.binance.com/fapi/v1/openInterest?symbol=BTCUSDT', { openInterest: 0 }),
@@ -982,7 +1049,8 @@
           fetchSafe('https://api.binance.com/api/v3/aggTrades?symbol=BTCUSDT&limit=1000', [])
         ]);
         const fgData = fgRes.data, fundingData = fundingRes.data, oiNow = oiNowRes.data, oiHist = oiHistRes.data, lsData = lsRes.data, newsData = newsRes.data, aggTrades = aggRes.data;
-        const c1h = d1h.Data.Data, c4h = d4h.Data.Data, c1d = d1d.Data.Data;
+        const c1h = candlePack.c1h || [], c4h = candlePack.c4h || [], c1d = candlePack.c1d || [];
+        if (!c1h.length || !c4h.length || !c1d.length) throw new Error('Keine Kerzendaten verfügbar');
         const cl = c1h.map(c => c.close), price = cl[cl.length - 1];
         const ema15 = calcEMA(cl, 15), ema300 = calcEMA(cl, 300), ema800 = calcEMA(cl, 800);
         const rsi = calcRSI(cl, 14), atr = calcATR(c1h.map(c => ({ high: c.high, low: c.low, close: c.close })), 14);
@@ -1010,12 +1078,13 @@
         const exchangeFlowPct = totalQ > 0 ? ((buyQ - (totalQ - buyQ)) / totalQ) * 100 : 0;
         const onchain = { whaleTrades, exchangeFlowPct };
         const cycle = calcCycle();
-        const scObj = score({ mtf, rsi, price, ema800, atr, goldenCross, macd, fg, funding, oiChange, lsLong, lsShort, news, onchain, cycle, change24: ((price - d24.Data.Data[0].open) / d24.Data.Data[0].open * 100) });
+        const dayOpen = candlePack.dayOpen || c1h[Math.max(0, c1h.length - 24)]?.open || c1h[0]?.open || price;
+        const scObj = score({ mtf, rsi, price, ema800, atr, goldenCross, macd, fg, funding, oiChange, lsLong, lsShort, news, onchain, cycle, change24: ((price - dayOpen) / dayOpen * 100) });
         const sc = scObj.total;
         const minScore = +document.getElementById('cfgMinScore').value || 60;
         const shortThreshold = 100 - minScore;
         const sig = sc >= minScore ? 'LONG' : sc <= shortThreshold ? 'SHORT' : (!goldenCross ? 'EXIT' : 'NEUTRAL');
-        const change24 = ((price - d24.Data.Data[0].open) / d24.Data.Data[0].open * 100);
+        const change24 = ((price - dayOpen) / dayOpen * 100);
         mktData = {
           price, ema15, ema300, ema800, rsi, atr, macd, goldenCross, htfFilter, rsiZone, strength, signal: sig, score: sc, scoreObj: scObj,
           mtf, change24, fg, funding, oi: parseFloat(oiNow?.openInterest || 0), oiChange, lsLong, lsShort, news, onchain, cycle, closes: cl,
@@ -1032,10 +1101,13 @@
           }
         };
         updateUI();
+        document.getElementById('statusDot').className = 'status-dot ok';
       } catch (e) {
         document.getElementById('statusDot').className = 'status-dot err';
-        document.getElementById('lastUpdated').textContent = 'Fehler';
+        document.getElementById('lastUpdated').textContent = mktData ? 'Fehler, alte Daten aktiv' : 'Fehler';
         console.error(e);
+      } finally {
+        marketDataLoading = false;
       }
     }
 
