@@ -281,7 +281,7 @@ const SmartMoneySignal = {
                     `Alle Bedingungen erfüllt! Entry: $${this.state.currentPrice.toLocaleString()} | SL: $${this.state.stopLoss.toLocaleString()} | TP1: $${this.state.takeProfit1.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
                     'long'
                 );
-                NotificationSystem.showInPageAlert('long', 100, this.state.currentPrice);
+                NotificationSystem.showInPageAlert('long', 100, this.state.currentPrice, 'Smart Money Strategy');
             } else if (newSignal === 'EXIT') {
                 NotificationSystem.playSound('short');
                 NotificationSystem.sendNotification(

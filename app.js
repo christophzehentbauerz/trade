@@ -221,7 +221,7 @@ const NotificationSystem = {
     },
 
     // Check for signal change and notify
-    checkSignalChange(newSignal, confidence, price) {
+    checkSignalChange(newSignal, confidence, price, source = 'Coach-Konfluenz') {
         if (previousSignal === newSignal) return;
 
         const oldSignal = previousSignal;
@@ -233,19 +233,19 @@ const NotificationSystem = {
         // Notify on LONG or SHORT signal
         if (newSignal === 'LONG') {
             const title = 'LONG Signal erkannt';
-            const body = `BTC: $${price.toLocaleString()} | Konfidenz: ${Math.round(confidence)}%`;
+            const body = `BTC: $${price.toLocaleString()} | Konfidenz: ${Math.round(confidence)}% | Quelle: ${source}`;
 
             this.playSound('long');
             this.sendNotification(title, body, 'long');
-            this.showInPageAlert('long', confidence, price);
+            this.showInPageAlert('long', confidence, price, source);
 
         } else if (newSignal === 'SHORT') {
             const title = 'SHORT Signal erkannt';
-            const body = `BTC: $${price.toLocaleString()} | Konfidenz: ${Math.round(confidence)}%`;
+            const body = `BTC: $${price.toLocaleString()} | Konfidenz: ${Math.round(confidence)}% | Quelle: ${source}`;
 
             this.playSound('short');
             this.sendNotification(title, body, 'short');
-            this.showInPageAlert('short', confidence, price);
+            this.showInPageAlert('short', confidence, price, source);
 
         } else if (newSignal === 'NEUTRAL' && (oldSignal === 'LONG' || oldSignal === 'SHORT')) {
             // Signal changed from active to neutral
@@ -257,7 +257,7 @@ const NotificationSystem = {
     },
 
     // Show in-page alert popup
-    showInPageAlert(type, confidence, price) {
+    showInPageAlert(type, confidence, price, source = 'Coach-Konfluenz') {
         const alertBox = document.getElementById('signalAlert');
         if (!alertBox) return;
 
@@ -272,6 +272,7 @@ const NotificationSystem = {
                 <div class="alert-text">
                     <div class="alert-title">Neues ${signal} Signal!</div>
                     <div class="alert-details">BTC: $${price.toLocaleString()} | Konfidenz: ${Math.round(confidence)}%</div>
+                    <div class="alert-details">Quelle: ${source}</div>
                 </div>
                 <button class="alert-close" onclick="document.getElementById('signalAlert').classList.remove('show')">x</button>
             </div>
@@ -1293,7 +1294,18 @@ function updateSignalBanner() {
 
     updateNoTradeWarning();
     updateScoreInterpretation();
-    NotificationSystem.checkSignalChange(activeSignal, activeConfidence, state.price);
+    NotificationSystem.checkSignalChange(activeSignal, activeConfidence, state.price, getActiveSignalSource(activeSignal));
+}
+
+function getActiveSignalSource(activeSignal) {
+    if (activeSignal === 'LONG' && typeof SmartMoneySignal !== 'undefined') {
+        const smState = SmartMoneySignal?.state;
+        if (smState?.signal === 'LONG' && (smState?.signalStrength ?? 0) >= 3) {
+            return 'Smart Money Strategy';
+        }
+    }
+
+    return 'Coach-Konfluenz';
 }
 function calculateWeightedScore() {
     return state.scores.technical * CONFIG.weights.technical +
@@ -1654,7 +1666,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (testBtn) {
         testBtn.addEventListener('click', () => {
             NotificationSystem.playSound('long');
-            NotificationSystem.showInPageAlert('long', 75, state.price || 100000);
+            NotificationSystem.showInPageAlert('long', 75, state.price || 100000, 'Test');
         });
     }
 
