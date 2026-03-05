@@ -35,6 +35,9 @@ const SpotStrategy = {
         sellScore: 0,
         sellWarning: '',
         daysAboveSMA: 0,
+        rainbowModelPrice: 0,
+        rainbowRatio: 1,
+        rainbowBand: 'Neutral',
         signal: 'LOADING',
         zone: 'LOADING',
         action: '',
@@ -93,6 +96,10 @@ const SpotStrategy = {
             const allHighs = candles.map(c => c.high);
             this.state.athPrice = Math.max(...allHighs);
             this.state.athDown = ((this.state.athPrice - this.state.price) / this.state.athPrice) * 100;
+            const rainbow = this.calculateRainbowValuation(this.state.price);
+            this.state.rainbowModelPrice = rainbow.modelPrice;
+            this.state.rainbowRatio = rainbow.ratio;
+            this.state.rainbowBand = rainbow.band;
 
             // Bull Market Age: how many consecutive days above SMA200
             let daysAbove = 0;
@@ -177,6 +184,24 @@ const SpotStrategy = {
 
         if (avgLoss === 0) return 100;
         return 100 - (100 / (1 + avgGain / avgLoss));
+    },
+
+    calculateRainbowValuation(price) {
+        const genesis = new Date('2009-01-03T00:00:00Z').getTime();
+        const days = Math.max(1000, Math.floor((Date.now() - genesis) / (1000 * 60 * 60 * 24)));
+        const modelPrice = Math.pow(10, (5.8 * Math.log10(days)) - 17.0);
+        const ratio = modelPrice > 0 ? price / modelPrice : 1;
+
+        let band = 'Neutral';
+        if (ratio < 0.45) band = 'Fire Sale';
+        else if (ratio < 0.75) band = 'Buy';
+        else if (ratio < 1.10) band = 'Accumulate';
+        else if (ratio < 1.60) band = 'Fair';
+        else if (ratio < 2.20) band = 'Warm';
+        else if (ratio < 3.00) band = 'Hot';
+        else band = 'Euphoria';
+
+        return { modelPrice, ratio, band };
     },
 
     evaluateSignal() {
@@ -357,6 +382,8 @@ const SpotStrategy = {
         if (actionEl) {
             let actionText = s.action;
             if (s.sellWarning) actionText = s.sellWarning + '\n' + actionText;
+            const rainbowDelta = ((s.rainbowRatio - 1) * 100).toFixed(1);
+            actionText += `\nRainbow: ${s.rainbowBand} | Modell $${Math.round(s.rainbowModelPrice).toLocaleString()} | ${rainbowDelta}%`;
             actionEl.textContent = actionText;
         }
 
