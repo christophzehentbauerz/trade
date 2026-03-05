@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="de">
 
 <head>
@@ -26,7 +26,7 @@
         <section class="notification-settings telegram-bar">
             <div class="notification-settings-content">
                 <div class="notification-info">
-                    <span class="notification-icon">🤖</span>
+                    <span class="notification-icon">ðŸ¤–</span>
                     <div class="notification-text">
                         <strong>Telegram Bot Test</strong>
                         <span class="notification-status">
@@ -36,10 +36,10 @@
                 </div>
                 <div class="notification-buttons">
                     <button id="testDailyUpdate" class="notif-btn telegram-test-btn">
-                        � Daily Report Test
+                        ï¿½ Daily Report Test
                     </button>
                     <button id="testSignalCheck" class="notif-btn telegram-test-btn active">
-                        � Signal Check Test
+                        ï¿½ Signal Check Test
                     </button>
                 </div>
             </div>
@@ -47,8 +47,8 @@
             <div id="telegramPreview" class="telegram-preview-overlay" style="display: none;">
                 <div class="telegram-preview-modal">
                     <div class="telegram-preview-header">
-                        <span>📱 Telegram Vorschau</span>
-                        <button id="closeTelegramPreview" class="close-preview-btn">×</button>
+                        <span>ðŸ“± Telegram Vorschau</span>
+                        <button id="closeTelegramPreview" class="close-preview-btn">Ã—</button>
                     </div>
                     <pre id="telegramPreviewContent"></pre>
                 </div>
@@ -59,7 +59,7 @@
         <header class="header">
             <div class="header-left">
                 <div class="logo">
-                    <span class="logo-icon">₿</span>
+                    <span class="logo-icon">â‚¿</span>
                     <span class="logo-text">Market Intelligence</span>
                 </div>
             </div>
@@ -69,17 +69,20 @@
                     <span id="lastUpdate" class="update-time">--:--:--</span>
                 </div>
                 <button id="refreshBtn" class="refresh-btn"
-                    title="Klicke hier oder drücke 'R' um die Daten manuell zu aktualisieren">
+                    title="Klicke hier oder drÃ¼cke 'R' um die Daten manuell zu aktualisieren">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path
                             d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
                     </svg>
                 </button>
                 <button id="tradeAnalysisBtn" class="trade-analysis-btn"
-                    title="Klicke für Live Trading-Empfehlung mit Entry/SL/TP">
-                    📊 TRADE-ANALYSE
+                    title="Klicke fÃ¼r Live Trading-Empfehlung mit Entry/SL/TP">
+                    ðŸ“Š TRADE-ANALYSE
                 </button>
-                <div class="auto-refresh" title="Countdown bis zur nächsten automatischen Aktualisierung">
+                <a href="web/trader_coach.html" class="trade-analysis-btn" title="Open TraderCoach">
+                    COACH
+                </a>
+                <div class="auto-refresh" title="Countdown bis zur nÃ¤chsten automatischen Aktualisierung">
                     <span class="countdown" id="countdown">5:00</span>
                 </div>
             </div>
@@ -89,48 +92,48 @@
         <section class="how-it-works-section">
             <details class="how-it-works">
                 <summary class="how-it-works-toggle">
-                    📚 Wie funktioniert dieses Dashboard? (Klick zum Öffnen)
+                    ðŸ“š Wie funktioniert dieses Dashboard? (Klick zum Ã–ffnen)
                 </summary>
                 <div class="how-it-works-content">
 
                     <!-- What is this dashboard -->
                     <div class="info-section">
-                        <h3>🎯 Was ist dieses Dashboard?</h3>
+                        <h3>ðŸŽ¯ Was ist dieses Dashboard?</h3>
                         <p>
                             Dieses Dashboard sammelt automatisch Marktdaten aus verschiedenen Quellen und berechnet
                             daraus ein <strong>Trading-Signal</strong> (LONG, SHORT oder NEUTRAL). Das Signal sagt dir,
-                            ob der Markt gerade günstig für einen Kauf (LONG), Verkauf (SHORT) oder zum Abwarten
+                            ob der Markt gerade gÃ¼nstig fÃ¼r einen Kauf (LONG), Verkauf (SHORT) oder zum Abwarten
                             (NEUTRAL) ist.
                         </p>
                     </div>
 
                     <!-- When is a trade recommended -->
                     <div class="info-section highlight-section">
-                        <h3>✅ Wann wird ein Trade empfohlen?</h3>
+                        <h3>âœ… Wann wird ein Trade empfohlen?</h3>
                         <p>Ein Trade wird <strong>NUR</strong> empfohlen, wenn der <strong>Gesamtscore</strong>
                             eindeutig ist:</p>
                         <div class="rules-grid">
                             <div class="rule-box rule-long">
-                                <div class="rule-title">🟢 LONG (Kaufen)</div>
-                                <div class="rule-condition">Score ≥ 6.5 / 10</div>
+                                <div class="rule-title">ðŸŸ¢ LONG (Kaufen)</div>
+                                <div class="rule-condition">Score â‰¥ 6.5 / 10</div>
                                 <div class="rule-desc">Mehrere Indikatoren zeigen bullische Signale</div>
                             </div>
                             <div class="rule-box rule-short">
-                                <div class="rule-title">🔴 SHORT (Verkaufen)</div>
-                                <div class="rule-condition">Score ≤ 3.5 / 10</div>
+                                <div class="rule-title">ðŸ”´ SHORT (Verkaufen)</div>
+                                <div class="rule-condition">Score â‰¤ 3.5 / 10</div>
                                 <div class="rule-desc">Mehrere Indikatoren zeigen bearische Signale</div>
                             </div>
                             <div class="rule-box rule-neutral">
-                                <div class="rule-title">⚪ NEUTRAL (Abwarten)</div>
+                                <div class="rule-title">âšª NEUTRAL (Abwarten)</div>
                                 <div class="rule-condition">Score zwischen 3.5 und 6.5</div>
-                                <div class="rule-desc">Signale sind gemischt → Kein Trade!</div>
+                                <div class="rule-desc">Signale sind gemischt â†’ Kein Trade!</div>
                             </div>
                         </div>
                     </div>
 
                     <!-- What factors count -->
                     <div class="info-section">
-                        <h3>📊 Welche Faktoren fließen ein?</h3>
+                        <h3>ðŸ“Š Welche Faktoren flieÃŸen ein?</h3>
                         <p>Der Gesamtscore wird aus <strong>4 Kategorien</strong> berechnet:</p>
                         <table class="factors-table">
                             <tr>
@@ -141,7 +144,7 @@
                             <tr>
                                 <td><strong>Technische Analyse</strong></td>
                                 <td>35%</td>
-                                <td>RSI, Trend-Richtung, EMA-Position, Volatilität</td>
+                                <td>RSI, Trend-Richtung, EMA-Position, VolatilitÃ¤t</td>
                             </tr>
                             <tr>
                                 <td><strong>On-Chain Daten</strong></td>
@@ -163,100 +166,100 @@
 
                     <!-- Glossary -->
                     <div class="info-section">
-                        <h3>📖 Erklärung der Begriffe</h3>
+                        <h3>ðŸ“– ErklÃ¤rung der Begriffe</h3>
 
                         <div class="glossary-grid">
                             <div class="glossary-item">
-                                <div class="glossary-term">📈 Derivatives (Derivate)</div>
+                                <div class="glossary-term">ðŸ“ˆ Derivatives (Derivate)</div>
                                 <div class="glossary-def">
                                     <strong>Was ist das?</strong> Finanzprodukte, die auf dem Bitcoin-Preis basieren,
-                                    aber nicht echter Bitcoin sind. Dazu gehören <em>Futures</em> (Wetten auf zukünftige
+                                    aber nicht echter Bitcoin sind. Dazu gehÃ¶ren <em>Futures</em> (Wetten auf zukÃ¼nftige
                                     Preise)
                                     und <em>Optionen</em>.<br><br>
                                     <strong>Warum wichtig?</strong> Hier handeln professionelle Trader mit Hebel.
                                     Die Daten zeigen, wie diese "Smart Money"-Trader positioniert sind.
                                     Wenn z.B. viele Short-Positionen offen sind, kann das ein Zeichen sein,
-                                    dass der Preis bald steigt (weil diese Shorts "gequetscht" werden können).
+                                    dass der Preis bald steigt (weil diese Shorts "gequetscht" werden kÃ¶nnen).
                                 </div>
                             </div>
 
                             <div class="glossary-item">
-                                <div class="glossary-term">💰 Funding Rate</div>
+                                <div class="glossary-term">ðŸ’° Funding Rate</div>
                                 <div class="glossary-def">
-                                    Eine Gebühr, die alle 8 Stunden zwischen Long- und Short-Tradern ausgetauscht
+                                    Eine GebÃ¼hr, die alle 8 Stunden zwischen Long- und Short-Tradern ausgetauscht
                                     wird.<br><br>
-                                    • <strong>Positiv:</strong> Longs zahlen an Shorts → Zu viele sind long →
+                                    â€¢ <strong>Positiv:</strong> Longs zahlen an Shorts â†’ Zu viele sind long â†’
                                     Bearish<br>
-                                    • <strong>Negativ:</strong> Shorts zahlen an Longs → Zu viele sind short →
+                                    â€¢ <strong>Negativ:</strong> Shorts zahlen an Longs â†’ Zu viele sind short â†’
                                     Bullish<br><br>
                                     <em>Wird als Kontraindikator verwendet!</em>
                                 </div>
                             </div>
 
                             <div class="glossary-item">
-                                <div class="glossary-term">📊 Open Interest (OI)</div>
+                                <div class="glossary-term">ðŸ“Š Open Interest (OI)</div>
                                 <div class="glossary-def">
                                     Die Gesamtsumme aller offenen Futures-Positionen in Dollar.<br><br>
-                                    • <strong>Steigend + Preis steigt:</strong> Starker Aufwärtstrend<br>
-                                    • <strong>Steigend + Preis fällt:</strong> Starker Abwärtstrend<br>
-                                    • <strong>Fallend:</strong> Trader schließen Positionen, weniger Interesse
+                                    â€¢ <strong>Steigend + Preis steigt:</strong> Starker AufwÃ¤rtstrend<br>
+                                    â€¢ <strong>Steigend + Preis fÃ¤llt:</strong> Starker AbwÃ¤rtstrend<br>
+                                    â€¢ <strong>Fallend:</strong> Trader schlieÃŸen Positionen, weniger Interesse
                                 </div>
                             </div>
 
                             <div class="glossary-item">
-                                <div class="glossary-term">⚖️ Long/Short Ratio</div>
+                                <div class="glossary-term">âš–ï¸ Long/Short Ratio</div>
                                 <div class="glossary-def">
-                                    Zeigt das Verhältnis zwischen Long- und Short-Positionen.<br><br>
-                                    • <strong>Mehr Longs (>55%):</strong> Die Masse ist bullish → Potenzielle
+                                    Zeigt das VerhÃ¤ltnis zwischen Long- und Short-Positionen.<br><br>
+                                    â€¢ <strong>Mehr Longs (>55%):</strong> Die Masse ist bullish â†’ Potenzielle
                                     Korrektur<br>
-                                    • <strong>Mehr Shorts (>55%):</strong> Die Masse ist bearish → Potentieller
+                                    â€¢ <strong>Mehr Shorts (>55%):</strong> Die Masse ist bearish â†’ Potentieller
                                     Anstieg<br><br>
                                     <em>Wird als Kontraindikator verwendet!</em>
                                 </div>
                             </div>
 
                             <div class="glossary-item">
-                                <div class="glossary-term">😱 Fear & Greed Index</div>
+                                <div class="glossary-term">ðŸ˜± Fear & Greed Index</div>
                                 <div class="glossary-def">
                                     Misst die Emotionen im Markt von 0 (extreme Angst) bis 100 (extreme Gier).<br><br>
-                                    • <strong>0-25 (Angst):</strong> "Be greedy when others are fearful" →
+                                    â€¢ <strong>0-25 (Angst):</strong> "Be greedy when others are fearful" â†’
                                     Kaufsignal<br>
-                                    • <strong>75-100 (Gier):</strong> "Be fearful when others are greedy" →
+                                    â€¢ <strong>75-100 (Gier):</strong> "Be fearful when others are greedy" â†’
                                     Verkaufssignal<br><br>
                                     <em>Klassischer Kontraindikator nach Warren Buffett!</em>
                                 </div>
                             </div>
 
                             <div class="glossary-item">
-                                <div class="glossary-term">📉 RSI (Relative Strength Index)</div>
+                                <div class="glossary-term">ðŸ“‰ RSI (Relative Strength Index)</div>
                                 <div class="glossary-def">
-                                    Ein Momentum-Indikator von 0-100, der zeigt ob ein Asset überkauft oder überverkauft
+                                    Ein Momentum-Indikator von 0-100, der zeigt ob ein Asset Ã¼berkauft oder Ã¼berverkauft
                                     ist.<br><br>
-                                    • <strong>Unter 30:</strong> Überverkauft → Potenzielle Kaufgelegenheit<br>
-                                    • <strong>Über 70:</strong> Überkauft → Potenzielle Verkaufsgelegenheit<br>
-                                    • <strong>30-70:</strong> Neutraler Bereich
+                                    â€¢ <strong>Unter 30:</strong> Ãœberverkauft â†’ Potenzielle Kaufgelegenheit<br>
+                                    â€¢ <strong>Ãœber 70:</strong> Ãœberkauft â†’ Potenzielle Verkaufsgelegenheit<br>
+                                    â€¢ <strong>30-70:</strong> Neutraler Bereich
                                 </div>
                             </div>
 
                             <div class="glossary-item">
-                                <div class="glossary-term">📈 EMA (Exponential Moving Average)</div>
+                                <div class="glossary-term">ðŸ“ˆ EMA (Exponential Moving Average)</div>
                                 <div class="glossary-def">
                                     Ein gleitender Durchschnitt, der neueren Preisen mehr Gewicht gibt.<br><br>
-                                    • <strong>Preis über EMA:</strong> Aufwärtstrend, bullish<br>
-                                    • <strong>Preis unter EMA:</strong> Abwärtstrend, bearish<br><br>
+                                    â€¢ <strong>Preis Ã¼ber EMA:</strong> AufwÃ¤rtstrend, bullish<br>
+                                    â€¢ <strong>Preis unter EMA:</strong> AbwÃ¤rtstrend, bearish<br><br>
                                     Die 200-Tage-EMA ist besonders wichtig als langfristiger Trendindikator.
                                 </div>
                             </div>
 
                             <div class="glossary-item">
-                                <div class="glossary-term">🎯 Liquidation Zones</div>
+                                <div class="glossary-term">ðŸŽ¯ Liquidation Zones</div>
                                 <div class="glossary-def">
                                     Preisniveaus, bei denen viele gehebelte Positionen zwangsliquidiert werden.<br><br>
                                     Der Preis tendiert oft dazu, diese Zonen "abzuholen", weil Market Maker dort
-                                    Liquidität finden.
+                                    LiquiditÃ¤t finden.
                                     <br><br>
-                                    • <strong>Long Liquidations:</strong> Unter dem aktuellen Preis<br>
-                                    • <strong>Short Liquidations:</strong> Über dem aktuellen Preis
+                                    â€¢ <strong>Long Liquidations:</strong> Unter dem aktuellen Preis<br>
+                                    â€¢ <strong>Short Liquidations:</strong> Ãœber dem aktuellen Preis
                                 </div>
                             </div>
                         </div>
@@ -264,12 +267,12 @@
 
                     <!-- Important notes -->
                     <div class="info-section warning-section">
-                        <h3>⚠️ Wichtige Hinweise</h3>
+                        <h3>âš ï¸ Wichtige Hinweise</h3>
                         <ul>
                             <li><strong>Kontraindikator:</strong> Wenn "alle" in eine Richtung positioniert sind,
                                 passiert oft das Gegenteil. Deshalb werden Fear & Greed und L/S Ratio umgekehrt
                                 interpretiert.</li>
-                            <li><strong>Konfidenz max. 85%:</strong> Märkte sind nie 100% vorhersagbar.
+                            <li><strong>Konfidenz max. 85%:</strong> MÃ¤rkte sind nie 100% vorhersagbar.
                                 Selbst bei starken Signalen bleibt Unsicherheit.</li>
                             <li><strong>Keine Finanzberatung:</strong> Dies ist ein Analyse-Tool, keine Empfehlung.
                                 Investiere nur was du verlieren kannst.</li>
@@ -283,11 +286,11 @@
         <section class="signal-banner" id="signalBanner">
             <div class="signal-content">
                 <div class="signal-primary">
-                    <span class="signal-label">PRIMÄRES SIGNAL</span>
+                    <span class="signal-label">PRIMÃ„RES SIGNAL</span>
                     <span class="signal-value" id="primarySignal">LOADING...</span>
                 </div>
                 <div class="signal-confidence"
-                    title="Je höher die Konfidenz, desto sicherer ist das Signal. Max. 85% weil Märkte nie 100% vorhersagbar sind.">
+                    title="Je hÃ¶her die Konfidenz, desto sicherer ist das Signal. Max. 85% weil MÃ¤rkte nie 100% vorhersagbar sind.">
                     <span class="confidence-label">Konfidenz</span>
                     <div class="confidence-bar">
                         <div class="confidence-fill" id="confidenceFill" style="width: 0%"></div>
@@ -300,7 +303,7 @@
             </div>
             <!-- Signal Explanation Box -->
             <div class="signal-explanation" id="signalExplanation">
-                <div class="explanation-title">ℹ️ Was bedeutet das Signal?</div>
+                <div class="explanation-title">â„¹ï¸ Was bedeutet das Signal?</div>
                 <div class="explanation-content" id="signalExplanationContent">
                     Warte auf Daten...
                 </div>
@@ -309,7 +312,7 @@
 
         <!-- No Trade Warning Box (shown when neutral) -->
         <section class="no-trade-warning" id="noTradeWarning" style="display: none;">
-            <div class="warning-icon">⚠️</div>
+            <div class="warning-icon">âš ï¸</div>
             <div class="warning-content">
                 <h3>Kein Trade empfohlen - Warum?</h3>
                 <div id="noTradeReasons">
@@ -355,11 +358,11 @@
         <!-- Strategy Tabs Navigation -->
         <div class="strategy-tabs-container">
             <div class="strategy-tabs">
-                <button id="tab-btn-smart-money" class="strategy-tab active" onclick="switchStrategy('smart-money')">🎯
+                <button id="tab-btn-smart-money" class="strategy-tab active" onclick="switchStrategy('smart-money')">ðŸŽ¯
                     Smart Money</button>
-                <button id="tab-btn-trend-guard" class="strategy-tab" onclick="switchStrategy('trend-guard')">🛡️
+                <button id="tab-btn-trend-guard" class="strategy-tab" onclick="switchStrategy('trend-guard')">ðŸ›¡ï¸
                     TrendGuard Dynamic</button>
-                <button id="tab-btn-spot" class="strategy-tab" onclick="switchStrategy('spot')">🏦
+                <button id="tab-btn-spot" class="strategy-tab" onclick="switchStrategy('spot')">ðŸ¦
                     Smart Accumulator</button>
             </div>
         </div>
@@ -369,13 +372,13 @@
             <section class="smart-money-signal-section" id="smartMoneySection">
                 <div class="sm-signal-header">
                     <div class="sm-title">
-                        <span class="sm-icon">🎯</span>
+                        <span class="sm-icon">ðŸŽ¯</span>
                         <h2>Smart Money Strategy</h2>
                         <span class="sm-badge">LIVE</span>
                     </div>
                     <div class="sm-update-info">
                         <span class="sm-timeframe">1H Timeframe</span>
-                        <span class="sm-separator">•</span>
+                        <span class="sm-separator">â€¢</span>
                         <span class="sm-update-label">Update:</span>
                         <span id="smartMoneyUpdate" class="sm-update-time">--:--</span>
                     </div>
@@ -387,58 +390,58 @@
                         <div class="sm-signal-label">SIGNAL</div>
                         <div id="smartMoneySignal" class="sm-signal sm-signal-neutral">LADE...</div>
                         <div class="sm-strength">
-                            Stärke: <span id="signalStrength">0/3</span>
+                            StÃ¤rke: <span id="signalStrength">0/3</span>
                         </div>
                     </div>
 
                     <!-- Conditions Checklist -->
                     <div class="sm-conditions">
-                        <h3>📋 Entry Bedingungen</h3>
+                        <h3>ðŸ“‹ Entry Bedingungen</h3>
 
                         <div class="condition-item condition-not-met" id="condition-goldenCross">
-                            <span class="condition-icon">⏳</span>
+                            <span class="condition-icon">â³</span>
                             <div class="condition-content">
-                                <div class="condition-name">🔄 Golden Cross</div>
-                                <div class="condition-status not-met">EMA(15) muss über EMA(300) steigen</div>
+                                <div class="condition-name">ðŸ”„ Golden Cross</div>
+                                <div class="condition-status not-met">EMA(15) muss Ã¼ber EMA(300) steigen</div>
                                 <div class="condition-progress pending">Lade...</div>
-                                <div class="condition-explanation">EMA(15) muss über EMA(300) kreuzen = Trendwechsel zu
+                                <div class="condition-explanation">EMA(15) muss Ã¼ber EMA(300) kreuzen = Trendwechsel zu
                                     bullish</div>
                             </div>
                         </div>
 
                         <div class="condition-item condition-not-met" id="condition-htfFilter">
-                            <span class="condition-icon">⏳</span>
+                            <span class="condition-icon">â³</span>
                             <div class="condition-content">
-                                <div class="condition-name">📈 HTF Filter</div>
-                                <div class="condition-status not-met">Preis muss über EMA(800) steigen</div>
+                                <div class="condition-name">ðŸ“ˆ HTF Filter</div>
+                                <div class="condition-status not-met">Preis muss Ã¼ber EMA(800) steigen</div>
                                 <div class="condition-progress pending">Lade...</div>
-                                <div class="condition-explanation">Preis muss über EMA(800) sein = Wir handeln nur im
-                                    Aufwärtstrend</div>
+                                <div class="condition-explanation">Preis muss Ã¼ber EMA(800) sein = Wir handeln nur im
+                                    AufwÃ¤rtstrend</div>
                             </div>
                         </div>
 
                         <div class="condition-item condition-not-met" id="condition-rsiZone">
-                            <span class="condition-icon">⏳</span>
+                            <span class="condition-icon">â³</span>
                             <div class="condition-content">
-                                <div class="condition-name">📊 RSI Zone</div>
+                                <div class="condition-name">ðŸ“Š RSI Zone</div>
                                 <div class="condition-status not-met">RSI muss in Zone 45-70 sein</div>
                                 <div class="condition-progress pending">Lade...</div>
-                                <div class="condition-explanation">RSI muss zwischen 45-70 sein = Nicht überkauft, nicht
-                                    überverkauft</div>
+                                <div class="condition-explanation">RSI muss zwischen 45-70 sein = Nicht Ã¼berkauft, nicht
+                                    Ã¼berverkauft</div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Trade Levels -->
                     <div class="sm-trade-levels">
-                        <h3>📊 Trade Levels</h3>
+                        <h3>ðŸ“Š Trade Levels</h3>
                         <div class="sm-levels-grid">
                             <div class="sm-level-item">
                                 <span class="sm-level-label">ATR (14)</span>
                                 <span id="smartMoneyATR" class="sm-level-value">--</span>
                             </div>
                             <div class="sm-level-item">
-                                <span class="sm-level-label">Stop Loss (ATR×2.5)</span>
+                                <span class="sm-level-label">Stop Loss (ATRÃ—2.5)</span>
                                 <span id="smartMoneySL" class="sm-level-value sm-level-sl">--</span>
                             </div>
                             <div class="sm-level-item">
@@ -458,7 +461,7 @@
 
                     <!-- Performance Summary -->
                     <div class="sm-performance">
-                        <h3>📈 Performance (2022-2026)</h3>
+                        <h3>ðŸ“ˆ Performance (2022-2026)</h3>
                         <div class="sm-perf-grid">
                             <div class="sm-perf-item">
                                 <div class="sm-perf-label">Total Return</div>
@@ -494,13 +497,13 @@
             <section class="smart-money-signal-section" id="trendStrategySection">
                 <div class="sm-signal-header">
                     <div class="sm-title">
-                        <span class="sm-icon">🛡️</span>
+                        <span class="sm-icon">ðŸ›¡ï¸</span>
                         <h2>TrendGuard Dynamic</h2>
                         <span class="sm-badge">LIVE</span>
                     </div>
                     <div class="sm-update-info">
                         <span class="sm-timeframe">1H Timeframe</span>
-                        <span class="sm-separator">•</span>
+                        <span class="sm-separator">â€¢</span>
                         <span class="sm-update-label">Update:</span>
                         <span id="trendUpdate" class="sm-update-time">--:--</span>
                     </div>
@@ -512,17 +515,17 @@
                         <div class="sm-signal-label">SIGNAL</div>
                         <div id="trendSignal" class="sm-signal sm-signal-neutral">LADE...</div>
                         <div class="sm-strength">
-                            Stärke: <span id="trendStrength">0/3</span>
+                            StÃ¤rke: <span id="trendStrength">0/3</span>
                         </div>
                     </div>
 
                     <!-- Conditions -->
                     <div class="sm-conditions">
-                        <h3>📋 Strategy Conditions</h3>
+                        <h3>ðŸ“‹ Strategy Conditions</h3>
 
                         <!-- Trend Filter -->
                         <div class="condition-item" id="metric-trend">
-                            <span class="condition-icon">📈</span>
+                            <span class="condition-icon">ðŸ“ˆ</span>
                             <div class="condition-content">
                                 <div class="condition-name">Trend Filter (800 SMA)</div>
                                 <div class="condition-status metric-value">--</div>
@@ -536,7 +539,7 @@
 
                         <!-- Breakout -->
                         <div class="condition-item" id="metric-channel">
-                            <span class="condition-icon">💥</span>
+                            <span class="condition-icon">ðŸ’¥</span>
                             <div class="condition-content">
                                 <div class="condition-name">Entry Signal (100h)</div>
                                 <div class="condition-status metric-value">--</div>
@@ -547,7 +550,7 @@
 
                         <!-- Momentum -->
                         <div class="condition-item" id="metric-momentum">
-                            <span class="condition-icon">🚀</span>
+                            <span class="condition-icon">ðŸš€</span>
                             <div class="condition-content">
                                 <div class="condition-name">Momentum (ADX 14)</div>
                                 <div class="condition-status metric-value">--</div>
@@ -559,7 +562,7 @@
 
                     <!-- Trade Levels -->
                     <div class="sm-trade-levels">
-                        <h3>📊 Trade Management</h3>
+                        <h3>ðŸ“Š Trade Management</h3>
                         <div class="sm-levels-grid">
                             <div class="sm-level-item">
                                 <span class="sm-level-label">Stop Loss (4x ATR)</span>
@@ -575,7 +578,7 @@
 
                 <!-- Performance Summary -->
                 <div class="sm-performance">
-                    <h3>📈 Performance (2022-2026)</h3>
+                    <h3>ðŸ“ˆ Performance (2022-2026)</h3>
                     <div class="sm-perf-grid">
                         <div class="sm-perf-item">
                             <div class="sm-perf-label">Total Return</div>
@@ -606,13 +609,13 @@
             <section class="smart-money-signal-section" id="spotStrategySection">
                 <div class="sm-signal-header">
                     <div class="sm-title">
-                        <span class="sm-icon">🏦</span>
+                        <span class="sm-icon">ðŸ¦</span>
                         <h2>Smart Accumulator</h2>
-                        <span class="sm-badge">SPOT · LONG TERM</span>
+                        <span class="sm-badge">SPOT Â· LONG TERM</span>
                     </div>
                     <div class="sm-update-info">
                         <span class="sm-timeframe">Daily Timeframe</span>
-                        <span class="sm-separator">•</span>
+                        <span class="sm-separator">â€¢</span>
                         <span class="sm-update-label">Update:</span>
                         <span id="spotUpdate" class="sm-update-time">--:--</span>
                     </div>
@@ -631,7 +634,7 @@
 
                     <!-- Action Recommendation -->
                     <div class="spot-action-box" id="spotActionBox">
-                        <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 8px;">💎 Empfehlung
+                        <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 8px;">ðŸ’Ž Empfehlung
                         </div>
                         <div id="spotAction"
                             style="font-size: 1.1em; color: var(--text-primary); font-weight: 600; line-height: 1.5;">
@@ -640,11 +643,11 @@
 
                     <!-- Indicators -->
                     <div class="sm-conditions">
-                        <h3>📋 Indikatoren</h3>
+                        <h3>ðŸ“‹ Indikatoren</h3>
 
                         <!-- SMA 200 -->
                         <div class="condition-item" id="metric-sma">
-                            <span class="condition-icon">📉</span>
+                            <span class="condition-icon">ðŸ“‰</span>
                             <div class="condition-content">
                                 <div class="condition-name">Price vs SMA 200 (Daily)</div>
                                 <div class="condition-status metric-value">--</div>
@@ -655,36 +658,36 @@
 
                         <!-- RSI Daily -->
                         <div class="condition-item" id="metric-rsi">
-                            <span class="condition-icon">📊</span>
+                            <span class="condition-icon">ðŸ“Š</span>
                             <div class="condition-content">
                                 <div class="condition-name">RSI (Daily, 14)</div>
                                 <div class="condition-status metric-value">--</div>
                                 <div class="condition-progress metric-sub">--</div>
-                                <div class="condition-explanation">Unter 40 = Überverkauft, Kaufzone (max 25 Punkte)
+                                <div class="condition-explanation">Unter 40 = Ãœberverkauft, Kaufzone (max 25 Punkte)
                                 </div>
                             </div>
                         </div>
 
                         <!-- Discount ATH -->
                         <div class="condition-item" id="metric-discount">
-                            <span class="condition-icon">🏷️</span>
+                            <span class="condition-icon">ðŸ·ï¸</span>
                             <div class="condition-content">
                                 <div class="condition-name">Rabatt vom ATH</div>
                                 <div class="condition-status metric-value">--</div>
                                 <div class="condition-progress metric-sub">--</div>
-                                <div class="condition-explanation">Je größer der Rabatt, desto besser (max 10 Punkte)
+                                <div class="condition-explanation">Je grÃ¶ÃŸer der Rabatt, desto besser (max 10 Punkte)
                                 </div>
                             </div>
                         </div>
 
                         <!-- Weekly RSI -->
                         <div class="condition-item" id="metric-weekly">
-                            <span class="condition-icon">📅</span>
+                            <span class="condition-icon">ðŸ“…</span>
                             <div class="condition-content">
                                 <div class="condition-name">Weekly RSI (Momentum)</div>
                                 <div class="condition-status metric-value">--</div>
                                 <div class="condition-progress metric-sub">--</div>
-                                <div class="condition-explanation">Wöchentliches Momentum als Bestätigung (max 10
+                                <div class="condition-explanation">WÃ¶chentliches Momentum als BestÃ¤tigung (max 10
                                     Punkte)</div>
                             </div>
                         </div>
@@ -692,7 +695,7 @@
 
                     <!-- Score Breakdown -->
                     <div class="sm-trade-levels" style="margin-top: 15px;">
-                        <h3>📊 Score Breakdown (Buy Score)</h3>
+                        <h3>ðŸ“Š Score Breakdown (Buy Score)</h3>
                         <div class="score-breakdown">
                             <div id="smaScore" class="score-row">
                                 <span class="score-label">SMA 200</span>
@@ -734,18 +737,18 @@
 
                     <!-- Strategy Info -->
                     <div class="sm-performance" style="margin-top: 15px;">
-                        <h3>ℹ️ So funktioniert die Strategie</h3>
+                        <h3>â„¹ï¸ So funktioniert die Strategie</h3>
                         <p
                             style="color: var(--text-secondary); font-size: 0.88em; line-height: 1.7; margin-bottom: 12px;">
-                            Der <strong>Smart Accumulator</strong> identifiziert langfristige Kaufzonen für Bitcoin
+                            Der <strong>Smart Accumulator</strong> identifiziert langfristige Kaufzonen fÃ¼r Bitcoin
                             anhand von 5 Indikatoren. Er berechnet einen <strong>Buy Score</strong> (0-100) der misst,
-                            wie günstig der aktuelle Preis historisch gesehen ist, und einen <strong>Sell Score</strong>
+                            wie gÃ¼nstig der aktuelle Preis historisch gesehen ist, und einen <strong>Sell Score</strong>
                             (0-100)
-                            der vor Überhitzung warnt. Ein <strong>7-Tage DCA Cooldown</strong> verhindert zu häufige
-                            Käufe.
+                            der vor Ãœberhitzung warnt. Ein <strong>7-Tage DCA Cooldown</strong> verhindert zu hÃ¤ufige
+                            KÃ¤ufe.
                         </p>
 
-                        <h3 style="margin-top: 16px;">📊 Backtest-Ergebnisse (2017-2026)</h3>
+                        <h3 style="margin-top: 16px;">ðŸ“Š Backtest-Ergebnisse (2017-2026)</h3>
                         <div class="sm-perf-grid" style="margin-top: 8px;">
                             <div class="sm-perf-item">
                                 <div class="sm-perf-label">Buy Signal Genauigkeit</div>
@@ -760,45 +763,45 @@
                                 <div class="sm-perf-value">24</div>
                             </div>
                             <div class="sm-perf-item">
-                                <div class="sm-perf-label">🔥 Fire Sales</div>
+                                <div class="sm-perf-label">ðŸ”¥ Fire Sales</div>
                                 <div class="sm-perf-value">10</div>
                             </div>
                         </div>
 
-                        <h3 style="margin-top: 16px;">🎯 Zonen-Erklärung</h3>
+                        <h3 style="margin-top: 16px;">ðŸŽ¯ Zonen-ErklÃ¤rung</h3>
                         <div
                             style="font-size: 0.85em; color: var(--text-secondary); line-height: 1.8; margin-top: 6px;">
-                            <div>🔥 <strong>FIRE SALE</strong> (Buy Score ≥75) → Aggressive Käufe, 3-5% Portfolio</div>
-                            <div>🟢 <strong>ACCUMULATION</strong> (Buy ≥50) → Standard DCA Kauf, 1-2% Portfolio</div>
-                            <div>⚖️ <strong>FAIR VALUE</strong> (Buy ≥25) → Halten, minimales DCA</div>
-                            <div>⚠️ <strong>WARM</strong> (Sell ≥30) → Keine Käufe, evtl. leicht reduzieren</div>
-                            <div>🔴 <strong>ÜBERHITZT</strong> (Sell ≥45) → Teilverkauf empfohlen (10-20%)</div>
-                            <div>🚨 <strong>EUPHORIA</strong> (Sell ≥60) → Gewinne sichern! 20-30% verkaufen</div>
+                            <div>ðŸ”¥ <strong>FIRE SALE</strong> (Buy Score â‰¥75) â†’ Aggressive KÃ¤ufe, 3-5% Portfolio</div>
+                            <div>ðŸŸ¢ <strong>ACCUMULATION</strong> (Buy â‰¥50) â†’ Standard DCA Kauf, 1-2% Portfolio</div>
+                            <div>âš–ï¸ <strong>FAIR VALUE</strong> (Buy â‰¥25) â†’ Halten, minimales DCA</div>
+                            <div>âš ï¸ <strong>WARM</strong> (Sell â‰¥30) â†’ Keine KÃ¤ufe, evtl. leicht reduzieren</div>
+                            <div>ðŸ”´ <strong>ÃœBERHITZT</strong> (Sell â‰¥45) â†’ Teilverkauf empfohlen (10-20%)</div>
+                            <div>ðŸš¨ <strong>EUPHORIA</strong> (Sell â‰¥60) â†’ Gewinne sichern! 20-30% verkaufen</div>
                         </div>
 
-                        <h3 style="margin-top: 16px;">🏆 Beste historische Signale</h3>
+                        <h3 style="margin-top: 16px;">ðŸ† Beste historische Signale</h3>
                         <div
                             style="font-size: 0.85em; color: var(--text-secondary); line-height: 1.8; margin-top: 6px;">
-                            <div>✅ <strong>Bärenmarkt 2018</strong> → Fire Sale bei $3.200 → +2.054% Return</div>
-                            <div>✅ <strong>Corona Crash 2020</strong> → Fire Sale bei $4.800 → +1.341% Return</div>
-                            <div>✅ <strong>Bärenmarkt 2022</strong> → Fire Sale bei $15.800 → +338% Return</div>
-                            <div>✅ <strong>Sell Apr 2021</strong> → Euphoria bei $63.500 → danach -51% Crash</div>
-                            <div>✅ <strong>Sell Feb 2024</strong> → Euphoria bei $73.000 → danach -21%</div>
+                            <div>âœ… <strong>BÃ¤renmarkt 2018</strong> â†’ Fire Sale bei $3.200 â†’ +2.054% Return</div>
+                            <div>âœ… <strong>Corona Crash 2020</strong> â†’ Fire Sale bei $4.800 â†’ +1.341% Return</div>
+                            <div>âœ… <strong>BÃ¤renmarkt 2022</strong> â†’ Fire Sale bei $15.800 â†’ +338% Return</div>
+                            <div>âœ… <strong>Sell Apr 2021</strong> â†’ Euphoria bei $63.500 â†’ danach -51% Crash</div>
+                            <div>âœ… <strong>Sell Feb 2024</strong> â†’ Euphoria bei $73.000 â†’ danach -21%</div>
                         </div>
 
-                        <h3 style="margin-top: 16px;">⚠️ Wichtige Hinweise</h3>
+                        <h3 style="margin-top: 16px;">âš ï¸ Wichtige Hinweise</h3>
                         <div
                             style="font-size: 0.85em; color: var(--text-secondary); line-height: 1.7; margin-top: 6px;">
-                            <div>• Buy Score ist <strong>deutlich zuverlässiger</strong> (76%) als Sell Score (57%)
+                            <div>â€¢ Buy Score ist <strong>deutlich zuverlÃ¤ssiger</strong> (76%) als Sell Score (57%)
                             </div>
-                            <div>• Sell Signale sind <strong>Warnungen</strong>, keine harten Sell-Orders</div>
-                            <div>• Der <strong>Bull-Dampener</strong> reduziert Sell-Score wenn der Aufwärtstrend noch
+                            <div>â€¢ Sell Signale sind <strong>Warnungen</strong>, keine harten Sell-Orders</div>
+                            <div>â€¢ Der <strong>Bull-Dampener</strong> reduziert Sell-Score wenn der AufwÃ¤rtstrend noch
                                 jung ist (&lt;120 Tage)</div>
-                            <div>• Fear &amp; Greed verstärkt Signale: Real wären Buy-Scores in Panikphasen +10-20
-                                Punkte höher</div>
-                            <div>• Strategie ist für <strong>langfristiges Spot-Buying</strong> designed – nicht für
+                            <div>â€¢ Fear &amp; Greed verstÃ¤rkt Signale: Real wÃ¤ren Buy-Scores in Panikphasen +10-20
+                                Punkte hÃ¶her</div>
+                            <div>â€¢ Strategie ist fÃ¼r <strong>langfristiges Spot-Buying</strong> designed â€“ nicht fÃ¼r
                                 kurzfristige Trades</div>
-                            <div>• Backtest-Daten: 8+ Jahre (2017-2026), 3.100+ Tageskerzen</div>
+                            <div>â€¢ Backtest-Daten: 8+ Jahre (2017-2026), 3.100+ Tageskerzen</div>
                         </div>
                     </div>
                 </div>
@@ -839,10 +842,10 @@
             <!-- Fear & Greed Card -->
             <section class="card fear-greed-card">
                 <div class="card-header">
-                    <h2><span class="card-icon">😱</span> Fear & Greed Index</h2>
+                    <h2><span class="card-icon">ðŸ˜±</span> Fear & Greed Index</h2>
                     <div class="fg-source-control">
                         <label for="fgSourceMode" class="fg-source-label">Quelle</label>
-                        <select id="fgSourceMode" class="fg-source-select" title="Wähle die Datenquelle für den Fear & Greed Index">
+                        <select id="fgSourceMode" class="fg-source-select" title="WÃ¤hle die Datenquelle fÃ¼r den Fear & Greed Index">
                             <option value="avg">Durchschnitt</option>
                             <option value="cmc">CoinMarketCap</option>
                             <option value="alt">Alternative.me</option>
@@ -855,8 +858,8 @@
                     <div class="explanation-box">
                         <strong>Was ist das?</strong> Dieser Index misst die Emotionen im Markt.<br>
                         <strong>Wichtig:</strong> Er wird als <em>Kontraindikator</em> verwendet!<br>
-                        • <span class="text-bearish">0-25 = Extreme Angst</span> → Oft guter Kaufzeitpunkt<br>
-                        • <span class="text-bullish">75-100 = Extreme Gier</span> → Oft guter Verkaufszeitpunkt
+                        â€¢ <span class="text-bearish">0-25 = Extreme Angst</span> â†’ Oft guter Kaufzeitpunkt<br>
+                        â€¢ <span class="text-bullish">75-100 = Extreme Gier</span> â†’ Oft guter Verkaufszeitpunkt
                     </div>
                     <div class="gauge-container">
                         <div class="gauge">
@@ -886,7 +889,7 @@
             <!-- Technical Analysis Card -->
             <section class="card technical-card">
                 <div class="card-header">
-                    <h2><span class="card-icon">📊</span> Technische Analyse</h2>
+                    <h2><span class="card-icon">ðŸ“Š</span> Technische Analyse</h2>
                     <span class="card-badge" id="technicalBadge">--/10</span>
                     <span class="info-badge"
                         title="Analyse basierend auf Preischarts und mathematischen Indikatoren. Gewichtung: 35% des Gesamtsignals.">?</span>
@@ -894,19 +897,19 @@
                 <div class="card-body">
                     <div class="explanation-box">
                         Technische Indikatoren analysieren vergangene Preisbewegungen,
-                        um zukünftige Trends vorherzusagen.
+                        um zukÃ¼nftige Trends vorherzusagen.
                     </div>
                     <div class="indicator-grid">
                         <div class="indicator" id="rsiIndicator">
                             <div class="indicator-header">
                                 <span class="indicator-name"
-                                    title="Relative Strength Index: Misst ob BTC überkauft (>70) oder überverkauft (<30) ist">RSI
+                                    title="Relative Strength Index: Misst ob BTC Ã¼berkauft (>70) oder Ã¼berverkauft (<30) ist">RSI
                                     (14)</span>
                                 <span class="indicator-value" id="rsiValue">--</span>
                             </div>
                             <div class="indicator-explanation">
-                                RSI unter 30 = Überverkauft (Kaufsignal)<br>
-                                RSI über 70 = Überkauft (Verkaufssignal)
+                                RSI unter 30 = Ãœberverkauft (Kaufsignal)<br>
+                                RSI Ã¼ber 70 = Ãœberkauft (Verkaufssignal)
                             </div>
                             <div class="indicator-bar">
                                 <div class="indicator-zones">
@@ -917,9 +920,9 @@
                                 <div class="indicator-marker" id="rsiMarker"></div>
                             </div>
                             <div class="indicator-labels">
-                                <span>Überverkauft</span>
+                                <span>Ãœberverkauft</span>
                                 <span>Neutral</span>
-                                <span>Überkauft</span>
+                                <span>Ãœberkauft</span>
                             </div>
                         </div>
 
@@ -931,7 +934,7 @@
                             </div>
                             <div class="indicator-explanation">
                                 Bullish = Preis steigt<br>
-                                Bearish = Preis fällt
+                                Bearish = Preis fÃ¤llt
                             </div>
                             <div class="trend-visual" id="trendVisual">
                                 <div class="trend-arrow"></div>
@@ -941,12 +944,12 @@
                         <div class="indicator" id="emaIndicator">
                             <div class="indicator-header">
                                 <span class="indicator-name"
-                                    title="Exponential Moving Average: Durchschnittspreis der letzten 200 Tage. Preis darüber = bullish, darunter = bearish">vs
+                                    title="Exponential Moving Average: Durchschnittspreis der letzten 200 Tage. Preis darÃ¼ber = bullish, darunter = bearish">vs
                                     EMA</span>
                                 <span class="indicator-value" id="emaValue">--</span>
                             </div>
                             <div class="indicator-explanation">
-                                Preis über EMA = Bullish<br>
+                                Preis Ã¼ber EMA = Bullish<br>
                                 Preis unter EMA = Bearish
                             </div>
                             <div class="ema-status" id="emaStatus">
@@ -958,7 +961,7 @@
                         <div class="indicator" id="volatilityIndicator">
                             <div class="indicator-header">
                                 <span class="indicator-name"
-                                    title="Wie stark der Preis schwankt. Hohe Volatilität = mehr Risiko, aber auch mehr Chancen">Volatilität</span>
+                                    title="Wie stark der Preis schwankt. Hohe VolatilitÃ¤t = mehr Risiko, aber auch mehr Chancen">VolatilitÃ¤t</span>
                                 <span class="indicator-value" id="volatilityValue">--</span>
                             </div>
                             <div class="indicator-explanation">
@@ -974,11 +977,11 @@
                     <div class="indicator" id="volumeIndicator">
                         <div class="indicator-header">
                             <span class="indicator-name"
-                                title="On-Balance Volume (Trend) und Relative Volume (Intensität)">Volume Flow</span>
+                                title="On-Balance Volume (Trend) und Relative Volume (IntensitÃ¤t)">Volume Flow</span>
                             <span class="indicator-value" id="volumeDashValue">--</span>
                         </div>
                         <div class="indicator-explanation">
-                            OBV Trend bestätigt Richtung<br>
+                            OBV Trend bestÃ¤tigt Richtung<br>
                             RVOL > 1.5 = Hohes Interesse
                         </div>
                         <div class="trend-visual" id="volumeDashVisual">
@@ -991,7 +994,7 @@
             <!-- Derivatives Card -->
             <section class="card derivatives-card">
                 <div class="card-header">
-                    <h2><span class="card-icon">📈</span> Derivatives</h2>
+                    <h2><span class="card-icon">ðŸ“ˆ</span> Derivatives</h2>
                     <span class="card-badge" id="derivativesBadge">--/10</span>
                     <span class="info-badge"
                         title="Daten aus dem Futures-Markt. Zeigt wie Trader mit Hebel positioniert sind.">?</span>
@@ -999,18 +1002,18 @@
                 <div class="card-body">
                     <div class="explanation-box">
                         Derivatives zeigen, wie professionelle Trader mit Hebel wetten.
-                        Diese Daten sind oft ein Frühindikator für Preisbewegungen.
+                        Diese Daten sind oft ein FrÃ¼hindikator fÃ¼r Preisbewegungen.
                     </div>
                     <div class="derivatives-grid">
                         <div class="derivative-item">
                             <span class="derivative-label"
-                                title="Gebühr die Long-Trader an Short-Trader zahlen (oder umgekehrt). Negativ = Shorts zahlen = bullish">Funding
+                                title="GebÃ¼hr die Long-Trader an Short-Trader zahlen (oder umgekehrt). Negativ = Shorts zahlen = bullish">Funding
                                 Rate</span>
                             <span class="derivative-value" id="fundingRate">--%</span>
                             <span class="derivative-status" id="fundingStatus">--</span>
                             <div class="item-explanation">
-                                Negativ = Shorts zahlen → Bullish<br>
-                                Stark positiv = Longs zahlen → Bearish
+                                Negativ = Shorts zahlen â†’ Bullish<br>
+                                Stark positiv = Longs zahlen â†’ Bearish
                             </div>
                         </div>
                         <div class="derivative-item">
@@ -1026,7 +1029,7 @@
                         </div>
                         <div class="derivative-item">
                             <span class="derivative-label"
-                                title="Verhältnis zwischen Long- und Short-Positionen. Extremwerte sind oft Kontraindikatoren">Long/Short
+                                title="VerhÃ¤ltnis zwischen Long- und Short-Positionen. Extremwerte sind oft Kontraindikatoren">Long/Short
                                 Ratio</span>
                             <div class="ls-ratio-bar">
                                 <div class="ls-long" id="lsLong" style="width: 50%"></div>
@@ -1037,8 +1040,8 @@
                                 <span id="shortPercent">50%</span>
                             </div>
                             <div class="item-explanation">
-                                Mehr Shorts = Konträr bullish<br>
-                                Mehr Longs = Konträr bearish
+                                Mehr Shorts = KontrÃ¤r bullish<br>
+                                Mehr Longs = KontrÃ¤r bearish
                             </div>
                         </div>
                         <div class="derivative-item liquidations">
@@ -1066,7 +1069,7 @@
             <!-- Sentiment Card -->
             <section class="card sentiment-card">
                 <div class="card-header">
-                    <h2><span class="card-icon">🎭</span> Sentiment & Positioning</h2>
+                    <h2><span class="card-icon">ðŸŽ­</span> Sentiment & Positioning</h2>
                     <span class="card-badge" id="sentimentBadge">--/10</span>
                     <span class="info-badge"
                         title="Zusammenfassung der Marktstimmung. Gewichtung: 20% des Gesamtsignals.">?</span>
@@ -1091,17 +1094,17 @@
                         </div>
                         <div class="sentiment-factors">
                             <div class="factor" title="Fear & Greed als Kontraindikator">
-                                <span class="factor-icon" id="fgIcon">😱</span>
+                                <span class="factor-icon" id="fgIcon">ðŸ˜±</span>
                                 <span class="factor-name">Fear & Greed</span>
                                 <span class="factor-signal" id="fgSignal">--</span>
                             </div>
                             <div class="factor" title="Funding Rate Interpretation">
-                                <span class="factor-icon">💰</span>
+                                <span class="factor-icon">ðŸ’°</span>
                                 <span class="factor-name">Funding</span>
                                 <span class="factor-signal" id="fundingSignal">--</span>
                             </div>
                             <div class="factor" title="Long/Short Ratio als Kontraindikator">
-                                <span class="factor-icon">📊</span>
+                                <span class="factor-icon">ðŸ“Š</span>
                                 <span class="factor-name">L/S Ratio</span>
                                 <span class="factor-signal" id="lsSignal">--</span>
                             </div>
@@ -1113,16 +1116,16 @@
             <!-- Trade Setup Card -->
             <section class="card trade-card">
                 <div class="card-header">
-                    <h2><span class="card-icon">🎯</span> Trade Setup</h2>
+                    <h2><span class="card-icon">ðŸŽ¯</span> Trade Setup</h2>
                     <span class="info-badge"
                         title="Konkrete Handelsempfehlung basierend auf der Analyse. NUR wenn ein Signal vorhanden ist!">?</span>
                 </div>
                 <div class="card-body">
                     <div class="explanation-box">
                         <strong>Entry Zone:</strong> Empfohlener Einstiegspreis<br>
-                        <strong>Stop Loss:</strong> Preis wo du aussteigen solltest wenn es falsch läuft<br>
+                        <strong>Stop Loss:</strong> Preis wo du aussteigen solltest wenn es falsch lÃ¤uft<br>
                         <strong>Take Profit:</strong> Preise wo du Gewinne mitnehmen solltest<br>
-                        <strong>R:R:</strong> Risk-Reward-Verhältnis (1:2 = doppelter Gewinn im Vergleich zum Risiko)
+                        <strong>R:R:</strong> Risk-Reward-VerhÃ¤ltnis (1:2 = doppelter Gewinn im Vergleich zum Risiko)
                     </div>
                     <div class="trade-direction" id="tradeDirection">
                         <span class="direction-label">Richtung</span>
@@ -1134,23 +1137,23 @@
                             <span class="level-value" id="entryZone">$-- - $--</span>
                         </div>
                         <div class="level stoploss"
-                            title="WICHTIG: Hier aussteigen wenn der Trade gegen dich läuft. Begrenzt deinen Verlust!">
+                            title="WICHTIG: Hier aussteigen wenn der Trade gegen dich lÃ¤uft. Begrenzt deinen Verlust!">
                             <span class="level-label">Stop Loss</span>
                             <span class="level-value" id="stopLoss">$--</span>
                             <span class="level-percent" id="slPercent">(--%)</span>
                         </div>
-                        <div class="level takeprofit" title="Erstes Gewinnziel - hier 50% der Position schließen">
+                        <div class="level takeprofit" title="Erstes Gewinnziel - hier 50% der Position schlieÃŸen">
                             <span class="level-label">Take Profit 1</span>
                             <span class="level-value" id="tp1">$--</span>
                             <span class="level-rr" id="tp1rr">R:R --</span>
                         </div>
                         <div class="level takeprofit"
-                            title="Zweites Gewinnziel - hier weitere 30% der Position schließen">
+                            title="Zweites Gewinnziel - hier weitere 30% der Position schlieÃŸen">
                             <span class="level-label">Take Profit 2</span>
                             <span class="level-value" id="tp2">$--</span>
                             <span class="level-rr" id="tp2rr">R:R --</span>
                         </div>
-                        <div class="level takeprofit" title="Drittes Gewinnziel - hier die restlichen 20% schließen">
+                        <div class="level takeprofit" title="Drittes Gewinnziel - hier die restlichen 20% schlieÃŸen">
                             <span class="level-label">Take Profit 3</span>
                             <span class="level-value" id="tp3">$--</span>
                             <span class="level-rr" id="tp3rr">R:R --</span>
@@ -1161,7 +1164,7 @@
                             <span class="rec-label">Position Size</span>
                             <span class="rec-value" id="positionSize">--%</span>
                         </div>
-                        <div class="rec-item" title="Maximaler empfohlener Hebel. HÖHERER HEBEL = HÖHERES RISIKO!">
+                        <div class="rec-item" title="Maximaler empfohlener Hebel. HÃ–HERER HEBEL = HÃ–HERES RISIKO!">
                             <span class="rec-label">Max Hebel</span>
                             <span class="rec-value" id="maxLeverage">--x</span>
                         </div>
@@ -1172,24 +1175,24 @@
             <!-- Key Levels Card -->
             <section class="card levels-card">
                 <div class="card-header">
-                    <h2><span class="card-icon">📍</span> Key Levels</h2>
+                    <h2><span class="card-icon">ðŸ“</span> Key Levels</h2>
                     <span class="info-badge"
-                        title="Wichtige Preisniveaus. Widerstände stoppen Aufwärtsbewegungen, Unterstützungen stoppen Abwärtsbewegungen.">?</span>
+                        title="Wichtige Preisniveaus. WiderstÃ¤nde stoppen AufwÃ¤rtsbewegungen, UnterstÃ¼tzungen stoppen AbwÃ¤rtsbewegungen.">?</span>
                 </div>
                 <div class="card-body">
                     <div class="explanation-box">
-                        <strong>Widerstände (rot):</strong> Preisniveaus wo Verkaufsdruck erwartet wird<br>
-                        <strong>Unterstützungen (grün):</strong> Preisniveaus wo Kaufinteresse erwartet wird
+                        <strong>WiderstÃ¤nde (rot):</strong> Preisniveaus wo Verkaufsdruck erwartet wird<br>
+                        <strong>UnterstÃ¼tzungen (grÃ¼n):</strong> Preisniveaus wo Kaufinteresse erwartet wird
                     </div>
                     <div class="levels-container">
                         <div class="levels-section resistances">
-                            <h3>🔴 Widerstände</h3>
+                            <h3>ðŸ”´ WiderstÃ¤nde</h3>
                             <ul id="resistancesList">
                                 <li><span class="level-price">$--</span><span class="level-desc">--</span></li>
                             </ul>
                         </div>
                         <div class="levels-section supports">
-                            <h3>🟢 Unterstützungen</h3>
+                            <h3>ðŸŸ¢ UnterstÃ¼tzungen</h3>
                             <ul id="supportsList">
                                 <li><span class="level-price">$--</span><span class="level-desc">--</span></li>
                             </ul>
@@ -1201,24 +1204,24 @@
             <!-- Risk Factors Card -->
             <section class="card risk-card">
                 <div class="card-header">
-                    <h2><span class="card-icon">⚠️</span> Risiko-Faktoren</h2>
+                    <h2><span class="card-icon">âš ï¸</span> Risiko-Faktoren</h2>
                     <span class="info-badge"
-                        title="Wichtige Warnsignale und Events die deine Position beeinflussen könnten.">?</span>
+                        title="Wichtige Warnsignale und Events die deine Position beeinflussen kÃ¶nnten.">?</span>
                 </div>
                 <div class="card-body">
                     <div class="explanation-box">
                         <strong>Invalidation:</strong> Wenn diese Bedingungen eintreten, ist das Trade-Setup
-                        hinfällig!<br>
-                        <strong>Events:</strong> Termine die zu starker Volatilität führen können.
+                        hinfÃ¤llig!<br>
+                        <strong>Events:</strong> Termine die zu starker VolatilitÃ¤t fÃ¼hren kÃ¶nnen.
                     </div>
                     <div class="risk-section">
-                        <h3>🚫 Trade Invalidation</h3>
+                        <h3>ðŸš« Trade Invalidation</h3>
                         <ul id="invalidationList">
                             <li>--</li>
                         </ul>
                     </div>
                     <div class="risk-section">
-                        <h3>📅 Upcoming Events</h3>
+                        <h3>ðŸ“… Upcoming Events</h3>
                         <ul id="eventsList">
                             <li>--</li>
                         </ul>
@@ -1231,16 +1234,16 @@
             <!-- Score Breakdown Card -->
             <section class="card score-card">
                 <div class="card-header">
-                    <h2><span class="card-icon">📋</span> Score Breakdown</h2>
+                    <h2><span class="card-icon">ðŸ“‹</span> Score Breakdown</h2>
                     <span class="info-badge"
                         title="So wird das Signal berechnet: Technisch 35%, On-Chain 25%, Sentiment 20%, Makro 20%">?</span>
                 </div>
                 <div class="card-body">
                     <div class="explanation-box">
                         <strong>Score-Regeln:</strong><br>
-                        • Score ≥ 6.5 → LONG Signal (Kaufen)<br>
-                        • Score ≤ 3.5 → SHORT Signal (Verkaufen)<br>
-                        • Score 3.5 - 6.5 → NEUTRAL (Kein Trade!)
+                        â€¢ Score â‰¥ 6.5 â†’ LONG Signal (Kaufen)<br>
+                        â€¢ Score â‰¤ 3.5 â†’ SHORT Signal (Verkaufen)<br>
+                        â€¢ Score 3.5 - 6.5 â†’ NEUTRAL (Kein Trade!)
                     </div>
                     <div class="score-items">
                         <div class="score-item" title="Gewichtung: 35% - RSI, Trend, EMA-Position">
@@ -1250,7 +1253,7 @@
                             </div>
                             <span class="score-value" id="techScore">--/10</span>
                         </div>
-                        <div class="score-item" title="Gewichtung: 25% - Whale-Aktivität, Exchange-Flows">
+                        <div class="score-item" title="Gewichtung: 25% - Whale-AktivitÃ¤t, Exchange-Flows">
                             <span class="score-name">On-Chain Daten</span>
                             <div class="score-bar">
                                 <div class="score-fill" id="onchainScoreFill"></div>
@@ -1286,8 +1289,8 @@
             <section class="analysis-card-container" id="analysisCardContainer" style="display: none;">
                 <div class="card analysis-card">
                     <div class="card-header">
-                        <h2>🎯 Live Trading-Analyse</h2>
-                        <button class="close-analysis-btn" id="closeAnalysisBtn">✕</button>
+                        <h2>ðŸŽ¯ Live Trading-Analyse</h2>
+                        <button class="close-analysis-btn" id="closeAnalysisBtn">âœ•</button>
                     </div>
                     <div class="card-body">
                         <div class="analysis-content" id="analysisContent">
@@ -1300,8 +1303,8 @@
 
         <!-- Disclaimer Footer -->
         <footer class="disclaimer">
-            <p>⚠️ <strong>Disclaimer:</strong> Dies ist KEINE Finanzberatung. Kryptowährungen sind hochvolatil.
-                Investiere nur, was du verlieren kannst. Die Konfidenz-Werte sind Schätzungen basierend auf
+            <p>âš ï¸ <strong>Disclaimer:</strong> Dies ist KEINE Finanzberatung. KryptowÃ¤hrungen sind hochvolatil.
+                Investiere nur, was du verlieren kannst. Die Konfidenz-Werte sind SchÃ¤tzungen basierend auf
                 historischen Mustern, keine Garantien.</p>
         </footer>
     </div>
@@ -1477,3 +1480,4 @@
 </body>
 
 </html>
+
