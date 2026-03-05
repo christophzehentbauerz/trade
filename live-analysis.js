@@ -68,6 +68,31 @@ function detectOBVDivergence(prices, obvData) {
     return { divergence: false, type: 'none' };
 }
 
+async function ensureAnalysisDataReady() {
+    const hasCoreData =
+        Number.isFinite(state.price) &&
+        state.price > 0 &&
+        Array.isArray(state.priceHistory) &&
+        state.priceHistory.length >= 10;
+
+    if (!hasCoreData && typeof updateDashboard === 'function') {
+        await updateDashboard();
+    }
+
+    const hasSmartMoney =
+        typeof SmartMoneySignal !== 'undefined' &&
+        SmartMoneySignal.state &&
+        SmartMoneySignal.state.lastUpdate;
+
+    if (!hasSmartMoney && typeof SmartMoneySignal !== 'undefined' && typeof SmartMoneySignal.updateSignal === 'function') {
+        try {
+            await SmartMoneySignal.updateSignal();
+        } catch (error) {
+            console.warn('Smart Money refresh failed before analysis:', error);
+        }
+    }
+}
+
 async function generateLiveAnalysis() {
     console.log('🔬 Generiere Live-Analyse...');
 
@@ -181,15 +206,17 @@ async function generateLiveAnalysis() {
             stopLoss = signal === 'LONG' ? entry * (1 - slPercent) : entry * (1 + slPercent);
         }
 
-        // Take Profit: Min 2x Stop Loss
-        tpPercent = slPercent * 2.5;
-
-        if (signal === 'LONG') {
+        // Take Profit from Smart Money levels if available
+        if (signal === 'LONG' && smartMoneyData?.takeProfit1) {
+            takeProfit = smartMoneyData.takeProfit1;
+            tpPercent = (takeProfit - entry) / entry;
+        } else if (signal === 'SHORT') {
+            tpPercent = slPercent * 2.5;
+            takeProfit = entry * (1 - tpPercent);
+        } else {
+            tpPercent = slPercent * 2.5;
             if (!smartMoneyData?.atr) stopLoss = entry * (1 - slPercent);
             takeProfit = entry * (1 + tpPercent);
-        } else if (signal === 'SHORT') {
-            stopLoss = entry * (1 + slPercent);
-            takeProfit = entry * (1 - tpPercent);
         }
     }
 
@@ -462,6 +489,7 @@ function generateReasons(confluenceScore, rsi, trend, fearGreed, sr, smartMoneyD
 
 // Display analysis in formatted card
 async function showLiveAnalysis() {
+    await ensureAnalysisDataReady();
     const analysis = await generateLiveAnalysis();
     console.log(analysis);
 
@@ -599,7 +627,7 @@ async function showLiveAnalysis() {
                 </div>
                 ${smartMoneyData.atr ? `
                     <div class="sm-analysis-atr">
-                        ATR(14): $${smartMoneyData.atr?.toFixed(0)} → Stop Loss bei $${smartMoneyData.stopLoss?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        ATR(14): $${smartMoneyData.atr?.toFixed(0)} → SL: $${smartMoneyData.stopLoss?.toLocaleString(undefined, { maximumFractionDigits: 0 })} | TP1: $${smartMoneyData.takeProfit1?.toLocaleString(undefined, { maximumFractionDigits: 0 })} | TP2: $${smartMoneyData.takeProfit2?.toLocaleString(undefined, { maximumFractionDigits: 0 })} | TP3: $${smartMoneyData.takeProfit3?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </div>
                 ` : ''}
             </div>

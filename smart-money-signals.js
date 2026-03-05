@@ -19,6 +19,7 @@ const SmartMoneySignal = {
         rsiMax: 70,
         atrPeriod: 14,
         atrMultiplier: 2.5,
+        tpMultipliers: [1.5, 2.5, 4.0],
         refreshInterval: 300000, // 5 minutes
         candleCount: 1000 // Enough for EMA 800
     },
@@ -43,6 +44,9 @@ const SmartMoneySignal = {
 
         // Trade levels
         stopLoss: 0,
+        takeProfit1: 0,
+        takeProfit2: 0,
+        takeProfit3: 0,
 
         // Metadata
         lastCandle: null,
@@ -240,6 +244,11 @@ const SmartMoneySignal = {
             // Calculate trade levels
             this.state.stopLoss = currentPrice - (atr * this.config.atrMultiplier);
 
+            const riskDistance = Math.max(0, currentPrice - this.state.stopLoss);
+            this.state.takeProfit1 = currentPrice + (riskDistance * this.config.tpMultipliers[0]);
+            this.state.takeProfit2 = currentPrice + (riskDistance * this.config.tpMultipliers[1]);
+            this.state.takeProfit3 = currentPrice + (riskDistance * this.config.tpMultipliers[2]);
+
             // Notify if signal changed
             if (previousSignal !== this.state.signal && previousSignal !== null) {
                 this.onSignalChange(previousSignal, this.state.signal);
@@ -269,7 +278,7 @@ const SmartMoneySignal = {
                 NotificationSystem.playSound('long');
                 NotificationSystem.sendNotification(
                     '🟢 SMART MONEY LONG Signal!',
-                    `Alle Bedingungen erfüllt! Entry: $${this.state.currentPrice.toLocaleString()} | SL: $${this.state.stopLoss.toLocaleString()}`,
+                    `Alle Bedingungen erfüllt! Entry: $${this.state.currentPrice.toLocaleString()} | SL: $${this.state.stopLoss.toLocaleString()} | TP1: $${this.state.takeProfit1.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
                     'long'
                 );
                 NotificationSystem.showInPageAlert('long', 100, this.state.currentPrice);
@@ -352,6 +361,21 @@ const SmartMoneySignal = {
         const slEl = document.getElementById('smartMoneySL');
         if (slEl) {
             slEl.textContent = `$${this.state.stopLoss?.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+        }
+
+        const tp1El = document.getElementById('smartMoneyTP1');
+        if (tp1El) {
+            tp1El.textContent = `$${this.state.takeProfit1?.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+        }
+
+        const tp2El = document.getElementById('smartMoneyTP2');
+        if (tp2El) {
+            tp2El.textContent = `$${this.state.takeProfit2?.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+        }
+
+        const tp3El = document.getElementById('smartMoneyTP3');
+        if (tp3El) {
+            tp3El.textContent = `$${this.state.takeProfit3?.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
         }
 
         // Update ATR display
@@ -448,6 +472,9 @@ const SmartMoneySignal = {
             message += `📊 *Trade Levels:*\n`;
             message += `📍 Entry: $${s.currentPrice?.toLocaleString()}\n`;
             message += `🛑 Stop Loss: $${s.stopLoss?.toLocaleString(undefined, { maximumFractionDigits: 0 })} (ATR×2.5)\n`;
+            message += `🎯 TP1: $${s.takeProfit1?.toLocaleString(undefined, { maximumFractionDigits: 0 })} (1.5R)\n`;
+            message += `🎯 TP2: $${s.takeProfit2?.toLocaleString(undefined, { maximumFractionDigits: 0 })} (2.5R)\n`;
+            message += `🎯 TP3: $${s.takeProfit3?.toLocaleString(undefined, { maximumFractionDigits: 0 })} (4.0R)\n`;
         }
 
         return message;

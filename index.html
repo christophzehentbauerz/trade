@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 
 <head>
@@ -13,19 +13,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
-    <style>
-        @keyframes coachPulse {
-
-            0%,
-            100% {
-                box-shadow: 0 0 0 0 rgba(107, 79, 245, 0);
-            }
-
-            50% {
-                box-shadow: 0 0 12px 4px rgba(107, 79, 245, .55);
-            }
-        }
-    </style>
 </head>
 
 <body>
@@ -92,11 +79,6 @@
                     title="Klicke für Live Trading-Empfehlung mit Entry/SL/TP">
                     📊 TRADE-ANALYSE
                 </button>
-                <a href="web/trader_coach.html" class="trade-analysis-btn"
-                    style="text-decoration:none;background:linear-gradient(135deg,#6b4ff5,#3d2fa0);animation:coachPulse 2.5s ease-in-out infinite;"
-                    title="TraderCoach – Frag den KI-Coach!">
-                    🤖 COACH
-                </a>
                 <div class="auto-refresh" title="Countdown bis zur nächsten automatischen Aktualisierung">
                     <span class="countdown" id="countdown">5:00</span>
                 </div>
@@ -149,7 +131,7 @@
                     <!-- What factors count -->
                     <div class="info-section">
                         <h3>📊 Welche Faktoren fließen ein?</h3>
-                        <p>Der Gesamtscore wird aus <strong>5 Kategorien</strong> berechnet:</p>
+                        <p>Der Gesamtscore wird aus <strong>4 Kategorien</strong> berechnet:</p>
                         <table class="factors-table">
                             <tr>
                                 <th>Kategorie</th>
@@ -158,28 +140,23 @@
                             </tr>
                             <tr>
                                 <td><strong>Technische Analyse</strong></td>
-                                <td>32%</td>
+                                <td>35%</td>
                                 <td>RSI, Trend-Richtung, EMA-Position, Volatilität</td>
                             </tr>
                             <tr>
                                 <td><strong>On-Chain Daten</strong></td>
-                                <td>22%</td>
+                                <td>25%</td>
                                 <td>Preis-Momentum, Handelsvolumen</td>
                             </tr>
                             <tr>
                                 <td><strong>Sentiment</strong></td>
-                                <td>18%</td>
+                                <td>20%</td>
                                 <td>Fear & Greed Index, Funding Rate, Long/Short Ratio</td>
                             </tr>
                             <tr>
                                 <td><strong>Makro</strong></td>
-                                <td>18%</td>
+                                <td>20%</td>
                                 <td>Abstand zum ATH, Markttrends</td>
-                            </tr>
-                            <tr>
-                                <td><strong>News & Events</strong></td>
-                                <td>10%</td>
-                                <td>Fed/CPI/ETF/Regulierung-Headlines und Event-Risiko</td>
                             </tr>
                         </table>
                     </div>
@@ -384,9 +361,6 @@
                     TrendGuard Dynamic</button>
                 <button id="tab-btn-spot" class="strategy-tab" onclick="switchStrategy('spot')">🏦
                     Smart Accumulator</button>
-                <a href="web/trader_coach.html" class="strategy-tab"
-                    style="text-decoration:none;background:linear-gradient(135deg,rgba(107,79,245,.25),rgba(61,47,160,.15));border-color:rgba(107,79,245,.5);color:#a78bfa;font-weight:700;">🤖
-                    TraderCoach</a>
             </div>
         </div>
 
@@ -466,6 +440,18 @@
                             <div class="sm-level-item">
                                 <span class="sm-level-label">Stop Loss (ATR×2.5)</span>
                                 <span id="smartMoneySL" class="sm-level-value sm-level-sl">--</span>
+                            </div>
+                            <div class="sm-level-item">
+                                <span class="sm-level-label">Take Profit 1 (1.5R)</span>
+                                <span id="smartMoneyTP1" class="sm-level-value sm-level-tp">--</span>
+                            </div>
+                            <div class="sm-level-item">
+                                <span class="sm-level-label">Take Profit 2 (2.5R)</span>
+                                <span id="smartMoneyTP2" class="sm-level-value sm-level-tp">--</span>
+                            </div>
+                            <div class="sm-level-item">
+                                <span class="sm-level-label">Take Profit 3 (4.0R)</span>
+                                <span id="smartMoneyTP3" class="sm-level-value sm-level-tp">--</span>
                             </div>
                         </div>
                     </div>
@@ -854,6 +840,14 @@
             <section class="card fear-greed-card">
                 <div class="card-header">
                     <h2><span class="card-icon">😱</span> Fear & Greed Index</h2>
+                    <div class="fg-source-control">
+                        <label for="fgSourceMode" class="fg-source-label">Quelle</label>
+                        <select id="fgSourceMode" class="fg-source-select" title="Wähle die Datenquelle für den Fear & Greed Index">
+                            <option value="avg">Durchschnitt</option>
+                            <option value="cmc">CoinMarketCap</option>
+                            <option value="alt">Alternative.me</option>
+                        </select>
+                    </div>
                     <span class="info-badge"
                         title="Misst die Stimmung am Markt von 0 (extreme Angst) bis 100 (extreme Gier). Extreme Werte sind oft KONTRAINDIKATOREN!">?</span>
                 </div>
@@ -895,7 +889,7 @@
                     <h2><span class="card-icon">📊</span> Technische Analyse</h2>
                     <span class="card-badge" id="technicalBadge">--/10</span>
                     <span class="info-badge"
-                        title="Analyse basierend auf Preischarts und mathematischen Indikatoren. Gewichtung: 32% des Gesamtsignals.">?</span>
+                        title="Analyse basierend auf Preischarts und mathematischen Indikatoren. Gewichtung: 35% des Gesamtsignals.">?</span>
                 </div>
                 <div class="card-body">
                     <div class="explanation-box">
@@ -1069,51 +1063,13 @@
                 </div>
             </section>
 
-            <!-- On-Chain Intelligence Card -->
-            <section class="card onchain-card">
-                <div class="card-header">
-                    <h2><span class="card-icon">⛓️</span> On-Chain & Cycle</h2>
-                    <span class="card-badge" id="onchainBadge">--/10</span>
-                    <span class="info-badge"
-                        title="Whale-Aktivität, Exchange-Flow-Proxys, MACD und Halving-Zyklus als zusätzliche Kontextfaktoren.">?</span>
-                </div>
-                <div class="card-body">
-                    <div class="explanation-box">
-                        Diese Karte ergänzt klassische Indikatoren um Marktstruktur-Signale:
-                        Whale-Prints, Exchange-Flow, MACD und den BTC-Halving-Zyklus.
-                    </div>
-                    <div class="onchain-grid">
-                        <div class="onchain-item">
-                            <span class="onchain-label">Whale Trades (Proxy)</span>
-                            <span class="onchain-value" id="whaleTrades">--</span>
-                            <span class="onchain-sub" id="whaleBias">--</span>
-                        </div>
-                        <div class="onchain-item">
-                            <span class="onchain-label">Exchange Flow (24h)</span>
-                            <span class="onchain-value" id="exchangeFlow">--</span>
-                            <span class="onchain-sub">Taker-Buy vs Sell Flow</span>
-                        </div>
-                        <div class="onchain-item">
-                            <span class="onchain-label">MACD (1h)</span>
-                            <span class="onchain-value" id="macdSignal">--</span>
-                            <span class="onchain-sub">12/26/9 Momentum</span>
-                        </div>
-                        <div class="onchain-item">
-                            <span class="onchain-label">Halving-Zyklus</span>
-                            <span class="onchain-value" id="cyclePhase">--</span>
-                            <span class="onchain-sub" id="daysToHalving">--</span>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
             <!-- Sentiment Card -->
             <section class="card sentiment-card">
                 <div class="card-header">
                     <h2><span class="card-icon">🎭</span> Sentiment & Positioning</h2>
                     <span class="card-badge" id="sentimentBadge">--/10</span>
                     <span class="info-badge"
-                        title="Zusammenfassung der Marktstimmung. Gewichtung: 18% des Gesamtsignals.">?</span>
+                        title="Zusammenfassung der Marktstimmung. Gewichtung: 20% des Gesamtsignals.">?</span>
                 </div>
                 <div class="card-body">
                     <div class="explanation-box">
@@ -1148,11 +1104,6 @@
                                 <span class="factor-icon">📊</span>
                                 <span class="factor-name">L/S Ratio</span>
                                 <span class="factor-signal" id="lsSignal">--</span>
-                            </div>
-                            <div class="factor" title="News-Flow aus BTC-Headlines">
-                                <span class="factor-icon" id="newsIcon">📰</span>
-                                <span class="factor-name">News</span>
-                                <span class="factor-signal" id="newsSignal">--</span>
                             </div>
                         </div>
                     </div>
@@ -1272,22 +1223,6 @@
                             <li>--</li>
                         </ul>
                     </div>
-                    <div class="risk-section">
-                        <h3>⚙️ Account & Risk Gate</h3>
-                        <div class="risk-settings-grid">
-                            <label class="risk-setting"><span>Gate aktiv</span><input id="riskGateEnabled" type="checkbox"
-                                    checked></label>
-                            <label class="risk-setting"><span>Risk %</span><input id="riskPercentInput" type="number"
-                                    min="0.1" max="5" step="0.1" value="1"></label>
-                            <label class="risk-setting"><span>Daily PnL %</span><input id="dailyPnlInput" type="number"
-                                    min="-30" max="30" step="0.1" value="0"></label>
-                            <label class="risk-setting"><span>Daily Loss Limit %</span><input id="dailyLossLimitInput"
-                                    type="number" min="-30" max="-0.1" step="0.1" value="-2"></label>
-                            <label class="risk-setting"><span>Min Score</span><input id="minScoreInput" type="number"
-                                    min="5.2" max="8.5" step="0.1" value="6.5"></label>
-                        </div>
-                        <div class="risk-gate-status" id="riskGateStatus">--</div>
-                    </div>
                 </div>
             </section>
 
@@ -1298,51 +1233,43 @@
                 <div class="card-header">
                     <h2><span class="card-icon">📋</span> Score Breakdown</h2>
                     <span class="info-badge"
-                        title="So wird das Signal berechnet: Technisch 32%, On-Chain 22%, Sentiment 18%, Makro 18%, News 10%">?</span>
+                        title="So wird das Signal berechnet: Technisch 35%, On-Chain 25%, Sentiment 20%, Makro 20%">?</span>
                 </div>
                 <div class="card-body">
                     <div class="explanation-box">
                         <strong>Score-Regeln:</strong><br>
-                        • Long/Short-Schwellen sind in den Risk-Settings konfigurierbar<br>
-                        • Score über Long-Schwelle → LONG<br>
-                        • Score unter Short-Schwelle → SHORT<br>
-                        • Dazwischen → NEUTRAL (Kein Trade!)
+                        • Score ≥ 6.5 → LONG Signal (Kaufen)<br>
+                        • Score ≤ 3.5 → SHORT Signal (Verkaufen)<br>
+                        • Score 3.5 - 6.5 → NEUTRAL (Kein Trade!)
                     </div>
                     <div class="score-items">
-                        <div class="score-item" title="Gewichtung: 32% - RSI, Trend, EMA-Position, MACD">
+                        <div class="score-item" title="Gewichtung: 35% - RSI, Trend, EMA-Position">
                             <span class="score-name">Technische Analyse</span>
                             <div class="score-bar">
                                 <div class="score-fill" id="techScoreFill"></div>
                             </div>
                             <span class="score-value" id="techScore">--/10</span>
                         </div>
-                        <div class="score-item" title="Gewichtung: 22% - Whale-Aktivität, Exchange-Flow, OI-Delta">
+                        <div class="score-item" title="Gewichtung: 25% - Whale-Aktivität, Exchange-Flows">
                             <span class="score-name">On-Chain Daten</span>
                             <div class="score-bar">
                                 <div class="score-fill" id="onchainScoreFill"></div>
                             </div>
                             <span class="score-value" id="onchainScore">--/10</span>
                         </div>
-                        <div class="score-item" title="Gewichtung: 18% - Fear & Greed, Funding, L/S Ratio">
+                        <div class="score-item" title="Gewichtung: 20% - Fear & Greed, Funding, L/S Ratio">
                             <span class="score-name">Sentiment</span>
                             <div class="score-bar">
                                 <div class="score-fill" id="sentimentScoreFill"></div>
                             </div>
                             <span class="score-value" id="sentimentScore">--/10</span>
                         </div>
-                        <div class="score-item" title="Gewichtung: 18% - Volumen, OBV, ATH-Distanz, Halving-Zyklus">
+                        <div class="score-item" title="Gewichtung: 20% - Volumen, OBV, ATH-Distanz">
                             <span class="score-name">Volume & Makro</span>
                             <div class="score-bar">
                                 <div class="score-fill" id="macroScoreFill"></div>
                             </div>
                             <span class="score-value" id="macroScore">--/10</span>
-                        </div>
-                        <div class="score-item" title="Gewichtung: 10% - Aktuelle BTC-News und Event-Risiken">
-                            <span class="score-name">News & Events</span>
-                            <div class="score-bar">
-                                <div class="score-fill" id="newsScoreFill"></div>
-                            </div>
-                            <span class="score-value" id="newsScore">--/10</span>
                         </div>
                     </div>
                     <div class="total-score">
@@ -1352,56 +1279,6 @@
                     <div class="score-interpretation" id="scoreInterpretation">
                         <!-- Filled by JS -->
                     </div>
-                </div>
-            </section>
-
-            <!-- Paper Trading Execution Card -->
-            <section class="card paper-card">
-                <div class="card-header">
-                    <h2><span class="card-icon">🧪</span> Paper Execution</h2>
-                    <span class="info-badge"
-                        title="Simulierte Ausführung mit Hard-Risk-Limits. Keine echten Orders. Strategien bleiben unverändert.">?</span>
-                </div>
-                <div class="card-body">
-                    <div class="paper-controls">
-                        <label><span>Paper aktiv</span><input id="paperEnabled" type="checkbox" checked></label>
-                        <label><span>Auto Execute</span><input id="paperAutoExecute" type="checkbox"></label>
-                        <label><span>Start Balance</span><input id="paperStartingBalance" type="number" min="100"
-                                step="100" value="10000"></label>
-                        <div class="paper-actions">
-                            <button id="paperResetBtn" class="paper-btn">Reset</button>
-                            <button id="paperCloseBtn" class="paper-btn danger">Close Position</button>
-                        </div>
-                    </div>
-                    <div id="paperStatus" class="paper-status">--</div>
-                    <div class="paper-metrics">
-                        <div><span>Equity</span><strong id="paperEquity">$--</strong></div>
-                        <div><span>Daily PnL</span><strong id="paperDailyPnl">--</strong></div>
-                        <div><span>Total PnL</span><strong id="paperTotalPnl">--</strong></div>
-                        <div><span>Open PnL</span><strong id="paperOpenPnl">$--</strong></div>
-                        <div><span>Position</span><strong id="paperPosition">--</strong></div>
-                        <div><span>Signal Quality</span><strong id="signalQuality">--</strong></div>
-                    </div>
-                    <div class="paper-journal">
-                        <h3>Trade Journal</h3>
-                        <ul id="paperTradeList">
-                            <li><span>Noch keine Trades</span></li>
-                        </ul>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Data Source Audit Card -->
-            <section class="card source-audit-card">
-                <div class="card-header">
-                    <h2><span class="card-icon">🔎</span> Data Source Audit</h2>
-                    <span class="info-badge"
-                        title="Zeigt pro Faktor, ob die Daten live, als Proxy oder als statischer Fallback genutzt werden.">?</span>
-                </div>
-                <div class="card-body">
-                    <ul class="source-list" id="sourceAuditList">
-                        <li><span>BTC Preis</span><span class="source-chip">--</span></li>
-                    </ul>
                 </div>
             </section>
 
@@ -1600,4 +1477,3 @@
 </body>
 
 </html>
-
