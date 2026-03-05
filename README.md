@@ -1,41 +1,48 @@
-# BTC Market Intelligence Dashboard
+﻿# Trade Suite
 
-Ein Echtzeit-Dashboard für Bitcoin-Marktanalysen, das technische Indikatoren, On-Chain-Daten und Sentiment-Analysen kombiniert.
+Dieses Repository kombiniert zwei Bereiche:
 
-## 🚀 Installation & Start
+1. BTC Market Intelligence Dashboard (Web-App)
+2. BTC Smart Money Backtester (Python)
 
-1. **Dateien öffnen:**
-   Öffne einfach die `index.html` in deinem Browser.
+## Web Dashboard
 
-2. **GitHub Upload (Anleitung):**
-   Da Git auf deinem Computer nicht gefunden wurde, hier die Schritte um es auf GitHub zu speichern:
+Dateien: `index.html`, `app.js`, `styles.css`, `live-analysis.js`, `smart-money-signals.js`
 
-   **Option A: Über den Browser (Einfach)**
-   1. Erstelle ein neues Repository auf [GitHub.com](https://github.com/new).
-   2. Klicke auf "uploading an existing file".
-   3. Ziehe alle Dateien aus diesem Ordner (`btc-intelligence`) in das Browser-Fenster.
-   4. Klicke auf "Commit changes".
+Features:
+- Live Markt-Analyse (Signal, Konfidenz, Entry/SL/TP)
+- Smart Money Signal-Engine
+- Risiko-Management und Trade-Level
+- Telegram-Report/Signal Integrationen
 
-   **Option B: Mit Git (Empfohlen)**
-   1. Installiere Git: [git-scm.com/downloads](https://git-scm.com/downloads)
-   2. Öffne ein Terminal in diesem Ordner.
-   3. Führe folgende Befehle aus:
-      ```bash
-      git init
-      git add .
-      git commit -m "Initial commit"
-      git branch -M main
-      git remote add origin <DEINE-REPO-URL>
-      git push -u origin main
-      ```
+Start lokal:
+- `index.html` im Browser öffnen
 
-## 🛠️ Features
+## Python Backtester
 
-- **Live Trading-Analyse:** Klicke auf "📊 TRADE-ANALYSE" für sofortige Empfehlungen.
-- **Konfidenz-System:** Signale basieren auf einem gewichteten Score (0-10).
-- **Risiko-Management:** Automatische Berechnung von Entry, Stop Loss und Take Profit.
-- **Interaktive Hilfe:** Klicke auf `?` Badges für Erklärungen (kein nerviges Hover!).
+Dateien: `backtest_runner.py`, `strategy_*.py`, `data_loader.py`, `advanced_analysis.py`
 
-## ⚠️ Disclaimer
+Features:
+- Backtests auf BTC/USDT Daten
+- ATR-basiertes Risiko-Management
+- Optimierung und Ergebnis-Exports
 
-Keine Finanzberatung. Nur für Bildungszwecke.
+Installation:
+```bash
+pip install -r requirements.txt
+```
+
+Beispiele:
+```bash
+python backtest_runner.py --plot
+python backtest_runner.py --optimize
+python advanced_analysis.py
+```
+
+## Output
+
+Ergebnisse werden nach `results/` geschrieben (Plots, Trades, Reports).
+
+## Disclaimer
+
+Keine Finanzberatung. Nur zu Lern- und Analysezwecken.
