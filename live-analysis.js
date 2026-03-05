@@ -184,7 +184,7 @@ async function generateLiveAnalysis() {
     }
 
     // Generate reasons
-    const reasons = generateReasons(confluenceScore, rsi, trend, fearGreed, sr, null);
+    const reasons = generateReasons(confluenceScore, rsi, trend, fearGreed, sr);
 
     // Format output
     const now = new Date();
@@ -385,66 +385,40 @@ function calculateLiveConfluenceScore(price, rsi, trend, fearGreed, ath, sr, vol
     };
 }
 
-function generateReasons(confluenceScore, rsi, trend, fearGreed, sr, smartMoneyData) {
+function generateReasons(confluenceScore, rsi, trend, fearGreed, sr) {
     const reasons = [];
 
-    // Smart Money Strategy reasons (prioritized)
-    if (smartMoneyData) {
-        if (smartMoneyData.goldenCross) {
-            reasons.push(`🎯 Golden Cross aktiv: EMA(15) $${smartMoneyData.emaFast?.toFixed(0)} > EMA(300) $${smartMoneyData.emaSlow?.toFixed(0)}`);
+    if (confluenceScore.breakdown.trend >= 1) {
+        const trendText = trend === 'up' ? 'Aufwaertstrend' : trend === 'down' ? 'Abwaertstrend' : 'Seitwaertsbewegung';
+        reasons.push(`Trend: ${trendText} stuetzt das Signal`);
+    }
+
+    if (confluenceScore.breakdown.momentum >= 1) {
+        if (confluenceScore.direction === 'LONG') {
+            reasons.push(`RSI bei ${Math.round(rsi)} zeigt Oversold-Bedingungen`);
         } else {
-            const gap = smartMoneyData.emaSlow - smartMoneyData.emaFast;
-            reasons.push(`⏳ Golden Cross fehlt: Noch $${gap?.toFixed(0)} Abstand`);
+            reasons.push(`RSI bei ${Math.round(rsi)} zeigt Overbought-Bedingungen`);
         }
+    }
 
-        if (smartMoneyData.htfFilter) {
-            reasons.push(`📈 HTF Filter bestätigt: Preis über EMA(800)`);
+    if (confluenceScore.breakdown.srPosition >= 1) {
+        if (confluenceScore.direction === 'LONG') {
+            reasons.push(`Preis nahe Support bei $${formatNumber(sr.nearestSupport, 0)}`);
         } else {
-            const needed = smartMoneyData.emaHTF - smartMoneyData.currentPrice;
-            reasons.push(`⏳ HTF Filter fehlt: +$${needed?.toFixed(0)} zum EMA(800) nötig`);
+            reasons.push(`Preis nahe Resistance bei $${formatNumber(sr.nearestResistance, 0)}`);
         }
+    }
 
-        if (smartMoneyData.rsiInZone) {
-            reasons.push(`✅ RSI in Zone: ${smartMoneyData.rsi?.toFixed(1)} (45-70)`);
-        } else if (smartMoneyData.rsi < 45) {
-            reasons.push(`⏳ RSI überverkauft: ${smartMoneyData.rsi?.toFixed(1)} < 45`);
-        } else {
-            reasons.push(`⚠️ RSI überkauft: ${smartMoneyData.rsi?.toFixed(1)} > 70`);
+    if (confluenceScore.breakdown.marketStructure >= 1) {
+        if (fearGreed < 35) {
+            reasons.push(`Fear & Greed bei ${fearGreed} (Extreme Fear -> Kaufgelegenheit)`);
+        } else if (fearGreed > 65) {
+            reasons.push(`Fear & Greed bei ${fearGreed} (Extreme Greed -> Verkaufsgelegenheit)`);
         }
-    } else {
-        // Fallback to confluence-based reasons
-        if (confluenceScore.breakdown.trend >= 1) {
-            const trendText = trend === 'up' ? 'Aufwärtstrend' : trend === 'down' ? 'Abwärtstrend' : 'Seitwärtsbewegung';
-            reasons.push(`Trend: ${trendText} unterstützt das Signal`);
-        }
+    }
 
-        if (confluenceScore.breakdown.momentum >= 1) {
-            if (confluenceScore.direction === 'LONG') {
-                reasons.push(`RSI bei ${Math.round(rsi)} zeigt Oversold-Bedingungen`);
-            } else {
-                reasons.push(`RSI bei ${Math.round(rsi)} zeigt Overbought-Bedingungen`);
-            }
-        }
-
-        if (confluenceScore.breakdown.srPosition >= 1) {
-            if (confluenceScore.direction === 'LONG') {
-                reasons.push(`Preis nahe Support bei $${formatNumber(sr.nearestSupport, 0)}`);
-            } else {
-                reasons.push(`Preis nahe Resistance bei $${formatNumber(sr.nearestResistance, 0)}`);
-            }
-        }
-
-        if (confluenceScore.breakdown.marketStructure >= 1) {
-            if (fearGreed < 35) {
-                reasons.push(`Fear & Greed bei ${fearGreed} (Extreme Fear → Kaufgelegenheit)`);
-            } else if (fearGreed > 65) {
-                reasons.push(`Fear & Greed bei ${fearGreed} (Extreme Greed → Verkaufsgelegenheit)`);
-            }
-        }
-
-        if (reasons.length < 3) {
-            reasons.push(`Confluence Score: ${confluenceScore.total}/10`);
-        }
+    if (reasons.length < 3) {
+        reasons.push(`Confluence Score: ${confluenceScore.total}/10`);
     }
 
     return reasons.slice(0, 4);
@@ -544,59 +518,6 @@ async function showLiveAnalysis() {
             </div>
         `;
     }
-
-    // Add Smart Money Strategy Panel (if data available)
-    const smartMoneyData = window.lastAnalysisData?.smartMoneyData;
-    if (smartMoneyData) {
-        const gcMet = smartMoneyData.goldenCross;
-        const htfMet = smartMoneyData.htfFilter;
-        const rsiMet = smartMoneyData.rsiInZone;
-
-        html += `
-            <div class="smart-money-analysis-section">
-                <div class="breakdown-title">🎯 Smart Money Strategy (${smartMoneyData.signalStrength}/3)</div>
-                <div class="sm-analysis-grid">
-                    <div class="sm-analysis-item ${gcMet ? 'met' : 'not-met'}">
-                        <div class="sm-analysis-icon">${gcMet ? '✅' : '❌'}</div>
-                        <div class="sm-analysis-content">
-                            <div class="sm-analysis-name">Golden Cross</div>
-                            <div class="sm-analysis-values">
-                                EMA(15): $${smartMoneyData.emaFast?.toFixed(0)} ${gcMet ? '>' : '<'} EMA(300): $${smartMoneyData.emaSlow?.toFixed(0)}
-                            </div>
-                            ${!gcMet ? `<div class="sm-analysis-gap">⏳ Noch $${(smartMoneyData.emaSlow - smartMoneyData.emaFast)?.toFixed(0)} Abstand</div>` : ''}
-                        </div>
-                    </div>
-                    <div class="sm-analysis-item ${htfMet ? 'met' : 'not-met'}">
-                        <div class="sm-analysis-icon">${htfMet ? '✅' : '❌'}</div>
-                        <div class="sm-analysis-content">
-                            <div class="sm-analysis-name">HTF Filter</div>
-                            <div class="sm-analysis-values">
-                                Preis: $${smartMoneyData.currentPrice?.toLocaleString()} ${htfMet ? '>' : '<'} EMA(800): $${smartMoneyData.emaHTF?.toFixed(0)}
-                            </div>
-                            ${!htfMet ? `<div class="sm-analysis-gap">⏳ Noch $${(smartMoneyData.emaHTF - smartMoneyData.currentPrice)?.toFixed(0)} nötig</div>` : ''}
-                        </div>
-                    </div>
-                    <div class="sm-analysis-item ${rsiMet ? 'met' : 'not-met'}">
-                        <div class="sm-analysis-icon">${rsiMet ? '✅' : '❌'}</div>
-                        <div class="sm-analysis-content">
-                            <div class="sm-analysis-name">RSI Zone</div>
-                            <div class="sm-analysis-values">
-                                RSI(14): ${smartMoneyData.rsi?.toFixed(1)} ${rsiMet ? '✓' : '✗'} [45-70]
-                            </div>
-                            ${!rsiMet && smartMoneyData.rsi < 45 ? `<div class="sm-analysis-gap">⏳ ${(45 - smartMoneyData.rsi)?.toFixed(1)} Punkte bis 45</div>` : ''}
-                            ${!rsiMet && smartMoneyData.rsi > 70 ? `<div class="sm-analysis-gap">⚠️ ${(smartMoneyData.rsi - 70)?.toFixed(1)} über 70</div>` : ''}
-                        </div>
-                    </div>
-                </div>
-                ${smartMoneyData.atr ? `
-                    <div class="sm-analysis-atr">
-                        ATR(14): $${smartMoneyData.atr?.toFixed(0)} → SL: $${smartMoneyData.stopLoss?.toLocaleString(undefined, { maximumFractionDigits: 0 })} | TP1: $${smartMoneyData.takeProfit1?.toLocaleString(undefined, { maximumFractionDigits: 0 })} | TP2: $${smartMoneyData.takeProfit2?.toLocaleString(undefined, { maximumFractionDigits: 0 })} | TP3: $${smartMoneyData.takeProfit3?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                    </div>
-                ` : ''}
-            </div>
-        `;
-    }
-
     // Add Volume Analysis Section (if data available)
     const volumeAnalysis = window.lastAnalysisData?.volumeAnalysis;
     if (volumeAnalysis) {

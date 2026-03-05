@@ -232,7 +232,7 @@ const NotificationSystem = {
 
         // Notify on LONG or SHORT signal
         if (newSignal === 'LONG') {
-            const title = '🟢 LONG Signal erkannt!';
+            const title = 'LONG Signal erkannt';
             const body = `BTC: $${price.toLocaleString()} | Konfidenz: ${Math.round(confidence)}%`;
 
             this.playSound('long');
@@ -240,7 +240,7 @@ const NotificationSystem = {
             this.showInPageAlert('long', confidence, price);
 
         } else if (newSignal === 'SHORT') {
-            const title = '🔴 SHORT Signal erkannt!';
+            const title = 'SHORT Signal erkannt';
             const body = `BTC: $${price.toLocaleString()} | Konfidenz: ${Math.round(confidence)}%`;
 
             this.playSound('short');
@@ -249,7 +249,7 @@ const NotificationSystem = {
 
         } else if (newSignal === 'NEUTRAL' && (oldSignal === 'LONG' || oldSignal === 'SHORT')) {
             // Signal changed from active to neutral
-            const title = '⚪ Signal zurückgesetzt';
+            const title = 'Signal zurueckgesetzt';
             const body = 'Das aktive Signal ist wieder neutral geworden.';
 
             this.sendNotification(title, body, 'neutral');
@@ -261,7 +261,7 @@ const NotificationSystem = {
         const alertBox = document.getElementById('signalAlert');
         if (!alertBox) return;
 
-        const emoji = type === 'long' ? '🟢' : '🔴';
+        const emoji = type === 'long' ? 'LONG' : 'SHORT';
         const signal = type === 'long' ? 'LONG' : 'SHORT';
         const color = type === 'long' ? 'bullish' : 'bearish';
 
@@ -273,7 +273,7 @@ const NotificationSystem = {
                     <div class="alert-title">Neues ${signal} Signal!</div>
                     <div class="alert-details">BTC: $${price.toLocaleString()} | Konfidenz: ${Math.round(confidence)}%</div>
                 </div>
-                <button class="alert-close" onclick="document.getElementById('signalAlert').classList.remove('show')">✕</button>
+                <button class="alert-close" onclick="document.getElementById('signalAlert').classList.remove('show')">x</button>
             </div>
         `;
         alertBox.classList.add('show');
@@ -1073,7 +1073,7 @@ function getUnifiedTradeRecommendation() {
 
     if (signal !== 'NEUTRAL' && isHighVolatility && confidence < 70) {
         signal = 'NEUTRAL';
-        blockedReasons.push('Setup verworfen: Volatilit�t zu hoch f�r aktuelle Konfidenz');
+        blockedReasons.push('Setup verworfen: Volatilitaet zu hoch fuer aktuelle Konfidenz');
     }
 
     const weightedRR = rr
@@ -1319,7 +1319,7 @@ function updateNoTradeWarning() {
         reasons.push(`<strong>Confluence Score ist ${formatNumber(score, 1)}/10</strong> - aktuell kein statistischer Vorteil`);
 
         if (rsi >= 40 && rsi <= 60) {
-            reasons.push(`<strong>RSI ist bei ${formatNumber(rsi, 0)}</strong> - weder �berkauft noch �berverkauft`);
+            reasons.push(`<strong>RSI ist bei ${formatNumber(rsi, 0)}</strong> - weder ueberkauft noch ueberverkauft`);
         }
 
         if (state.fearGreedIndex >= 35 && state.fearGreedIndex <= 65) {
@@ -1332,7 +1332,7 @@ function updateNoTradeWarning() {
 
         const trend = determineTrend(state.priceHistory);
         if (trend === 'sideways') {
-            reasons.push('<strong>Trend ist seitw�rts</strong> - keine klare Richtung');
+            reasons.push('<strong>Trend ist seitwaerts</strong> - keine klare Richtung');
         }
 
         if (state.longShortRatio.long >= 45 && state.longShortRatio.long <= 55) {
@@ -1340,10 +1340,10 @@ function updateNoTradeWarning() {
         }
 
         if (unified?.blockedReasons?.length) {
-            unified.blockedReasons.forEach(reason => reasons.push(`<strong>Qualit�tsfilter:</strong> ${reason}`));
+            unified.blockedReasons.forEach(reason => reasons.push(`<strong>Qualitaetsfilter:</strong> ${reason}`));
         }
 
-        reasons.push('<strong>Empfehlung:</strong> Warte auf ein klar best�tigtes Setup mit besserem Edge.');
+        reasons.push('<strong>Empfehlung:</strong> Warte auf ein klar bestaetigtes Setup mit besserem Edge.');
 
         reasonsEl.innerHTML = '<ul>' + reasons.map(r => `<li>${r}</li>`).join('') + '</ul>';
     } else {
