@@ -382,10 +382,10 @@ const SpotStrategy = {
         if (actionEl) {
             let actionText = s.action;
             if (s.sellWarning) actionText = s.sellWarning + '\n' + actionText;
-            const rainbowDelta = ((s.rainbowRatio - 1) * 100).toFixed(1);
-            actionText += `\nRainbow: ${s.rainbowBand} | Modell $${Math.round(s.rainbowModelPrice).toLocaleString()} | ${rainbowDelta}%`;
             actionEl.textContent = actionText;
         }
+
+        this.updateRainbowVisual(s);
 
         // Sell Score
         const sellEl = document.getElementById('spotSellScore');
@@ -469,6 +469,24 @@ const SpotStrategy = {
             fill.style.background = pct > 60 ? 'var(--accent-green)' : pct > 30 ? 'var(--accent-blue)' : 'var(--text-secondary)';
         }
         if (val) val.textContent = `${value}/${max}`;
+    },
+
+    updateRainbowVisual(s) {
+        const marker = document.getElementById('rainbowMarker');
+        const bandEl = document.getElementById('rainbowBandLabel');
+        const metaEl = document.getElementById('rainbowMeta');
+        if (!marker || !bandEl || !metaEl) return;
+
+        // Map ratio roughly into [0..100] scale.
+        const minRatio = 0.3;
+        const maxRatio = 3.5;
+        const pct = Math.max(0, Math.min(100, ((s.rainbowRatio - minRatio) / (maxRatio - minRatio)) * 100));
+        marker.style.left = `${pct}%`;
+
+        const delta = ((s.rainbowRatio - 1) * 100).toFixed(1);
+        bandEl.textContent = s.rainbowBand;
+        bandEl.className = `rainbow-band ${s.rainbowRatio < 1.1 ? 'text-bullish' : s.rainbowRatio > 2.2 ? 'text-bearish' : 'text-warning'}`;
+        metaEl.textContent = `Modell: $${Math.round(s.rainbowModelPrice).toLocaleString()} | Abweichung: ${delta}%`;
     },
 
     // Called from UI when user confirms a buy

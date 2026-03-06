@@ -4575,3 +4575,72 @@ body::after {
 .spot-action-box:hover {
     border-color: rgba(255, 255, 255, 0.15) !important;
 }
+
+.rainbow-visual-card {
+    margin-top: 12px;
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.rainbow-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.rainbow-title {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.rainbow-band {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.rainbow-scale {
+    position: relative;
+    height: 12px;
+    border-radius: 999px;
+    background: linear-gradient(90deg,
+            #2f7af8 0%,
+            #22c55e 18%,
+            #84cc16 34%,
+            #f59e0b 54%,
+            #ef4444 74%,
+            #a855f7 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.rainbow-marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+    background: #0b0f18;
+    left: 50%;
+    transition: left 0.6s ease;
+}
+
+.rainbow-labels {
+    margin-top: 6px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.rainbow-meta {
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
