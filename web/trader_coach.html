@@ -875,9 +875,9 @@
       }
       throw lastErr || new Error('fetch failed');
     }
-    async function fetchSafe(url, fallback) {
+    async function fetchSafe(url, fallback, retries = 0, timeoutMs = 6000) {
       try {
-        return { ok: true, data: await fetchJSONWithRetry(url, 1, 10000) };
+        return { ok: true, data: await fetchJSONWithRetry(url, retries, timeoutMs) };
       } catch (_) {
         return { ok: false, data: fallback };
       }
@@ -955,10 +955,10 @@
     async function loadPrimaryCandles() {
       try {
         const [d1h, d4h, d1d, d24] = await Promise.all([
-          fetchJSONWithRetry('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=1000'),
-          fetchJSONWithRetry('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=500&aggregate=4'),
-          fetchJSONWithRetry('https://min-api.cryptocompare.com/data/v2/histoday?fsym=BTC&tsym=USD&limit=300'),
-          fetchJSONWithRetry('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=24')
+          fetchJSONWithRetry('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=1000', 1, 6500),
+          fetchJSONWithRetry('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=500&aggregate=4', 1, 6500),
+          fetchJSONWithRetry('https://min-api.cryptocompare.com/data/v2/histoday?fsym=BTC&tsym=USD&limit=300', 1, 6500),
+          fetchJSONWithRetry('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=24', 1, 6500)
         ]);
         return {
           source: 'cryptocompare',
@@ -968,25 +968,27 @@
           dayOpen: d24?.Data?.Data?.[0]?.open || 0
         };
       } catch (_) {
-        const [b1h, b4h, b1d, b24] = await Promise.all([
-          fetchJSONWithRetry('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=1000'),
-          fetchJSONWithRetry('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=4h&limit=500'),
-          fetchJSONWithRetry('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=300'),
-          fetchJSONWithRetry('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT')
-        ]);
-        const c1h = mapBinanceKlines(b1h);
-        const c4h = mapBinanceKlines(b4h);
-        const c1d = mapBinanceKlines(b1d);
-        const fallbackOpen = c1h.length >= 24 ? c1h[c1h.length - 24].open : c1h[0]?.open || 0;
-        return {
-          source: 'binance',
-          c1h,
-          c4h,
-          c1d,
-          dayOpen: parseFloat(b24?.openPrice || fallbackOpen || 0)
-        };
-      } catch (_) {
-        return loadCoinGeckoCandles();
+        try {
+          const [b1h, b4h, b1d, b24] = await Promise.all([
+            fetchJSONWithRetry('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=1000', 0, 4500),
+            fetchJSONWithRetry('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=4h&limit=500', 0, 4500),
+            fetchJSONWithRetry('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=300', 0, 4500),
+            fetchJSONWithRetry('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT', 0, 4500)
+          ]);
+          const c1h = mapBinanceKlines(b1h);
+          const c4h = mapBinanceKlines(b4h);
+          const c1d = mapBinanceKlines(b1d);
+          const fallbackOpen = c1h.length >= 24 ? c1h[c1h.length - 24].open : c1h[0]?.open || 0;
+          return {
+            source: 'binance',
+            c1h,
+            c4h,
+            c1d,
+            dayOpen: parseFloat(b24?.openPrice || fallbackOpen || 0)
+          };
+        } catch (_) {
+          return await loadCoinGeckoCandles();
+        }
       }
     }
 
@@ -1093,6 +1095,94 @@
       return { total: Math.round(weighted10 * 10), tech, onchain, sentiment, macro, news };
     }
 
+    function persistMarketData(data) {
+      try {
+        localStorage.setItem('coach_last_market_data', JSON.stringify({
+          ts: Date.now(),
+          data
+        }));
+      } catch (_) { }
+    }
+
+    function loadCachedMarketData() {
+      try {
+        const raw = localStorage.getItem('coach_last_market_data');
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.data) return null;
+        return parsed;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function buildEmergencyMarketData() {
+      const price = 100000;
+      const change24 = 0;
+      const mtf = { t1h: 'neutral', t4h: 'neutral', t1d: 'neutral', aligned: 'mixed' };
+      const news = { score: 5, bullish: 0, bearish: 0, highImpact: 0 };
+      const onchain = { whaleTrades: 0, exchangeFlowPct: 0 };
+      const cycle = calcCycle();
+      const scObj = score({
+        mtf,
+        rsi: 50,
+        price,
+        ema800: price,
+        atr: price * 0.015,
+        goldenCross: false,
+        macd: { trend: 'neutral', histogram: 0 },
+        fg: 50,
+        funding: 0,
+        oiChange: 0,
+        lsLong: 50,
+        lsShort: 50,
+        news,
+        onchain,
+        cycle,
+        change24
+      });
+      const sc = scObj.total;
+      return {
+        price,
+        ema15: price,
+        ema300: price,
+        ema800: price,
+        rsi: 50,
+        atr: price * 0.015,
+        macd: { trend: 'neutral', histogram: 0 },
+        goldenCross: false,
+        htfFilter: false,
+        rsiZone: true,
+        strength: 1,
+        signal: 'NEUTRAL',
+        score: sc,
+        scoreObj: scObj,
+        mtf,
+        change24,
+        fg: 50,
+        funding: 0,
+        oi: 0,
+        oiChange: 0,
+        lsLong: 50,
+        lsShort: 50,
+        news,
+        onchain,
+        cycle,
+        closes: [price],
+        sourceFlags: {
+          price: false,
+          fearGreed: false,
+          funding: false,
+          oi: false,
+          ls: false,
+          news: false,
+          macd: false,
+          onchain: false,
+          cycle: true
+        }
+      };
+    }
+
     let marketDataLoading = false;
     async function loadMarketData() {
       if (marketDataLoading) return;
@@ -1100,13 +1190,13 @@
       try {
         const candlePack = await loadPrimaryCandles();
         const [fgRes, fundingRes, oiNowRes, oiHistRes, lsRes, newsRes, aggRes] = await Promise.all([
-          fetchSafe('https://api.alternative.me/fng/?limit=1', { data: [{ value: '50' }] }),
-          fetchSafe('https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&limit=1', [{ fundingRate: 0 }]),
-          fetchSafe('https://fapi.binance.com/fapi/v1/openInterest?symbol=BTCUSDT', { openInterest: 0 }),
-          fetchSafe('https://fapi.binance.com/futures/data/openInterestHist?symbol=BTCUSDT&period=1h&limit=24', []),
-          fetchSafe('https://fapi.binance.com/fapi/v1/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1', [{ longShortRatio: 1 }]),
-          fetchSafe('https://min-api.cryptocompare.com/data/v2/news/?lang=EN&categories=BTC,Regulation,Market&excludeCategories=Sponsored', { Data: [] }),
-          fetchSafe('https://api.binance.com/api/v3/aggTrades?symbol=BTCUSDT&limit=1000', [])
+          fetchSafe('https://api.alternative.me/fng/?limit=1', { data: [{ value: '50' }] }, 0, 4500),
+          fetchSafe('https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&limit=1', [{ fundingRate: 0 }], 0, 4500),
+          fetchSafe('https://fapi.binance.com/fapi/v1/openInterest?symbol=BTCUSDT', { openInterest: 0 }, 0, 4500),
+          fetchSafe('https://fapi.binance.com/futures/data/openInterestHist?symbol=BTCUSDT&period=1h&limit=24', [], 0, 4500),
+          fetchSafe('https://fapi.binance.com/fapi/v1/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1', [{ longShortRatio: 1 }], 0, 4500),
+          fetchSafe('https://min-api.cryptocompare.com/data/v2/news/?lang=EN&categories=BTC,Regulation,Market&excludeCategories=Sponsored', { Data: [] }, 0, 4500),
+          fetchSafe('https://api.binance.com/api/v3/aggTrades?symbol=BTCUSDT&limit=1000', [], 0, 4500)
         ]);
         const fgData = fgRes.data, fundingData = fundingRes.data, oiNow = oiNowRes.data, oiHist = oiHistRes.data, lsData = lsRes.data, newsData = newsRes.data, aggTrades = aggRes.data;
         const c1h = candlePack.c1h || [], c4h = candlePack.c4h || [], c1d = candlePack.c1d || [];
@@ -1160,11 +1250,23 @@
             cycle: true
           }
         };
+        persistMarketData(mktData);
         updateUI();
         document.getElementById('statusDot').className = 'status-dot ok';
       } catch (e) {
+        const cached = loadCachedMarketData();
+        if (!mktData && cached?.data) {
+          mktData = cached.data;
+          updateUI();
+          document.getElementById('lastUpdated').textContent = 'Cache aktiv ' + new Date(cached.ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+        } else if (!mktData) {
+          mktData = buildEmergencyMarketData();
+          updateUI();
+          document.getElementById('lastUpdated').textContent = 'Offline-Fallback aktiv';
+        } else {
+          document.getElementById('lastUpdated').textContent = 'Fehler, alte Daten aktiv';
+        }
         document.getElementById('statusDot').className = 'status-dot err';
-        document.getElementById('lastUpdated').textContent = mktData ? 'Fehler, alte Daten aktiv' : 'Fehler';
         console.error(e);
       } finally {
         marketDataLoading = false;
