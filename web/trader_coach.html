@@ -1116,8 +1116,23 @@
       }
     }
 
-    function buildEmergencyMarketData() {
-      const price = 100000;
+    async function getEmergencyLivePrice() {
+      try {
+        const cg = await fetchJSONWithRetry('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd', 0, 3500);
+        const p = Number(cg?.bitcoin?.usd);
+        if (Number.isFinite(p) && p > 0) return p;
+      } catch (_) { }
+      try {
+        const cc = await fetchJSONWithRetry('https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=USD', 0, 3500);
+        const p = Number(cc?.USD);
+        if (Number.isFinite(p) && p > 0) return p;
+      } catch (_) { }
+      return null;
+    }
+
+    async function buildEmergencyMarketData() {
+      const liveFallbackPrice = await getEmergencyLivePrice();
+      const price = Number.isFinite(liveFallbackPrice) && liveFallbackPrice > 0 ? liveFallbackPrice : 0;
       const change24 = 0;
       const mtf = { t1h: 'neutral', t4h: 'neutral', t1d: 'neutral', aligned: 'mixed' };
       const news = { score: 5, bullish: 0, bearish: 0, highImpact: 0 };
@@ -1125,10 +1140,10 @@
       const cycle = calcCycle();
       const scObj = score({
         mtf,
-        rsi: 50,
+        rsi: price > 0 ? 50 : 0,
         price,
         ema800: price,
-        atr: price * 0.015,
+        atr: price > 0 ? price * 0.015 : 0,
         goldenCross: false,
         macd: { trend: 'neutral', histogram: 0 },
         fg: 50,
@@ -1141,19 +1156,19 @@
         cycle,
         change24
       });
-      const sc = scObj.total;
+      const sc = price > 0 ? scObj.total : 0;
       return {
         price,
         ema15: price,
         ema300: price,
         ema800: price,
-        rsi: 50,
-        atr: price * 0.015,
+        rsi: price > 0 ? 50 : 0,
+        atr: price > 0 ? price * 0.015 : 0,
         macd: { trend: 'neutral', histogram: 0 },
         goldenCross: false,
         htfFilter: false,
-        rsiZone: true,
-        strength: 1,
+        rsiZone: price > 0,
+        strength: price > 0 ? 1 : 0,
         signal: 'NEUTRAL',
         score: sc,
         scoreObj: scObj,
@@ -1168,15 +1183,15 @@
         news,
         onchain,
         cycle,
-        closes: [price],
+        closes: price > 0 ? [price] : [],
         sourceFlags: {
-          price: false,
+          price: price > 0,
           fearGreed: false,
           funding: false,
           oi: false,
           ls: false,
           news: false,
-          macd: false,
+          macd: price > 0,
           onchain: false,
           cycle: true
         }
@@ -1260,9 +1275,11 @@
           updateUI();
           document.getElementById('lastUpdated').textContent = 'Cache aktiv ' + new Date(cached.ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
         } else if (!mktData) {
-          mktData = buildEmergencyMarketData();
+          mktData = await buildEmergencyMarketData();
           updateUI();
-          document.getElementById('lastUpdated').textContent = 'Offline-Fallback aktiv';
+          document.getElementById('lastUpdated').textContent = mktData.price > 0
+            ? 'Preis-Fallback aktiv'
+            : 'Offline-Fallback aktiv';
         } else {
           document.getElementById('lastUpdated').textContent = 'Fehler, alte Daten aktiv';
         }
