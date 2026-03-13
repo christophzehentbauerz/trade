@@ -894,6 +894,64 @@
       }));
     }
 
+    function aggregateCandles(rows, step) {
+      if (!Array.isArray(rows) || !rows.length || step < 1) return [];
+      const out = [];
+      for (let i = 0; i < rows.length; i += step) {
+        const chunk = rows.slice(i, i + step);
+        if (!chunk.length) continue;
+        const open = chunk[0].open;
+        const close = chunk[chunk.length - 1].close;
+        let high = chunk[0].high;
+        let low = chunk[0].low;
+        let volumeto = 0;
+        for (const c of chunk) {
+          if (c.high > high) high = c.high;
+          if (c.low < low) low = c.low;
+          volumeto += c.volumeto || 0;
+        }
+        out.push({ time: chunk[0].time, open, high, low, close, volumeto });
+      }
+      return out;
+    }
+
+    async function loadCoinGeckoCandles() {
+      const cg = await fetchJSONWithRetry('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=90&interval=hourly');
+      const prices = cg?.prices || [];
+      const volumes = cg?.total_volumes || [];
+      if (!prices.length) throw new Error('CoinGecko liefert keine Kursdaten');
+
+      const c1h = [];
+      for (let i = 0; i < prices.length; i++) {
+        const ts = prices[i][0];
+        const price = parseFloat(prices[i][1]);
+        const prev = i > 0 ? parseFloat(prices[i - 1][1]) : price;
+        const vol = i < volumes.length ? parseFloat(volumes[i][1]) : 0;
+        const high = Math.max(price, prev);
+        const low = Math.min(price, prev);
+        c1h.push({
+          time: ts,
+          open: prev,
+          high,
+          low,
+          close: price,
+          volumeto: vol
+        });
+      }
+
+      const c4h = aggregateCandles(c1h, 4);
+      const c1d = aggregateCandles(c1h, 24);
+      const dayOpen = c1h.length >= 24 ? c1h[c1h.length - 24].open : c1h[0]?.open || 0;
+
+      return {
+        source: 'coingecko',
+        c1h,
+        c4h,
+        c1d,
+        dayOpen
+      };
+    }
+
     async function loadPrimaryCandles() {
       try {
         const [d1h, d4h, d1d, d24] = await Promise.all([
@@ -927,6 +985,8 @@
           c1d,
           dayOpen: parseFloat(b24?.openPrice || fallbackOpen || 0)
         };
+      } catch (_) {
+        return loadCoinGeckoCandles();
       }
     }
 
