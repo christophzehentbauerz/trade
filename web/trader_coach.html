@@ -991,8 +991,8 @@
   <nav>
     <div class="logo">BTC<span>Coach</span></div>
     <div class="nav-links">
-      <a href="../index.html" id="navDashboard">â† Dashboard</a>
-      <a href="trader_coach.html" class="active">ðŸ¤– Coach</a>
+      <a href="../index.html" id="navDashboard"><- Dashboard</a>
+      <a href="trader_coach.html" class="active">Coach</a>
     </div>
   </nav>
 
@@ -1004,19 +1004,19 @@
   <!-- GPT KEY BANNER -->
   <div class="gpt-banner">
     <div class="gpt-banner-inner">
-      <span class="gpt-badge">ðŸ§  KI-Modell</span>
-      <span id="gptStatus">Kein API-Key â€” Coach antwortet mit eingebautem Regelwerk</span>
+      <span class="gpt-badge">KI-Modell</span>
+      <span id="gptStatus">Kein API-Key - Coach antwortet mit eingebautem Regelwerk</span>
       <select id="gptModel"
         style="background:#0a1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:inherit;font-size:12px;outline:none;max-width:160px;">
-        <option value="gpt-4o-mini" selected>âš¡ gpt-4o-mini (gÃ¼nstig)</option>
-        <option value="gpt-4o">ðŸ§  gpt-4o (besser)</option>
-        <option value="o3-mini">ðŸ”¬ o3-mini (Reasoning)</option>
+        <option value="gpt-4o-mini" selected>gpt-4o-mini (guenstig)</option>
+        <option value="gpt-4o">gpt-4o (besser)</option>
+        <option value="o3-mini">o3-mini (Reasoning)</option>
       </select>
       <input type="password" id="gptKeyInput" placeholder="sk-... OpenAI API Key" autocomplete="off"
         style="min-width:160px;" />
       <button class="btn-sm btn-purple" id="gptSaveBtn">Speichern</button>
       <button class="btn-sm" id="gptClearBtn"
-        style="background:#1a2740;color:var(--muted);border:1px solid var(--border);">LÃ¶schen</button>
+        style="background:#1a2740;color:var(--muted);border:1px solid var(--border);">Loeschen</button>
     </div>
   </div>
 
@@ -1142,7 +1142,7 @@
     <!-- Left: Config + Indicators -->
     <div class="sidebar-col">
       <div class="card">
-        <div class="card-head">âš™ï¸ Einstellungen</div>
+        <div class="card-head">Einstellungen</div>
         <div class="card-body cfg">
           <label>Konto (USDT)</label>
           <input id="cfgAccount" type="number" value="5000" />
@@ -1157,7 +1157,7 @@
         </div>
       </div>
       <div class="card">
-        <div class="card-head">ðŸ“Š Indikatoren</div>
+        <div class="card-head">Indikatoren</div>
         <div class="card-body">
           <div class="ind-row"><span class="ind-label">EMA 15</span><span class="ind-val" id="iEma15">---</span></div>
           <div class="ind-row"><span class="ind-label">EMA 300</span><span class="ind-val" id="iEma300">---</span></div>
@@ -1166,13 +1166,13 @@
           <div class="ind-row"><span class="ind-label">ATR 14</span><span class="ind-val" id="iAtr">---</span></div>
           <div class="ind-row"><span class="ind-label">Golden Cross</span><span class="ind-val" id="iGc">---</span>
           </div>
-          <div class="ind-row"><span class="ind-label">Ãœber EMA 800</span><span class="ind-val" id="iHtf">---</span>
+          <div class="ind-row"><span class="ind-label">Ueber EMA 800</span><span class="ind-val" id="iHtf">---</span>
           </div>
           <div class="ind-row"><span class="ind-label">MACD (1h)</span><span class="ind-val" id="iMacd">---</span>
           </div>
           <div class="ind-row"><span class="ind-label">Funding</span><span class="ind-val" id="iFunding">---</span>
           </div>
-          <div class="ind-row"><span class="ind-label">Open Interest Î”</span><span class="ind-val" id="iOi">---</span>
+          <div class="ind-row"><span class="ind-label">Open Interest Delta</span><span class="ind-val" id="iOi">---</span>
           </div>
           <div class="ind-row"><span class="ind-label">L/S Ratio</span><span class="ind-val" id="iLs">---</span>
           </div>
@@ -1185,7 +1185,7 @@
         </div>
       </div>
       <div class="card">
-        <div class="card-head">ðŸ”Ž Faktor-Check</div>
+        <div class="card-head">Faktor-Check</div>
         <div class="card-body">
           <ul class="src-list" id="srcAuditCoach">
             <li class="src-item"><span>BTC Preis</span><span class="src-chip">--</span></li>
@@ -1197,15 +1197,15 @@
     <!-- Right: Chat -->
     <div class="card chat-card">
       <div class="gpt-indicator" id="gptIndicator" style="display:none">
-        <span class="gpt-dot"></span> GPT-4o aktiv â€” intelligente Antworten eingeschaltet
+        <span class="gpt-dot"></span> GPT-4o aktiv - intelligente Antworten eingeschaltet
       </div>
       <div class="quick">
         <button data-q="Darf ich heute traden oder lieber warten?">Freigabe</button>
-        <button data-q="Gib mir einen Trade-Plan">ðŸ“‹ Plan</button>
-        <button data-q="Wie ist der Signal-Score gerade?">ðŸ“Š Score</button>
-        <button data-q="EMA 800 Analyse und Trigger">ðŸ“ EMA 800</button>
-        <button data-q="Live Status alle Indikatoren">ðŸ“¡ Status</button>
-        <button data-q="Soll ich jetzt kaufen oder warten?">ðŸ’¬ Kaufen?</button>
+        <button data-q="Gib mir einen Trade-Plan">Plan</button>
+        <button data-q="Wie ist der Signal-Score gerade?">Score</button>
+        <button data-q="EMA 800 Analyse und Trigger">EMA 800</button>
+        <button data-q="Live Status alle Indikatoren">Status</button>
+        <button data-q="Soll ich jetzt kaufen oder warten?">Kaufen?</button>
       </div>
       <div class="messages" id="messages"></div>
       <div class="input-row">
@@ -1217,8 +1217,8 @@
   </div>
 
   <script>
-    // __OPENAI_KEY_INJECT__  â† GitHub Actions replaces this line with the key
-    // â”€â”€â”€ GPT KEY MANAGEMENT â”€â”€â”€
+    // __OPENAI_KEY_INJECT__  <- GitHub Actions replaces this line with the key
+    // --- GPT KEY MANAGEMENT ---
     // Auto-save injected key to localStorage on first load
     if (typeof _presetKey !== 'undefined' && _presetKey && !localStorage.getItem('coach_gpt_key')) {
       localStorage.setItem('coach_gpt_key', _presetKey);
@@ -1227,11 +1227,11 @@
     function updateGptUI() {
       const hasKey = !!gptKey;
       document.getElementById('gptStatus').textContent = hasKey
-        ? 'ðŸ§  GPT-4o aktiv â€” alle Fragen werden intelligent beantwortet'
-        : 'Kein API-Key â€” Coach antwortet mit eingebautem Regelwerk';
+        ? 'GPT-4o aktiv - alle Fragen werden intelligent beantwortet'
+        : 'Kein API-Key - Coach antwortet mit eingebautem Regelwerk';
       document.getElementById('gptStatus').style.color = hasKey ? 'var(--green)' : 'var(--muted)';
       document.getElementById('gptIndicator').style.display = hasKey ? 'flex' : 'none';
-      if (hasKey) document.getElementById('gptKeyInput').placeholder = 'API-Key gespeichert âœ“';
+      if (hasKey) document.getElementById('gptKeyInput').placeholder = 'API-Key gespeichert';
     }
     document.getElementById('gptSaveBtn').addEventListener('click', () => {
       const val = document.getElementById('gptKeyInput').value.trim();
@@ -1240,9 +1240,9 @@
         localStorage.setItem('coach_gpt_key', val);
         document.getElementById('gptKeyInput').value = '';
         updateGptUI();
-        addMsg('bot', 'âœ… GPT-4o API-Key gespeichert! Deine nÃ¤chsten Fragen werden von GPT-4o beantwortet.');
+        addMsg('bot', 'GPT-4o API-Key gespeichert. Deine naechsten Fragen werden von GPT-4o beantwortet.');
       } else {
-        addMsg('bot', 'âŒ UngÃ¼ltiger Key â€” muss mit sk- beginnen. Key findest du unter: platform.openai.com/api-keys');
+        addMsg('bot', 'Ungueltiger Key - er muss mit sk- beginnen. Key findest du unter: platform.openai.com/api-keys');
       }
     });
     document.getElementById('gptClearBtn').addEventListener('click', () => {
@@ -1250,11 +1250,11 @@
       localStorage.removeItem('coach_gpt_key');
       document.getElementById('gptKeyInput').placeholder = 'sk-... OpenAI API Key eingeben';
       updateGptUI();
-      addMsg('bot', 'ðŸ—‘ï¸ API-Key gelÃ¶scht. Coach lÃ¤uft wieder im Regelwerk-Modus.');
+      addMsg('bot', 'API-Key geloescht. Coach laeuft wieder im Regelwerk-Modus.');
     });
     updateGptUI();
 
-    // â”€â”€â”€ MARKET DATA â”€â”€â”€
+    // --- MARKET DATA ---
     let mktData = null;
 
     async function fetchJSON(url, timeoutMs = 12000) {
@@ -1332,10 +1332,10 @@
           : makeSourceEntry(fallbackStatus, fallbackLabel, 'News-Score ohne Live-News'),
         macd: flags.macd
           ? makeSourceEntry(mode === 'cache' ? 'cache' : mode === 'fallback' ? 'fallback' : 'derived', mode === 'cache' ? 'Cache' : mode === 'fallback' ? 'Fallback' : 'Berechnet', 'Aus geladenen Kerzendaten berechnet')
-          : makeSourceEntry(fallbackStatus, fallbackLabel, 'MACD nicht aus vollstÃ¤ndigen Kerzendaten berechnet'),
+          : makeSourceEntry(fallbackStatus, fallbackLabel, 'MACD nicht aus vollstaendigen Kerzendaten berechnet'),
         onchain: flags.onchain
           ? makeSourceEntry(mode === 'cache' ? 'cache' : 'proxy', mode === 'cache' ? 'Cache' : 'Proxy', 'Proxy aus AggTrades und Volumen')
-          : makeSourceEntry(fallbackStatus, fallbackLabel, 'On-Chain Proxy nicht verfÃ¼gbar'),
+          : makeSourceEntry(fallbackStatus, fallbackLabel, 'On-Chain Proxy nicht verfuegbar'),
         cycle: makeSourceEntry(mode === 'cache' ? 'cache' : 'derived', mode === 'cache' ? 'Cache' : 'Berechnet', 'Halving-Zyklus aus festem Zeitmodell')
       };
     }
@@ -1379,7 +1379,7 @@
         `Preis ${d.sourceMeta.price.label.toLowerCase()}`,
         `Funding ${d.sourceMeta.funding.label.toLowerCase()}`,
         `News ${d.sourceMeta.news.label.toLowerCase()}`
-      ].join(' Â· ');
+      ].join(' · ');
     }
 
     function getDataAgeMinutes(ts) {
@@ -1395,14 +1395,14 @@
       const priceStatus = data?.sourceMeta?.price?.status || 'static';
       const macdStatus = data?.sourceMeta?.macd?.status || 'static';
 
-      if (mode === 'offline') issues.push('Keine Marktdaten verfÃ¼gbar');
+      if (mode === 'offline') issues.push('Keine Marktdaten verfuegbar');
       else if (mode === 'fallback') issues.push('Nur Fallback-Daten aktiv');
 
       if (mode === 'cache' && ageMinutes !== null && ageMinutes > 30) issues.push(`Cache zu alt (${ageMinutes.toFixed(0)} min)`);
-      else if (ageMinutes !== null && ageMinutes > 10) warnings.push(`Daten Ã¤lter als ${ageMinutes.toFixed(0)} min`);
+      else if (ageMinutes !== null && ageMinutes > 10) warnings.push(`Daten aelter als ${ageMinutes.toFixed(0)} min`);
 
-      if (!['live', 'cache', 'fallback'].includes(priceStatus)) issues.push('Preisquelle nicht verlÃ¤sslich');
-      if (!['derived', 'cache', 'fallback'].includes(macdStatus)) issues.push('MACD-Quelle nicht verlÃ¤sslich');
+      if (!['live', 'cache', 'fallback'].includes(priceStatus)) issues.push('Preisquelle nicht verlaesslich');
+      if (!['derived', 'cache', 'fallback'].includes(macdStatus)) issues.push('MACD-Quelle nicht verlaesslich');
 
       return {
         ageMinutes,
@@ -1421,9 +1421,9 @@
     function formatCoachQuality(data) {
       const q = buildCoachQuality(data);
       const age = q.ageMinutes === null ? 'Alter n/a' : `Alter ${q.ageMinutes.toFixed(0)} min`;
-      if (q.blocked) return `QualitÃ¤t blockiert Â· ${q.issues[0]} Â· ${age}`;
-      if (q.warnings.length) return `QualitÃ¤t eingeschrÃ¤nkt Â· ${q.warnings[0]} Â· ${age}`;
-      return `QualitÃ¤t ok Â· ${age}`;
+      if (q.blocked) return `Qualitaet blockiert · ${q.issues[0]} · ${age}`;
+      if (q.warnings.length) return `Qualitaet eingeschraenkt · ${q.warnings[0]} · ${age}`;
+      return `Qualitaet ok · ${age}`;
     }
 
     function mapBinanceKlines(rows) {
@@ -1742,7 +1742,7 @@
         sourceMeta: {
           price: price > 0
             ? makeSourceEntry('fallback', 'Fallback', 'Nur Preis-Fallback aus CoinGecko/CryptoCompare')
-            : makeSourceEntry('static', 'Offline', 'Kein Live-Preis verfÃ¼gbar'),
+            : makeSourceEntry('static', 'Offline', 'Kein Live-Preis verfuegbar'),
           fearGreed: makeSourceEntry('fallback', 'Fallback', 'Fear & Greed Defaultwert 50'),
           funding: makeSourceEntry('fallback', 'Fallback', 'Funding Defaultwert 0'),
           oi: makeSourceEntry('fallback', 'Fallback', 'Open Interest Defaultwert 0'),
@@ -1776,7 +1776,7 @@
         ]);
         const fgData = fgRes.data, fundingData = fundingRes.data, oiNow = oiNowRes.data, oiHist = oiHistRes.data, lsData = lsRes.data, newsData = newsRes.data, aggTrades = aggRes.data;
         const c1h = candlePack.c1h || [], c4h = candlePack.c4h || [], c1d = candlePack.c1d || [];
-        if (!c1h.length || !c4h.length || !c1d.length) throw new Error('Keine Kerzendaten verfÃ¼gbar');
+        if (!c1h.length || !c4h.length || !c1d.length) throw new Error('Keine Kerzendaten verfuegbar');
         const cl = c1h.map(c => c.close), price = cl[cl.length - 1];
         const ema15 = calcEMA(cl, 15), ema300 = calcEMA(cl, 300), ema800 = calcEMA(cl, 800);
         const rsi = calcRSI(cl, 14), atr = calcATR(c1h.map(c => ({ high: c.high, low: c.low, close: c.close })), 14);
@@ -1839,7 +1839,7 @@
               : makeSourceEntry('fallback', 'Fallback', 'Funding Defaultwert 0'),
             oi: oiNowRes.ok && oiHistRes.ok
               ? makeSourceEntry('live', 'Live', 'Binance Open Interest APIs')
-              : makeSourceEntry('fallback', 'Fallback', 'Open Interest nicht live verfÃ¼gbar'),
+              : makeSourceEntry('fallback', 'Fallback', 'Open Interest nicht live verfuegbar'),
             ls: lsRes.ok
               ? makeSourceEntry('live', 'Live', 'Binance Long/Short Ratio API')
               : makeSourceEntry('fallback', 'Fallback', 'Long/Short Defaultwert 50/50'),
@@ -1849,7 +1849,7 @@
             macd: makeSourceEntry(candleStatus === 'live' ? 'derived' : 'fallback', candleStatus === 'live' ? 'Berechnet' : 'Fallback', `${candleLabel} Kerzendaten`),
             onchain: aggRes.ok
               ? makeSourceEntry('proxy', 'Proxy', 'Aus Binance AggTrades und Volumen abgeleitet')
-              : makeSourceEntry('fallback', 'Fallback', 'On-Chain Proxy nicht live verfÃ¼gbar'),
+              : makeSourceEntry('fallback', 'Fallback', 'On-Chain Proxy nicht live verfuegbar'),
             cycle: makeSourceEntry('derived', 'Berechnet', 'Halving-Zyklus aus festem Zeitmodell')
           },
           dataStatus: {
@@ -1909,8 +1909,8 @@
       document.getElementById('iEma800').textContent = '$' + fmt(d.ema800);
       document.getElementById('iRsi').textContent = d.rsi.toFixed(1);
       document.getElementById('iAtr').textContent = '$' + fmt(d.atr);
-      document.getElementById('iGc').textContent = d.goldenCross ? 'âœ… Ja' : 'âŒ Nein';
-      document.getElementById('iHtf').textContent = d.htfFilter ? 'âœ… Ja' : 'âŒ Nein';
+      document.getElementById('iGc').textContent = d.goldenCross ? '[OK] Ja' : '[X] Nein';
+      document.getElementById('iHtf').textContent = d.htfFilter ? '[OK] Ja' : '[X] Nein';
       document.getElementById('iMacd').textContent = `${d.macd.trend} (${d.macd.histogram.toFixed(2)})`;
       document.getElementById('iFunding').textContent = `${d.funding >= 0 ? '+' : ''}${d.funding.toFixed(4)}%`;
       document.getElementById('iOi').textContent = `${d.oiChange >= 0 ? '+' : ''}${d.oiChange.toFixed(2)}%`;
@@ -1943,7 +1943,7 @@
       ).join('');
     }
 
-    // â”€â”€â”€ BUILT-IN COACH â”€â”€â”€
+    // --- BUILT-IN COACH ---
     function getCtx() { return { account: +document.getElementById('cfgAccount').value || 5000, riskPct: +document.getElementById('cfgRisk').value || 1, minScore: +document.getElementById('cfgMinScore').value || 60, dailyPnl: +document.getElementById('cfgDailyPnl').value || 0, openRisk: +document.getElementById('cfgOpenRisk').value || 0 }; }
 
     function buildPlan(ctx) {
@@ -2084,7 +2084,7 @@
       return `🤖 TraderCoach\n\nFrag mich:\n• "Darf ich heute traden?"\n• "Gib mir einen Trade-Plan"\n• "Wie stark ist das Signal?"\n• "EMA 800 Analyse"\n• "Live Status"\n\nFreigabe: ${decision.permission}\nScore: ${score}/100 | ${signal}`;
     }
 
-    // â”€â”€â”€ GPT-4o CALL â”€â”€â”€
+    // --- GPT-4o CALL ---
     async function askGPT(question) {
       if (!mktData) return null;
       const d = mktData;
@@ -2138,7 +2138,7 @@ WICHTIG: Gib keine Anlageberatung. Weise immer auf Risiken hin. Antworte praegna
       return data.choices[0].message.content;
     }
 
-    // â”€â”€â”€ CHAT â”€â”€â”€
+    // --- CHAT ---
     const msgsEl = document.getElementById('messages');
     const qEl = document.getElementById('question');
 
@@ -2158,21 +2158,21 @@ WICHTIG: Gib keine Anlageberatung. Weise immer auf Risiken hin. Antworte praegna
       qEl.value = '';
 
       if (!mktData) {
-        const ld = addMsg('bot', 'â³ Lade Marktdaten...');
+        const ld = addMsg('bot', 'Lade Marktdaten...');
         await loadMarketData();
         ld.remove();
-        if (!mktData) { addMsg('bot', 'âš ï¸ Daten konnten nicht geladen werden.'); return; }
+        if (!mktData) { addMsg('bot', 'Warnung: Daten konnten nicht geladen werden.'); return; }
       }
 
       if (gptKey) {
-        const ld = addMsg('bot', 'ðŸ§  GPT-4o denkt nach...', 'loading');
+        const ld = addMsg('bot', 'GPT-4o denkt nach...', 'loading');
         try {
           const reply = await askGPT(question);
           ld.remove();
           addMsg('bot', reply, 'gpt-reply');
         } catch (e) {
           ld.remove();
-          addMsg('bot', `âš ï¸ GPT-Fehler: ${e.message}\n\nFallback auf Regelwerk:`, 'bot');
+          addMsg('bot', `Warnung: GPT-Fehler: ${e.message}\n\nFallback auf Regelwerk:`, 'bot');
           addMsg('bot', builtinAnswer(question));
         }
       } else {
@@ -2193,16 +2193,16 @@ WICHTIG: Gib keine Anlageberatung. Weise immer auf Risiken hin. Antworte praegna
       });
     });
 
-    // â”€â”€â”€ INIT â”€â”€â”€
+    // --- INIT ---
     (async () => {
-      addMsg('bot', 'ðŸ‘‹ Hallo! Ich bin dein BTC TraderCoach.\n\nLade Marktdaten...');
+      addMsg('bot', 'Hallo! Ich bin dein BTC TraderCoach.\n\nLade Marktdaten...');
       await loadMarketData();
       if (mktData) {
-        const gptHint = gptKey ? '\nðŸ§  GPT-4o ist aktiv â€” stell mir jede Frage!' : '\nðŸ’¡ Tipp: Gib deinen OpenAI API-Key ein fÃ¼r noch intelligentere Antworten!';
+        const gptHint = gptKey ? '\nGPT-4o ist aktiv - stell mir jede Frage!' : '\nTipp: Gib deinen OpenAI API-Key ein fuer noch intelligentere Antworten!';
         const decision = buildCoachDecision(getCtx());
-        addMsg('bot', `âœ… ${getDataModeIntro()} geladen!\n\nBTC: $${fmt(mktData.price)} | Score: ${mktData.score}/100 | Signal: ${mktData.signal}\nMTF: ${mktData.mtf.t1h}/${mktData.mtf.t4h}/${mktData.mtf.t1d}\nHeute: ${decision?.today || 'Lade...'}\nFreigabe: ${decision?.permission || 'Lade...'}\nQuellen: ${summarizeSources(mktData)}${gptHint}`);
+        addMsg('bot', `${getDataModeIntro()} geladen!\n\nBTC: $${fmt(mktData.price)} | Score: ${mktData.score}/100 | Signal: ${mktData.signal}\nMTF: ${mktData.mtf.t1h}/${mktData.mtf.t4h}/${mktData.mtf.t1d}\nHeute: ${decision?.today || 'Lade...'}\nFreigabe: ${decision?.permission || 'Lade...'}\nQuellen: ${summarizeSources(mktData)}${gptHint}`);
       } else {
-        addMsg('bot', 'âš ï¸ Daten konnten nicht geladen werden. Seite neu laden.');
+        addMsg('bot', 'Warnung: Daten konnten nicht geladen werden. Seite neu laden.');
       }
     })();
 
