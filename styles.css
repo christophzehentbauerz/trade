@@ -692,28 +692,199 @@ body::after {
     order: 1;
 }
 
-.price-ticker-bar {
+.decision-panel {
     order: 2;
 }
 
-.signal-banner {
+.price-ticker-bar {
     order: 3;
 }
 
-.no-trade-warning {
+.signal-banner {
     order: 4;
 }
 
-.strategy-tabs-container {
+.no-trade-warning {
     order: 5;
 }
 
-.strategy-content {
+.strategy-tabs-container {
     order: 6;
 }
 
-.dashboard-grid {
+.strategy-content {
     order: 7;
+}
+
+.dashboard-grid {
+    order: 8;
+}
+
+.decision-panel {
+    background: var(--bg-card);
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 0;
+}
+
+.decision-panel .card-body {
+    display: grid;
+    gap: 18px;
+}
+
+.decision-permission {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 18px 20px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.025);
+}
+
+.decision-permission.trade-erlaubt {
+    border-color: rgba(34, 197, 94, 0.35);
+    background: rgba(34, 197, 94, 0.08);
+}
+
+.decision-permission.nur-bei-trigger,
+.decision-permission.wait-for-confirmation {
+    border-color: rgba(245, 158, 11, 0.35);
+    background: rgba(245, 158, 11, 0.08);
+}
+
+.decision-permission.no-trade,
+.decision-permission.high-risk-day {
+    border-color: rgba(239, 68, 68, 0.35);
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.decision-kicker,
+.decision-subtitle,
+.horizon-label,
+.decision-label,
+.trigger-title {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    font-weight: 700;
+}
+
+.decision-permission-value {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.decision-grid,
+.horizon-grid,
+.trigger-grid,
+.decision-lower-grid {
+    display: grid;
+    gap: 12px;
+}
+
+.decision-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.decision-item,
+.horizon-card,
+.trigger-card,
+.strategy-brief,
+.why-no-trade {
+    padding: 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.025);
+}
+
+.decision-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.decision-item-wide {
+    grid-column: span 2;
+}
+
+.decision-value,
+.horizon-value,
+.trigger-main {
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.event-green {
+    color: var(--bullish);
+}
+
+.event-yellow {
+    color: var(--warning);
+}
+
+.event-red {
+    color: var(--bearish);
+}
+
+.horizon-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.horizon-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.trigger-grid,
+.decision-lower-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.trigger-card.long {
+    border-color: rgba(34, 197, 94, 0.2);
+}
+
+.trigger-card.short {
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+.trigger-main {
+    margin: 10px 0 12px;
+}
+
+.trigger-meta,
+.strategy-brief-grid {
+    display: grid;
+    gap: 8px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.why-no-trade ul {
+    margin: 12px 0 0;
+    padding-left: 18px;
+    color: var(--text-secondary);
+    display: grid;
+    gap: 8px;
+}
+
+@media (max-width: 900px) {
+    .decision-grid,
+    .horizon-grid,
+    .trigger-grid,
+    .decision-lower-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .decision-item-wide {
+        grid-column: span 1;
+    }
 }
 
 .how-it-works-section {

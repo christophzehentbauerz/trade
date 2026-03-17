@@ -285,6 +285,105 @@
             </details>
         </section>
 
+        <section class="decision-panel">
+            <div class="card-header">
+                <h2><span class="card-icon">⛳</span> Execution Filter</h2>
+                <span class="card-badge">Nur Entscheidungslogik</span>
+            </div>
+            <div class="card-body">
+                <div class="decision-permission" id="tradePermissionCard">
+                    <span class="decision-kicker">Trade Permission</span>
+                    <span class="decision-permission-value" id="tradePermissionValue">Lade...</span>
+                </div>
+
+                <div class="decision-grid">
+                    <div class="decision-item">
+                        <span class="decision-label">Bevorzugte Richtung</span>
+                        <span class="decision-value" id="preferredDirectionValue">--</span>
+                    </div>
+                    <div class="decision-item">
+                        <span class="decision-label">Marktphase</span>
+                        <span class="decision-value" id="marketPhaseValue">--</span>
+                    </div>
+                    <div class="decision-item">
+                        <span class="decision-label">Beste Strategie heute</span>
+                        <span class="decision-value" id="bestStrategyValue">--</span>
+                    </div>
+                    <div class="decision-item">
+                        <span class="decision-label">Event-Risiko</span>
+                        <span class="decision-value" id="eventRiskValue">--</span>
+                    </div>
+                    <div class="decision-item">
+                        <span class="decision-label">Hebel erlaubt</span>
+                        <span class="decision-value" id="leveragePermissionValue">--</span>
+                    </div>
+                    <div class="decision-item">
+                        <span class="decision-label">Spot erlaubt</span>
+                        <span class="decision-value" id="spotPermissionValue">--</span>
+                    </div>
+                    <div class="decision-item decision-item-wide">
+                        <span class="decision-label">Persoenlicher Modus</span>
+                        <span class="decision-value" id="styleFitValue">--</span>
+                    </div>
+                </div>
+
+                <div class="horizon-grid">
+                    <div class="horizon-card">
+                        <span class="horizon-label">Tagesurteil</span>
+                        <span class="horizon-value" id="todayVerdict">--</span>
+                    </div>
+                    <div class="horizon-card">
+                        <span class="horizon-label">Intraday</span>
+                        <span class="horizon-value" id="intradayVerdict">--</span>
+                    </div>
+                    <div class="horizon-card">
+                        <span class="horizon-label">Swing</span>
+                        <span class="horizon-value" id="swingVerdict">--</span>
+                    </div>
+                    <div class="horizon-card">
+                        <span class="horizon-label">Spot</span>
+                        <span class="horizon-value" id="spotVerdict">--</span>
+                    </div>
+                </div>
+
+                <div class="trigger-grid">
+                    <div class="trigger-card long">
+                        <div class="trigger-title">Long-Trigger</div>
+                        <div class="trigger-main" id="longTriggerLabel">--</div>
+                        <div class="trigger-meta"><strong>Entry:</strong> <span id="longTriggerEntry">--</span></div>
+                        <div class="trigger-meta"><strong>Invalidierung:</strong> <span id="longTriggerInvalidation">--</span></div>
+                        <div class="trigger-meta"><strong>Gueltig bis:</strong> <span id="longTriggerValidity">--</span></div>
+                    </div>
+                    <div class="trigger-card short">
+                        <div class="trigger-title">Short-Trigger</div>
+                        <div class="trigger-main" id="shortTriggerLabel">--</div>
+                        <div class="trigger-meta"><strong>Entry:</strong> <span id="shortTriggerEntry">--</span></div>
+                        <div class="trigger-meta"><strong>Invalidierung:</strong> <span id="shortTriggerInvalidation">--</span></div>
+                        <div class="trigger-meta"><strong>Gueltig bis:</strong> <span id="shortTriggerValidity">--</span></div>
+                    </div>
+                </div>
+
+                <div class="decision-lower-grid">
+                    <div class="strategy-brief">
+                        <div class="decision-subtitle">Strategie-Status</div>
+                        <div class="strategy-brief-grid">
+                            <div><strong>Status:</strong> <span id="strategyStatusValue">--</span></div>
+                            <div><strong>Trigger:</strong> <span id="strategyTriggerValue">--</span></div>
+                            <div><strong>Invalidierung:</strong> <span id="strategyInvalidationValue">--</span></div>
+                            <div><strong>Bevorzugter Entry:</strong> <span id="strategyEntryValue">--</span></div>
+                            <div><strong>Marktumfeld:</strong> <span id="strategyEnvironmentValue">--</span></div>
+                        </div>
+                    </div>
+                    <div class="why-no-trade">
+                        <div class="decision-subtitle">Warum heute kein guter Trade ist</div>
+                        <ul id="whyNoTradeList">
+                            <li>Warte auf Daten...</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Main Signal Banner -->
         <section class="signal-banner" id="signalBanner">
             <div class="signal-content">
