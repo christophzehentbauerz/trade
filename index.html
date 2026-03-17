@@ -302,9 +302,59 @@
                 </div>
             </div>
             <div class="card-body">
+                <div class="top-decision-strip">
+                    <div class="top-decision-item top-action">
+                        <span class="decision-label">Jetzt tun</span>
+                        <span class="top-decision-value" id="actionNowValue">--</span>
+                    </div>
+                    <div class="top-decision-item">
+                        <span class="decision-label">Nur gueltig wenn</span>
+                        <span class="top-decision-value" id="validOnlyIfValue">--</span>
+                    </div>
+                    <div class="top-decision-item">
+                        <span class="decision-label">Auf keinen Fall</span>
+                        <span class="top-decision-value" id="doNotTradeValue">--</span>
+                    </div>
+                    <div class="top-decision-item">
+                        <span class="decision-label">Hebel</span>
+                        <span class="top-decision-value" id="topLeverageValue">--</span>
+                    </div>
+                    <div class="top-decision-item">
+                        <span class="decision-label">Spot</span>
+                        <span class="top-decision-value" id="topSpotValue">--</span>
+                    </div>
+                </div>
+
                 <div class="decision-permission" id="tradePermissionCard">
-                    <span class="decision-kicker">Trade Permission</span>
-                    <span class="decision-permission-value" id="tradePermissionValue">Lade...</span>
+                    <span class="decision-kicker">Status: Daten werden geladen</span>
+                    <span class="decision-permission-value" id="tradePermissionValue">Wird geladen</span>
+                </div>
+
+                <div class="integrity-card" id="liveIntegrityCard">
+                    <div class="integrity-header">
+                        <div>
+                            <div class="decision-subtitle">Live Integrity Gate</div>
+                            <div class="integrity-status" id="liveIntegrityStatus">--</div>
+                        </div>
+                        <div class="integrity-confidence-wrap">
+                            <span class="integrity-confidence-label">Live Confidence</span>
+                            <span class="integrity-confidence-value" id="liveConfidenceValue">--</span>
+                        </div>
+                    </div>
+                    <div class="integrity-grid">
+                        <div class="integrity-item">
+                            <span class="decision-label">Freshness</span>
+                            <span class="decision-value" id="liveFreshnessValue">--</span>
+                        </div>
+                        <div class="integrity-item">
+                            <span class="decision-label">Quellenstatus</span>
+                            <span class="decision-value" id="liveSourcesValue">--</span>
+                        </div>
+                        <div class="integrity-item integrity-item-wide">
+                            <span class="decision-label">Operativer Blocker</span>
+                            <span class="decision-value" id="liveBlockerValue">--</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="decision-grid">
@@ -320,6 +370,10 @@
                     <div class="decision-item">
                         <span class="decision-label">Marktphase</span>
                         <span class="decision-value" id="marketPhaseValue">--</span>
+                    </div>
+                    <div class="decision-item">
+                        <span class="decision-label">Gueltigkeit</span>
+                        <span class="decision-value" id="validityWindowValue">--</span>
                     </div>
                     <div class="decision-item">
                         <span class="decision-label">Beste Strategie heute</span>
@@ -422,6 +476,36 @@
                     </div>
                 </div>
 
+                <div class="hard-trigger-card" id="hardTriggerCard">
+                    <div class="decision-subtitle">Hard Trigger Card</div>
+                    <div class="hard-trigger-grid">
+                        <div class="hard-trigger-item">
+                            <span class="decision-label">Aktiver Move</span>
+                            <span class="decision-value" id="hardTriggerDirection">--</span>
+                        </div>
+                        <div class="hard-trigger-item">
+                            <span class="decision-label">Trigger</span>
+                            <span class="decision-value" id="hardTriggerValue">--</span>
+                        </div>
+                        <div class="hard-trigger-item">
+                            <span class="decision-label">Invalidierung</span>
+                            <span class="decision-value" id="hardTriggerInvalidation">--</span>
+                        </div>
+                        <div class="hard-trigger-item">
+                            <span class="decision-label">RR</span>
+                            <span class="decision-value" id="hardTriggerRR">--</span>
+                        </div>
+                        <div class="hard-trigger-item">
+                            <span class="decision-label">Gueltig bis</span>
+                            <span class="decision-value" id="hardTriggerValidity">--</span>
+                        </div>
+                        <div class="hard-trigger-item hard-trigger-item-wide">
+                            <span class="decision-label">Nicht handeln, wenn</span>
+                            <span class="decision-value" id="hardTriggerBlock">--</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="trigger-grid">
                     <div class="trigger-card long">
                         <div class="trigger-title">Long-Trigger</div>
@@ -465,7 +549,7 @@
             <div class="signal-content">
                 <div class="signal-primary">
                     <span class="signal-label">PRIMÄRES SIGNAL</span>
-                    <span class="signal-value" id="primarySignal">LOADING...</span>
+                    <span class="signal-value" id="primarySignal">DATEN WERDEN GELADEN</span>
                 </div>
                 <div class="signal-confidence"
                     title="Je höher die Konfidenz, desto sicherer ist das Signal. Max. 85% weil Märkte nie 100% vorhersagbar sind.">
@@ -476,7 +560,7 @@
                     <span class="confidence-value" id="confidenceValue">--%</span>
                 </div>
                 <div class="signal-summary" id="signalSummary">
-                    Lade Marktdaten...
+                    Marktdaten werden geladen...
                 </div>
             </div>
             <!-- Signal Explanation Box -->
@@ -578,6 +662,21 @@
                 </div>
 
                 <div class="sm-signal-body">
+                    <div class="strategy-decision-card" id="smartMoneyDecisionCard">
+                        <div class="strategy-decision-top">
+                            <span class="strategy-status-pill" id="smartMoneyStatus">BEOBACHTEN</span>
+                            <span class="strategy-priority" id="smartMoneyPriority">Prioritaet: --</span>
+                        </div>
+                        <div class="strategy-decision-grid">
+                            <div><strong>Zweck:</strong> Intraday Reclaim-, Sweep- und Range-Entries</div>
+                            <div><strong>Ideales Umfeld:</strong> <span id="smartMoneyEnvironment">--</span></div>
+                            <div><strong>Trigger:</strong> <span id="smartMoneyTrigger">--</span></div>
+                            <div><strong>Invalidierung:</strong> <span id="smartMoneyInvalidation">--</span></div>
+                            <div><strong>Bevorzugter Entry:</strong> <span id="smartMoneyEntryPref">--</span></div>
+                            <div><strong>Risiko-Hinweis:</strong> <span id="smartMoneyRisk">--</span></div>
+                        </div>
+                    </div>
+
                     <!-- Main Signal Display -->
                     <div class="sm-main-signal">
                         <div class="sm-signal-label">SIGNAL</div>
@@ -703,6 +802,21 @@
                 </div>
 
                 <div class="sm-signal-body">
+                    <div class="strategy-decision-card" id="trendDecisionCard">
+                        <div class="strategy-decision-top">
+                            <span class="strategy-status-pill" id="trendStrategyStatus">BEOBACHTEN</span>
+                            <span class="strategy-priority" id="trendStrategyPriority">Prioritaet: --</span>
+                        </div>
+                        <div class="strategy-decision-grid">
+                            <div><strong>Zweck:</strong> Trendfolge bei bestaetigtem Breakout</div>
+                            <div><strong>Ideales Umfeld:</strong> <span id="trendStrategyEnvironment">--</span></div>
+                            <div><strong>Trigger:</strong> <span id="trendStrategyTrigger">--</span></div>
+                            <div><strong>Invalidierung:</strong> <span id="trendStrategyInvalidation">--</span></div>
+                            <div><strong>Bevorzugter Entry:</strong> <span id="trendStrategyEntry">--</span></div>
+                            <div><strong>Risiko-Hinweis:</strong> <span id="trendStrategyRisk">--</span></div>
+                        </div>
+                    </div>
+
                     <!-- Main Signal -->
                     <div class="sm-main-signal">
                         <div class="sm-signal-label">SIGNAL</div>
@@ -815,6 +929,21 @@
                 </div>
 
                 <div class="sm-signal-body">
+                    <div class="strategy-decision-card" id="spotDecisionCard">
+                        <div class="strategy-decision-top">
+                            <span class="strategy-status-pill" id="spotStrategyStatus">BEOBACHTEN</span>
+                            <span class="strategy-priority" id="spotStrategyPriority">Prioritaet: --</span>
+                        </div>
+                        <div class="strategy-decision-grid">
+                            <div><strong>Zweck:</strong> defensive Spot-Akkumulation</div>
+                            <div><strong>Ideales Umfeld:</strong> <span id="spotStrategyEnvironment">--</span></div>
+                            <div><strong>Trigger:</strong> <span id="spotStrategyTrigger">--</span></div>
+                            <div><strong>Invalidierung:</strong> <span id="spotStrategyInvalidation">--</span></div>
+                            <div><strong>Bevorzugter Entry:</strong> <span id="spotStrategyEntry">--</span></div>
+                            <div><strong>Risiko-Hinweis:</strong> <span id="spotStrategyRisk">--</span></div>
+                        </div>
+                    </div>
+
                     <!-- Main Signal -->
                     <div class="sm-main-signal">
                         <div class="sm-signal-label">STRATEGY ZONE</div>

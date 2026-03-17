@@ -1360,6 +1360,47 @@ function formatDecisionPrice(value) {
     return Number.isFinite(value) ? `$${formatNumber(value, 0)}` : '--';
 }
 
+function buildLiveIntegrityModel(unified) {
+    const quality = state.dataQuality || { mode: 'loading', issues: [], warnings: [] };
+    const ageMinutes = state.lastUpdate ? (Date.now() - state.lastUpdate.getTime()) / 60000 : null;
+    const warningThreshold = Math.max(7, CONFIG.refreshInterval / 60000 * 1.4);
+    const staleThreshold = Math.max(12, CONFIG.refreshInterval / 60000 * 2.2);
+
+    let confidence = 100;
+    if (quality.mode === 'partial') confidence -= 20;
+    if (quality.mode === 'degraded') confidence -= 45;
+    confidence -= (quality.warnings?.length || 0) * 6;
+    confidence -= (quality.issues?.length || 0) * 14;
+    if (ageMinutes !== null && ageMinutes > warningThreshold) confidence -= 16;
+    if (ageMinutes !== null && ageMinutes > staleThreshold) confidence -= 24;
+    if (!state.price || !state.priceHistory?.length) confidence -= 25;
+    if (unified?.filters?.isLowLiquidity) confidence -= 8;
+    confidence = Math.max(0, Math.min(100, Math.round(confidence)));
+
+    const blockers = [];
+    if (quality.mode === 'degraded') blockers.push(quality.issues?.[0] || 'Kritische Kernquelle fehlt');
+    if (ageMinutes !== null && ageMinutes > staleThreshold) blockers.push(`Daten sind stale (${Math.round(ageMinutes)} min alt)`);
+    if ((quality.warnings?.length || 0) >= 3) blockers.push('Zu viele Teil-Fallbacks gleichzeitig');
+    if (!state.priceHistory?.length) blockers.push('Preis-Historie fehlt');
+
+    const blocked = blockers.length > 0;
+    const caution = !blocked && (quality.mode === 'partial' || (quality.warnings?.length || 0) > 0 || (ageMinutes !== null && ageMinutes > warningThreshold));
+
+    return {
+        confidence,
+        blocked,
+        caution,
+        status: blocked ? 'BLOCKED' : caution ? 'LIVE CAUTION' : 'LIVE READY',
+        freshness: ageMinutes === null ? 'gerade geladen' : ageMinutes < 1 ? 'unter 1 min' : `${Math.round(ageMinutes)} min alt`,
+        sourceState: blocked
+            ? `${quality.summary} / ${quality.issues?.length || 0} kritisch`
+            : quality.mode === 'partial'
+                ? `${quality.summary} / ${quality.warnings?.length || 0} Warnungen`
+                : 'Live / Kernquellen ok',
+        blocker: blockers[0] || 'Kein harter Datenblocker aktiv'
+    };
+}
+
 function getUpcomingScheduledEvents(horizonDays = 14) {
     const now = Date.now();
     const horizonMs = horizonDays * 24 * 60 * 60 * 1000;
@@ -1541,11 +1582,13 @@ function buildDecisionModel() {
     const weightedRR = unified?.weightedRR ?? 0;
     const phase = getMarketPhase(unified, trend, rsi, volatilityPercent);
     const eventRisk = getEventRisk(unified);
+    const liveIntegrity = buildLiveIntegrityModel(unified);
     const inMiddleOfRange = price > support * 1.003 && price < resistance * 0.997;
     const macroSentimentConflict = Math.abs((state.scores.macro ?? 5) - (state.scores.sentiment ?? 5)) >= 2.5;
     const noTradeReasons = [];
 
     if (state.dataQuality?.mode === 'degraded') noTradeReasons.push('Datenqualitaet ist nicht operativ belastbar');
+    if (liveIntegrity.blocked) noTradeReasons.push(`Live Gate blockiert: ${liveIntegrity.blocker}`);
     if (inMiddleOfRange) noTradeReasons.push('Preis handelt mitten in der Range');
     if (macroSentimentConflict) noTradeReasons.push('Makro und Sentiment laufen gegeneinander');
     if (weightedRR > 0 && weightedRR < TRADER_PROFILE.minRR) noTradeReasons.push(`R:R unter ${TRADER_PROFILE.minRR}:1`);
@@ -1561,7 +1604,7 @@ function buildDecisionModel() {
     const bias = unified.signal === 'LONG' ? 'LONG BIAS' : unified.signal === 'SHORT' ? 'SHORT BIAS' : phase === 'Squeeze vor Ausbruch' ? 'WAIT FOR BREAKOUT' : 'NO TRADE';
 
     let permission = 'NO TRADE';
-    if (state.dataQuality?.mode === 'degraded' || (TRADER_PROFILE.avoidMacroRisk && eventRisk.level === 'red')) {
+    if (liveIntegrity.blocked || state.dataQuality?.mode === 'degraded' || (TRADER_PROFILE.avoidMacroRisk && eventRisk.level === 'red')) {
         permission = 'HIGH RISK DAY';
     } else if (unified.signal !== 'NEUTRAL' && !inMiddleOfRange && weightedRR >= TRADER_PROFILE.minRR && !macroSentimentConflict) {
         permission = 'TRADE ERLAUBT';
@@ -1572,11 +1615,12 @@ function buildDecisionModel() {
     }
 
     const leverageAllowed = permission === 'TRADE ERLAUBT'
+        && !liveIntegrity.caution
         && !unified.filters.isHighVolatility
         && !unified.filters.isLowLiquidity
         && unified.confidence >= 70
         && (!TRADER_PROFILE.avoidWeekends || ![0, 6].includes(new Date().getDay()));
-    const spotAllowed = state.dataQuality?.mode !== 'degraded' && ((state.fearGreedIndex ?? 50) <= 75 || TRADER_PROFILE.preferSpotOnRiskDays);
+    const spotAllowed = !liveIntegrity.blocked && state.dataQuality?.mode !== 'degraded' && ((state.fearGreedIndex ?? 50) <= 75 || TRADER_PROFILE.preferSpotOnRiskDays);
 
     const longTriggerPrice = Math.max(price, resistance);
     const shortTriggerPrice = Math.min(price, support);
@@ -1614,11 +1658,45 @@ function buildDecisionModel() {
     }
 
     const bestStrategy = getBestStrategyForPhase(phase, unified.signal);
-    const strategyStatus = permission === 'TRADE ERLAUBT' ? 'bestaetigt' : permission === 'NUR BEI TRIGGER' ? 'vorbereitet' : permission === 'WAIT FOR CONFIRMATION' ? 'trigger abwarten' : 'inaktiv';
+    const strategyStatus = permission === 'TRADE ERLAUBT'
+        ? 'BESTAETIGT'
+        : permission === 'NUR BEI TRIGGER'
+            ? 'FAST AUSGELOEST'
+            : permission === 'WAIT FOR CONFIRMATION'
+                ? 'BEOBACHTEN'
+                : permission === 'HIGH RISK DAY'
+                    ? 'UNGUELTIG'
+                    : 'INAKTIV';
+    const topStatus = permission === 'TRADE ERLAUBT'
+        ? bias
+        : permission === 'HIGH RISK DAY'
+            ? 'NO TRADE'
+            : spotAllowed && (state.fearGreedIndex ?? 50) < 35
+                ? 'SPOT BUY'
+                : permission === 'NUR BEI TRIGGER' || permission === 'WAIT FOR CONFIRMATION'
+                    ? 'WAIT FOR TRIGGER'
+                    : 'NO TRADE';
+    const actionNow = permission === 'TRADE ERLAUBT'
+        ? (unified.signal === 'SHORT' ? 'SHORT ONLY' : 'LONG ONLY')
+        : permission === 'HIGH RISK DAY'
+            ? 'NO TRADE'
+            : 'WAIT';
+    const primaryTrigger = unified.signal === 'SHORT'
+        ? `Short erst unter ${formatDecisionPrice(shortTriggerPrice)} oder bei Rejection an ${formatDecisionPrice(resistance)}`
+        : `Long erst ueber ${formatDecisionPrice(longTriggerPrice)} oder nach Reclaim-Retest`;
+    const doNotTrade = [...new Set(noTradeReasons)][0] || 'Kein harter Blocker aktiv';
+    const activeEntryZone = unified.entryZone
+        ? `${formatDecisionPrice(unified.entryZone[0])} - ${formatDecisionPrice(unified.entryZone[1])}`
+        : unified.signal === 'SHORT'
+            ? `Rejection unter ${formatDecisionPrice(resistance)}`
+            : `Retest ueber ${formatDecisionPrice(longTriggerPrice)}`;
+    const takeProfits = [unified.tp1, unified.tp2, unified.tp3].filter(Number.isFinite).map(formatDecisionPrice).join(' / ') || '--';
+    const primaryRR = weightedRR > 0 ? `1:${formatNumber(weightedRR, 1)}` : `unter ${TRADER_PROFILE.minRR}:1`;
 
     return {
         unified,
         bias,
+        topStatus,
         permission,
         setupGrade,
         gradeReasons,
@@ -1630,6 +1708,25 @@ function buildDecisionModel() {
         noTradeReasons: [...new Set(noTradeReasons)].slice(0, 6),
         bestStrategy,
         strategyStatus,
+        liveIntegrity,
+        actionNow,
+        validOnlyIf: primaryTrigger,
+        doNotTrade,
+        topLeverage: leverageAllowed ? `JA, max ${Math.min(TRADER_PROFILE.maxLeverage, parseInt(unified.maxLeverage, 10) || TRADER_PROFILE.maxLeverage)}x` : permission === 'TRADE ERLAUBT' ? 'NUR KLEIN' : 'NEIN',
+        topSpot: spotAllowed ? 'JA' : 'NEIN',
+        validity: permission === 'TRADE ERLAUBT' ? 'gueltig bis naechstem 4h Close' : 'neu pruefen zum naechsten 4h Close',
+        actionBox: {
+            direction: bias,
+            strategy: bestStrategy.name,
+            longTrigger: longTriggerText,
+            shortTrigger: shortTriggerText,
+            entryZone: activeEntryZone,
+            invalidation: formatDecisionPrice(unified.stopLoss || (unified.signal === 'SHORT' ? resistance * 1.005 : support * 0.995)),
+            stopLoss: formatDecisionPrice(unified.stopLoss),
+            takeProfits,
+            rr: primaryRR,
+            block: doNotTrade
+        },
         triggerLong: {
             label: longTriggerText,
             entry: unified.signal === 'LONG' && unified.entryZone ? `${formatDecisionPrice(unified.entryZone[0])} - ${formatDecisionPrice(unified.entryZone[1])}` : `Retest ueber ${formatDecisionPrice(longTriggerPrice)}`,
@@ -1642,6 +1739,14 @@ function buildDecisionModel() {
             invalidation: formatDecisionPrice(unified.signal === 'SHORT' ? unified.stopLoss : resistance * 1.005),
             validUntil: 'naechster 4h Close'
         },
+        hardTrigger: {
+            direction: unified.signal === 'SHORT' ? 'SHORT SETUP' : unified.signal === 'LONG' ? 'LONG SETUP' : 'WAIT MODE',
+            trigger: primaryTrigger,
+            invalidation: formatDecisionPrice(unified.stopLoss || (unified.signal === 'SHORT' ? resistance * 1.005 : support * 0.995)),
+            rr: primaryRR,
+            validity: 'naechster 4h Close',
+            block: doNotTrade
+        },
         styleFit: leverageAllowed || (spotAllowed && permission !== 'HIGH RISK DAY')
             ? 'passt zu deinem Stil'
             : 'passt heute nicht zu deinem Stil'
@@ -1652,9 +1757,21 @@ function updateDecisionPanel() {
     const model = buildDecisionModel();
     if (!model) return;
 
+    const actionNowEl = document.getElementById('actionNowValue');
+    const validOnlyIfEl = document.getElementById('validOnlyIfValue');
+    const doNotTradeEl = document.getElementById('doNotTradeValue');
+    const topLeverageEl = document.getElementById('topLeverageValue');
+    const topSpotEl = document.getElementById('topSpotValue');
     const permissionEl = document.getElementById('tradePermissionValue');
     const permissionCard = document.getElementById('tradePermissionCard');
+    const liveIntegrityCard = document.getElementById('liveIntegrityCard');
+    const liveIntegrityStatusEl = document.getElementById('liveIntegrityStatus');
+    const liveConfidenceEl = document.getElementById('liveConfidenceValue');
+    const liveFreshnessEl = document.getElementById('liveFreshnessValue');
+    const liveSourcesEl = document.getElementById('liveSourcesValue');
+    const liveBlockerEl = document.getElementById('liveBlockerValue');
     const phaseEl = document.getElementById('marketPhaseValue');
+    const validityEl = document.getElementById('validityWindowValue');
     const biasEl = document.getElementById('preferredDirectionValue');
     const gradeEl = document.getElementById('setupGradeValue');
     const gradeCard = document.getElementById('setupGradeCard');
@@ -1670,9 +1787,23 @@ function updateDecisionPanel() {
         overrideSelect.value = state.eventFilter?.override || 'auto';
     }
 
+    actionNowEl.textContent = model.actionNow;
+    validOnlyIfEl.textContent = model.validOnlyIf;
+    doNotTradeEl.textContent = model.doNotTrade;
+    topLeverageEl.textContent = model.topLeverage;
+    topSpotEl.textContent = model.topSpot;
+
     permissionEl.textContent = model.permission;
     permissionCard.className = `decision-permission ${model.permission.toLowerCase().replace(/\s+/g, '-')}`;
+    permissionCard.querySelector('.decision-kicker').textContent = `Status: ${model.topStatus}`;
+    liveIntegrityCard.className = `integrity-card ${model.liveIntegrity.status.toLowerCase().replace(/\s+/g, '-')}`;
+    liveIntegrityStatusEl.textContent = model.liveIntegrity.status;
+    liveConfidenceEl.textContent = `${model.liveIntegrity.confidence}%`;
+    liveFreshnessEl.textContent = model.liveIntegrity.freshness;
+    liveSourcesEl.textContent = model.liveIntegrity.sourceState;
+    liveBlockerEl.textContent = model.liveIntegrity.blocker;
     phaseEl.textContent = model.phase;
+    validityEl.textContent = model.validity;
     biasEl.textContent = model.bias;
     gradeEl.textContent = model.setupGrade;
     gradeCard.className = `decision-item setup-grade-card grade-${model.setupGrade.toLowerCase().replace('+', 'plus').replace(/\s+/g, '-')}`;
@@ -1688,6 +1819,12 @@ function updateDecisionPanel() {
     document.getElementById('intradayVerdict').textContent = model.horizons.intraday;
     document.getElementById('swingVerdict').textContent = model.horizons.swing;
     document.getElementById('spotVerdict').textContent = model.horizons.spot;
+    document.getElementById('hardTriggerDirection').textContent = model.hardTrigger.direction;
+    document.getElementById('hardTriggerValue').textContent = model.hardTrigger.trigger;
+    document.getElementById('hardTriggerInvalidation').textContent = model.hardTrigger.invalidation;
+    document.getElementById('hardTriggerRR').textContent = model.hardTrigger.rr;
+    document.getElementById('hardTriggerValidity').textContent = model.validity;
+    document.getElementById('hardTriggerBlock').textContent = model.hardTrigger.block;
 
     document.getElementById('longTriggerLabel').textContent = model.triggerLong.label;
     document.getElementById('longTriggerEntry').textContent = model.triggerLong.entry;
@@ -1703,12 +1840,139 @@ function updateDecisionPanel() {
     document.getElementById('strategyTriggerValue').textContent = model.bestStrategy.trigger;
     document.getElementById('strategyInvalidationValue').textContent = model.unified.stopLoss ? formatDecisionPrice(model.unified.stopLoss) : 'erst bei Trigger definieren';
     document.getElementById('strategyEntryValue').textContent = model.bestStrategy.entry;
-    document.getElementById('strategyEnvironmentValue').textContent = model.bestStrategy.environment;
+    document.getElementById('strategyEnvironmentValue').textContent = `${model.bestStrategy.environment} / ${model.validity}`;
 
     const whyList = document.getElementById('whyNoTradeList');
     whyList.innerHTML = model.noTradeReasons.length
         ? model.noTradeReasons.map(reason => `<li>${reason}</li>`).join('')
         : '<li>Kein harter Blocker aktiv. Trigger und Risiko-Plan entscheiden.</li>';
+}
+
+function setTextIfExists(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+}
+
+function applyDecisionFallbackState(message) {
+    [
+        ['actionNowValue', 'NO TRADE'],
+        ['validOnlyIfValue', 'erst nach erfolgreichem Datenupdate'],
+        ['doNotTradeValue', message],
+        ['topLeverageValue', 'NEIN'],
+        ['topSpotValue', 'NEIN'],
+        ['tradePermissionValue', 'NO TRADE'],
+        ['liveIntegrityStatus', 'BLOCKED'],
+        ['liveConfidenceValue', '0%'],
+        ['liveFreshnessValue', 'kein gueltiges Update'],
+        ['liveSourcesValue', 'Kernbereiche unvollstaendig'],
+        ['liveBlockerValue', message],
+        ['preferredDirectionValue', 'NO TRADE'],
+        ['setupGradeValue', 'NO TRADE'],
+        ['setupGradeReason', 'Ohne frische Kerndaten keine Freigabe'],
+        ['marketPhaseValue', 'Risk-Off'],
+        ['validityWindowValue', 'nach Datenupdate neu pruefen'],
+        ['bestStrategyValue', 'keine operative Freigabe'],
+        ['eventRiskValue', 'Rot - Daten fehlen'],
+        ['leveragePermissionValue', 'Nein'],
+        ['spotPermissionValue', 'Nein'],
+        ['styleFitValue', 'passt heute nicht zu deinem Stil'],
+        ['todayVerdict', 'Heute kein Trade'],
+        ['intradayVerdict', 'Warten auf neue Daten'],
+        ['swingVerdict', 'Kein Swing ohne frische Daten'],
+        ['spotVerdict', 'Spot heute aussetzen'],
+        ['hardTriggerDirection', 'WAIT MODE'],
+        ['hardTriggerValue', 'Kein Trigger ohne Daten'],
+        ['hardTriggerInvalidation', '--'],
+        ['hardTriggerRR', '--'],
+        ['hardTriggerValidity', 'neu pruefen nach Datenupdate'],
+        ['hardTriggerBlock', message]
+    ].forEach(([id, value]) => setTextIfExists(id, value));
+
+    const permissionCard = document.getElementById('tradePermissionCard');
+    if (permissionCard) permissionCard.className = 'decision-permission high-risk-day';
+    const liveIntegrityCard = document.getElementById('liveIntegrityCard');
+    if (liveIntegrityCard) liveIntegrityCard.className = 'integrity-card blocked';
+
+    const whyList = document.getElementById('whyNoTradeList');
+    if (whyList) whyList.innerHTML = `<li>${message}</li>`;
+
+    [
+        ['smartMoneyEnvironment', 'keine Freigabe'],
+        ['smartMoneyTrigger', 'auf frische Daten warten'],
+        ['smartMoneyInvalidation', '--'],
+        ['smartMoneyEntryPref', '--'],
+        ['smartMoneyRisk', message],
+        ['trendStrategyEnvironment', 'keine Freigabe'],
+        ['trendStrategyTrigger', 'auf frische Daten warten'],
+        ['trendStrategyInvalidation', '--'],
+        ['trendStrategyEntry', '--'],
+        ['trendStrategyRisk', message],
+        ['spotStrategyEnvironment', 'keine Freigabe'],
+        ['spotStrategyTrigger', 'auf frische Daten warten'],
+        ['spotStrategyInvalidation', '--'],
+        ['spotStrategyEntry', '--'],
+        ['spotStrategyRisk', message]
+    ].forEach(([id, value]) => setTextIfExists(id, value));
+
+    applyStrategyCardState('smartMoneyDecisionCard', 'smartMoneyStatus', 'smartMoneyPriority', { state: 'UNGUELTIG', priority: 'niedrig' });
+    applyStrategyCardState('trendDecisionCard', 'trendStrategyStatus', 'trendStrategyPriority', { state: 'UNGUELTIG', priority: 'niedrig' });
+    applyStrategyCardState('spotDecisionCard', 'spotStrategyStatus', 'spotStrategyPriority', { state: 'UNGUELTIG', priority: 'niedrig' });
+}
+
+function applyStrategyCardState(cardId, statusId, priorityId, payload) {
+    const card = document.getElementById(cardId);
+    const statusEl = document.getElementById(statusId);
+    const priorityEl = document.getElementById(priorityId);
+    if (!card || !statusEl || !priorityEl) return;
+    card.dataset.state = payload.state.toLowerCase().replace(/\s+/g, '-');
+    statusEl.textContent = payload.state;
+    priorityEl.textContent = `Prioritaet: ${payload.priority}`;
+}
+
+function updateStrategyDecisionCards() {
+    const model = buildDecisionModel();
+    if (!model) return;
+
+    const baseState = model.strategyStatus;
+    const riskText = model.liveIntegrity.blocked
+        ? `Nicht handeln solange ${model.liveIntegrity.blocker}`
+        : model.doNotTrade;
+
+    applyStrategyCardState('smartMoneyDecisionCard', 'smartMoneyStatus', 'smartMoneyPriority', {
+        state: model.phase === 'Range' || model.phase === 'Volatile Chop'
+            ? (model.permission === 'TRADE ERLAUBT' ? 'BESTAETIGT' : model.permission === 'NUR BEI TRIGGER' ? 'FAST AUSGELOEST' : 'BEOBACHTEN')
+            : 'INAKTIV',
+        priority: model.bestStrategy.name === 'Smart Money' ? 'hoch' : 'sekundaer'
+    });
+    setTextIfExists('smartMoneyEnvironment', 'Range / Rejection / Intraday-Fokus');
+    setTextIfExists('smartMoneyTrigger', model.unified.signal === 'SHORT' ? model.triggerShort.label : model.triggerLong.label);
+    setTextIfExists('smartMoneyInvalidation', model.actionBox.invalidation);
+    setTextIfExists('smartMoneyEntryPref', model.unified.signal === 'SHORT' ? model.triggerShort.entry : model.triggerLong.entry);
+    setTextIfExists('smartMoneyRisk', riskText);
+
+    applyStrategyCardState('trendDecisionCard', 'trendStrategyStatus', 'trendStrategyPriority', {
+        state: model.bestStrategy.name === 'TrendGuard Dynamic'
+            ? baseState
+            : model.phase === 'Trend Up' || model.phase === 'Trend Down' || model.phase === 'Squeeze vor Ausbruch'
+                ? 'BEOBACHTEN'
+                : 'INAKTIV',
+        priority: model.bestStrategy.name === 'TrendGuard Dynamic' ? 'hoch' : 'sekundaer'
+    });
+    setTextIfExists('trendStrategyEnvironment', 'starker Trend oder Breakout-Phase');
+    setTextIfExists('trendStrategyTrigger', model.bestStrategy.name === 'TrendGuard Dynamic' ? model.bestStrategy.trigger : 'Warte auf Trendfolge mit 4h Close');
+    setTextIfExists('trendStrategyInvalidation', model.actionBox.invalidation);
+    setTextIfExists('trendStrategyEntry', model.bestStrategy.name === 'TrendGuard Dynamic' ? model.bestStrategy.entry : 'Breakout oder Retest von oben/unten');
+    setTextIfExists('trendStrategyRisk', riskText);
+
+    applyStrategyCardState('spotDecisionCard', 'spotStrategyStatus', 'spotStrategyPriority', {
+        state: model.spotAllowed ? ((state.fearGreedIndex ?? 50) < 35 ? 'BESTAETIGT' : 'BEOBACHTEN') : 'INAKTIV',
+        priority: model.bestStrategy.name === 'Smart Accumulator' || model.topStatus === 'SPOT BUY' ? 'hoch' : 'ergaenzend'
+    });
+    setTextIfExists('spotStrategyEnvironment', 'defensive Tage / Panic / Risk-Off');
+    setTextIfExists('spotStrategyTrigger', model.topStatus === 'SPOT BUY' ? 'Spot in Schwaeche staffeln oder Reclaim kaufen' : 'Nur bei deutlicher Schwaeche oder sauberem Reclaim');
+    setTextIfExists('spotStrategyInvalidation', model.liveIntegrity.blocked ? 'erst nach frischen Daten neu pruefen' : 'kein Spot, wenn Event-Risiko rot und Profil blockt');
+    setTextIfExists('spotStrategyEntry', state.fearGreedIndex < 35 ? 'gestaffelte Spot-Kaeufe' : 'nur kleine Spot-Tranche');
+    setTextIfExists('spotStrategyRisk', riskText);
 }
 
 function updateTradeSetup() {
@@ -2079,13 +2343,14 @@ async function updateDashboard() {
         updateTechnicalCard();
         updateDerivativesCard();
         updateSentimentCard();
+        updateLastUpdate();
         updateTradeSetup();
         updateKeyLevels();
         updateRiskFactors();
         updateScoreCard();
         updateDecisionPanel();
+        updateStrategyDecisionCards();
         updateSignalBanner();
-        updateLastUpdate();
         updateDataQualityStatus();
 
         console.log('Dashboard updated successfully');
@@ -2097,6 +2362,8 @@ async function updateDashboard() {
             warnings: []
         };
         state.eventFilter = buildEventFilter();
+        updateLastUpdate();
+        applyDecisionFallbackState('Dashboard-Update fehlgeschlagen. Keine operative Freigabe.');
         updateDataQualityStatus();
         console.error('Error updating dashboard:', error);
     } finally {
@@ -2304,6 +2571,7 @@ document.addEventListener('DOMContentLoaded', () => {
             state.eventFilter = buildEventFilter();
             updateRiskFactors();
             updateDecisionPanel();
+            updateStrategyDecisionCards();
             updateSignalBanner();
         });
     }
@@ -2333,6 +2601,7 @@ document.addEventListener('DOMContentLoaded', () => {
             state.eventFilter = buildEventFilter();
             updateRiskFactors();
             updateDecisionPanel();
+            updateStrategyDecisionCards();
             updateSignalBanner();
         });
     });
