@@ -82,6 +82,8 @@ const TRADER_PROFILE = {
     preferSpotOnRiskDays: true
 };
 
+const EVENT_OVERRIDE_KEY = 'btc-event-risk-override';
+
 const OFFICIAL_EVENT_SCHEDULE = [
     { id: 'fomc-2026-03', title: 'FOMC Zinsentscheid', startsAt: '2026-03-18T14:00:00-04:00', category: 'macro', source: 'Fed', url: 'https://www.federalreserve.gov/newsevents/2026-march.htm' },
     { id: 'nfp-2026-04', title: 'Employment Situation (NFP)', startsAt: '2026-04-03T08:30:00-04:00', category: 'macro', source: 'BLS', url: 'https://www.bls.gov/schedule/2026/' },
@@ -1316,10 +1318,17 @@ function buildEventFilter() {
         reasons.push('keine akuten Event-/News-Blocker');
     }
 
+    const override = localStorage.getItem(EVENT_OVERRIDE_KEY) || 'auto';
+    const finalLevel = override !== 'auto' ? override : level;
+    const overrideSummary = override !== 'auto'
+        ? `manuell auf ${override === 'red' ? 'Rot' : override === 'yellow' ? 'Gelb' : 'Gruen'} gesetzt`
+        : null;
+
     return {
-        level,
-        label: level === 'red' ? 'Rot' : level === 'yellow' ? 'Gelb' : 'Gruen',
-        summary: reasons.join(' | '),
+        level: finalLevel,
+        label: finalLevel === 'red' ? 'Rot' : finalLevel === 'yellow' ? 'Gelb' : 'Gruen',
+        summary: overrideSummary ? `${overrideSummary} | ${reasons.join(' | ')}` : reasons.join(' | '),
+        override,
         upcoming,
         headlines: impactfulHeadlines,
         sources: [
@@ -1513,6 +1522,11 @@ function updateDecisionPanel() {
     const leverageEl = document.getElementById('leveragePermissionValue');
     const spotEl = document.getElementById('spotPermissionValue');
     const styleEl = document.getElementById('styleFitValue');
+    const overrideSelect = document.getElementById('eventOverrideSelect');
+
+    if (overrideSelect && overrideSelect.value !== (state.eventFilter?.override || 'auto')) {
+        overrideSelect.value = state.eventFilter?.override || 'auto';
+    }
 
     permissionEl.textContent = model.permission;
     permissionCard.className = `decision-permission ${model.permission.toLowerCase().replace(/\s+/g, '-')}`;
@@ -2131,6 +2145,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize notification system
     NotificationSystem.init();
     renderSignalAuditLog();
+
+    const eventOverrideSelect = document.getElementById('eventOverrideSelect');
+    if (eventOverrideSelect) {
+        const savedOverride = localStorage.getItem(EVENT_OVERRIDE_KEY) || 'auto';
+        eventOverrideSelect.value = savedOverride;
+        eventOverrideSelect.addEventListener('change', async (e) => {
+            const value = ['auto', 'green', 'yellow', 'red'].includes(e.target.value) ? e.target.value : 'auto';
+            localStorage.setItem(EVENT_OVERRIDE_KEY, value);
+            state.eventFilter = buildEventFilter();
+            updateRiskFactors();
+            updateDecisionPanel();
+            updateSignalBanner();
+        });
+    }
 
     // Fear & Greed source mode
     const savedFgMode = localStorage.getItem('btc-fg-source-mode');

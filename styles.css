@@ -732,6 +732,34 @@ body::after {
     gap: 18px;
 }
 
+.decision-header-tools {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.event-override-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+}
+
+.event-override-control select {
+    appearance: none;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
 .decision-permission {
     display: flex;
     flex-direction: column;
@@ -875,6 +903,12 @@ body::after {
 }
 
 @media (max-width: 900px) {
+    .decision-header-tools {
+        width: 100%;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+
     .decision-grid,
     .horizon-grid,
     .trigger-grid,

@@ -288,7 +288,18 @@
         <section class="decision-panel">
             <div class="card-header">
                 <h2><span class="card-icon">⛳</span> Execution Filter</h2>
-                <span class="card-badge">Nur Entscheidungslogik</span>
+                <div class="decision-header-tools">
+                    <span class="card-badge">Nur Entscheidungslogik</span>
+                    <label class="event-override-control">
+                        <span>Event Override</span>
+                        <select id="eventOverrideSelect">
+                            <option value="auto">Auto</option>
+                            <option value="green">Gruen</option>
+                            <option value="yellow">Gelb</option>
+                            <option value="red">Rot</option>
+                        </select>
+                    </label>
+                </div>
             </div>
             <div class="card-body">
                 <div class="decision-permission" id="tradePermissionCard">
