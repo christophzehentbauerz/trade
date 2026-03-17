@@ -71,18 +71,22 @@ let state = {
     }
 };
 
-const TRADER_PROFILE = {
+const DEFAULT_TRADER_PROFILE = {
     style: 'Konservativ',
     focus: 'Intraday + Swing BTC',
     execution: 'Breakout oder Pullback',
     maxLeverage: 3,
     minRR: 2,
     maxOpenTrades: 1,
+    avoidWeekends: true,
     avoidMacroRisk: true,
     preferSpotOnRiskDays: true
 };
 
+let TRADER_PROFILE = { ...DEFAULT_TRADER_PROFILE };
+
 const EVENT_OVERRIDE_KEY = 'btc-event-risk-override';
+const TRADER_PROFILE_KEY = 'btc-trader-profile';
 
 const OFFICIAL_EVENT_SCHEDULE = [
     { id: 'fomc-2026-03', title: 'FOMC Zinsentscheid', startsAt: '2026-03-18T14:00:00-04:00', category: 'macro', source: 'Fed', url: 'https://www.federalreserve.gov/newsevents/2026-march.htm' },
@@ -147,6 +151,45 @@ function renderSignalAuditLog() {
     } catch (_) {
         el.innerHTML = '<div class=\"audit-empty\">Audit-Log konnte nicht geladen werden.</div>';
     }
+}
+
+function loadTraderProfile() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(TRADER_PROFILE_KEY) || '{}');
+        TRADER_PROFILE = {
+            ...DEFAULT_TRADER_PROFILE,
+            ...saved
+        };
+    } catch (_) {
+        TRADER_PROFILE = { ...DEFAULT_TRADER_PROFILE };
+    }
+}
+
+function saveTraderProfile() {
+    localStorage.setItem(TRADER_PROFILE_KEY, JSON.stringify(TRADER_PROFILE));
+}
+
+function updateTraderProfileUI() {
+    const ids = {
+        style: 'profileStyleSelect',
+        execution: 'profileExecutionSelect',
+        maxLeverage: 'profileMaxLeverage',
+        minRR: 'profileMinRR',
+        maxOpenTrades: 'profileMaxOpenTrades',
+        avoidWeekends: 'profileAvoidWeekends',
+        avoidMacroRisk: 'profileAvoidMacroRisk',
+        preferSpotOnRiskDays: 'profilePreferSpot'
+    };
+
+    Object.entries(ids).forEach(([key, id]) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (el.type === 'checkbox') {
+            el.checked = Boolean(TRADER_PROFILE[key]);
+        } else {
+            el.value = String(TRADER_PROFILE[key]);
+        }
+    });
 }
 
 // =====================================================
@@ -1363,6 +1406,10 @@ function getEventRisk(unified) {
     if (state.eventFilter?.summary) {
         labels.push(state.eventFilter.summary);
     }
+    if (TRADER_PROFILE.avoidWeekends && isWeekend) {
+        if (level !== 'red') level = 'yellow';
+        labels.push('Profil meidet Wochenend-Liquiditaet');
+    }
     if (state.dataQuality?.mode === 'degraded') {
         level = 'red';
         labels.push('Datenqualitaet eingeschraenkt');
@@ -1441,13 +1488,14 @@ function buildDecisionModel() {
     if (eventRisk.level === 'red') noTradeReasons.push(`Event-/News-Risiko rot: ${eventRisk.summary}`);
     else if (eventRisk.level === 'yellow') noTradeReasons.push(`Event-/News-Risiko gelb: ${eventRisk.summary}`);
     if (trend === 'sideways') noTradeReasons.push('Trend ist nicht eindeutig');
+    if (TRADER_PROFILE.avoidWeekends && [0, 6].includes(new Date().getDay())) noTradeReasons.push('dein Profil blockt Wochenend-Trades');
     if ((state.fundingRate ?? 0) > 0 && (state.longShortRatio.long ?? 50) > 55 && unified.signal === 'LONG') noTradeReasons.push('Funding und Positioning sprechen gegen aggressiven Long-Entry');
     if (unified?.blockedReasons?.length) noTradeReasons.push(...unified.blockedReasons);
 
     const bias = unified.signal === 'LONG' ? 'LONG BIAS' : unified.signal === 'SHORT' ? 'SHORT BIAS' : phase === 'Squeeze vor Ausbruch' ? 'WAIT FOR BREAKOUT' : 'NO TRADE';
 
     let permission = 'NO TRADE';
-    if (state.dataQuality?.mode === 'degraded' || eventRisk.level === 'red') {
+    if (state.dataQuality?.mode === 'degraded' || (TRADER_PROFILE.avoidMacroRisk && eventRisk.level === 'red')) {
         permission = 'HIGH RISK DAY';
     } else if (unified.signal !== 'NEUTRAL' && !inMiddleOfRange && weightedRR >= TRADER_PROFILE.minRR && !macroSentimentConflict) {
         permission = 'TRADE ERLAUBT';
@@ -1457,7 +1505,11 @@ function buildDecisionModel() {
         permission = 'NUR BEI TRIGGER';
     }
 
-    const leverageAllowed = permission === 'TRADE ERLAUBT' && !unified.filters.isHighVolatility && !unified.filters.isLowLiquidity && unified.confidence >= 70;
+    const leverageAllowed = permission === 'TRADE ERLAUBT'
+        && !unified.filters.isHighVolatility
+        && !unified.filters.isLowLiquidity
+        && unified.confidence >= 70
+        && (!TRADER_PROFILE.avoidWeekends || ![0, 6].includes(new Date().getDay()));
     const spotAllowed = state.dataQuality?.mode !== 'degraded' && ((state.fearGreedIndex ?? 50) <= 75 || TRADER_PROFILE.preferSpotOnRiskDays);
 
     const longTriggerPrice = Math.max(price, resistance);
@@ -2145,6 +2197,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize notification system
     NotificationSystem.init();
     renderSignalAuditLog();
+    loadTraderProfile();
+    updateTraderProfileUI();
 
     const eventOverrideSelect = document.getElementById('eventOverrideSelect');
     if (eventOverrideSelect) {
@@ -2159,6 +2213,35 @@ document.addEventListener('DOMContentLoaded', () => {
             updateSignalBanner();
         });
     }
+
+    [
+        'profileStyleSelect',
+        'profileExecutionSelect',
+        'profileMaxLeverage',
+        'profileMinRR',
+        'profileMaxOpenTrades',
+        'profileAvoidWeekends',
+        'profileAvoidMacroRisk',
+        'profilePreferSpot'
+    ].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('change', () => {
+            TRADER_PROFILE.style = document.getElementById('profileStyleSelect')?.value || DEFAULT_TRADER_PROFILE.style;
+            TRADER_PROFILE.execution = document.getElementById('profileExecutionSelect')?.value || DEFAULT_TRADER_PROFILE.execution;
+            TRADER_PROFILE.maxLeverage = Number(document.getElementById('profileMaxLeverage')?.value || DEFAULT_TRADER_PROFILE.maxLeverage);
+            TRADER_PROFILE.minRR = Number(document.getElementById('profileMinRR')?.value || DEFAULT_TRADER_PROFILE.minRR);
+            TRADER_PROFILE.maxOpenTrades = Number(document.getElementById('profileMaxOpenTrades')?.value || DEFAULT_TRADER_PROFILE.maxOpenTrades);
+            TRADER_PROFILE.avoidWeekends = Boolean(document.getElementById('profileAvoidWeekends')?.checked);
+            TRADER_PROFILE.avoidMacroRisk = Boolean(document.getElementById('profileAvoidMacroRisk')?.checked);
+            TRADER_PROFILE.preferSpotOnRiskDays = Boolean(document.getElementById('profilePreferSpot')?.checked);
+            saveTraderProfile();
+            state.eventFilter = buildEventFilter();
+            updateRiskFactors();
+            updateDecisionPanel();
+            updateSignalBanner();
+        });
+    });
 
     // Fear & Greed source mode
     const savedFgMode = localStorage.getItem('btc-fg-source-mode');

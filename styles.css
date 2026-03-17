@@ -821,7 +821,8 @@ body::after {
 .horizon-card,
 .trigger-card,
 .strategy-brief,
-.why-no-trade {
+.why-no-trade,
+.profile-card {
     padding: 16px;
     border-radius: var(--radius-md);
     border: 1px solid rgba(255, 255, 255, 0.06);
@@ -902,6 +903,54 @@ body::after {
     gap: 8px;
 }
 
+.profile-grid {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.profile-field,
+.profile-toggle {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+.profile-field span,
+.profile-toggle span {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.profile-field select {
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.profile-toggle {
+    justify-content: center;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.profile-toggle input {
+    width: 16px;
+    height: 16px;
+}
+
 @media (max-width: 900px) {
     .decision-header-tools {
         width: 100%;
@@ -909,6 +958,7 @@ body::after {
         flex-wrap: wrap;
     }
 
+    .profile-grid,
     .decision-grid,
     .horizon-grid,
     .trigger-grid,

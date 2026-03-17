@@ -338,6 +338,66 @@
                     </div>
                 </div>
 
+                <div class="profile-card">
+                    <div class="decision-subtitle">Trader Profile</div>
+                    <div class="profile-grid">
+                        <label class="profile-field">
+                            <span>Stil</span>
+                            <select id="profileStyleSelect">
+                                <option value="Konservativ">Konservativ</option>
+                                <option value="Ausgewogen">Ausgewogen</option>
+                                <option value="Aggressiv">Aggressiv</option>
+                            </select>
+                        </label>
+                        <label class="profile-field">
+                            <span>Execution</span>
+                            <select id="profileExecutionSelect">
+                                <option value="Breakout oder Pullback">Breakout oder Pullback</option>
+                                <option value="Nur Breakout">Nur Breakout</option>
+                                <option value="Nur Pullback">Nur Pullback</option>
+                            </select>
+                        </label>
+                        <label class="profile-field">
+                            <span>Max Hebel</span>
+                            <select id="profileMaxLeverage">
+                                <option value="1">1x</option>
+                                <option value="2">2x</option>
+                                <option value="3">3x</option>
+                                <option value="4">4x</option>
+                            </select>
+                        </label>
+                        <label class="profile-field">
+                            <span>Min RR</span>
+                            <select id="profileMinRR">
+                                <option value="1.5">1.5</option>
+                                <option value="2">2.0</option>
+                                <option value="2.5">2.5</option>
+                                <option value="3">3.0</option>
+                            </select>
+                        </label>
+                        <label class="profile-field">
+                            <span>Max offene Trades</span>
+                            <select id="profileMaxOpenTrades">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                            </select>
+                        </label>
+                        <label class="profile-toggle">
+                            <input type="checkbox" id="profileAvoidWeekends">
+                            <span>Wochenenden meiden</span>
+                        </label>
+                        <label class="profile-toggle">
+                            <input type="checkbox" id="profileAvoidMacroRisk">
+                            <span>Makro rot blocken</span>
+                        </label>
+                        <label class="profile-toggle">
+                            <input type="checkbox" id="profilePreferSpot">
+                            <span>Risk Days lieber Spot</span>
+                        </label>
+                    </div>
+                </div>
+
                 <div class="horizon-grid">
                     <div class="horizon-card">
                         <span class="horizon-label">Tagesurteil</span>
