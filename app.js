@@ -14,7 +14,8 @@ const CONFIG = {
         fearGreed: 'https://api.alternative.me/fng/',
         fearGreedCmc: 'https://api.coinmarketcap.com/data-api/v3/fear-and-greed/historical',
         binance: 'https://api.binance.com/api/v3',
-        binanceFutures: 'https://fapi.binance.com/fapi/v1'
+        binanceFutures: 'https://fapi.binance.com/fapi/v1',
+        cryptoCompareNews: 'https://min-api.cryptocompare.com/data/v2/news/'
     },
     weights: {
         technical: 0.35,
@@ -58,6 +59,15 @@ let state = {
         summary: 'Lade...',
         issues: [],
         warnings: []
+    },
+    newsItems: [],
+    eventFilter: {
+        level: 'loading',
+        label: 'Lade...',
+        summary: 'Event-Filter wird geladen',
+        upcoming: [],
+        headlines: [],
+        sources: []
     }
 };
 
@@ -71,6 +81,23 @@ const TRADER_PROFILE = {
     avoidMacroRisk: true,
     preferSpotOnRiskDays: true
 };
+
+const OFFICIAL_EVENT_SCHEDULE = [
+    { id: 'fomc-2026-03', title: 'FOMC Zinsentscheid', startsAt: '2026-03-18T14:00:00-04:00', category: 'macro', source: 'Fed', url: 'https://www.federalreserve.gov/newsevents/2026-march.htm' },
+    { id: 'nfp-2026-04', title: 'Employment Situation (NFP)', startsAt: '2026-04-03T08:30:00-04:00', category: 'macro', source: 'BLS', url: 'https://www.bls.gov/schedule/2026/' },
+    { id: 'cpi-2026-04', title: 'Consumer Price Index (CPI)', startsAt: '2026-04-10T08:30:00-04:00', category: 'macro', source: 'BLS', url: 'https://www.bls.gov/cpi/' },
+    { id: 'fomc-2026-04', title: 'FOMC Zinsentscheid', startsAt: '2026-04-29T14:00:00-04:00', category: 'macro', source: 'Fed', url: 'https://www.federalreserve.gov/newsevents/2026-04.htm' },
+    { id: 'nfp-2026-05', title: 'Employment Situation (NFP)', startsAt: '2026-05-08T08:30:00-04:00', category: 'macro', source: 'BLS', url: 'https://www.bls.gov/schedule/2026/' },
+    { id: 'cpi-2026-05', title: 'Consumer Price Index (CPI)', startsAt: '2026-05-12T08:30:00-04:00', category: 'macro', source: 'BLS', url: 'https://www.bls.gov/schedule/2026/' },
+    { id: 'nfp-2026-06', title: 'Employment Situation (NFP)', startsAt: '2026-06-05T08:30:00-04:00', category: 'macro', source: 'BLS', url: 'https://www.bls.gov/schedule/2026/' },
+    { id: 'cpi-2026-06', title: 'Consumer Price Index (CPI)', startsAt: '2026-06-10T08:30:00-04:00', category: 'macro', source: 'BLS', url: 'https://www.bls.gov/schedule/2026/' },
+    { id: 'fomc-2026-06', title: 'FOMC Zinsentscheid', startsAt: '2026-06-17T14:00:00-04:00', category: 'macro', source: 'Fed', url: 'https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm?mod=article_inline' },
+    { id: 'nfp-2026-07', title: 'Employment Situation (NFP)', startsAt: '2026-07-02T08:30:00-04:00', category: 'macro', source: 'BLS', url: 'https://www.bls.gov/schedule/2026/' },
+    { id: 'fomc-2026-07', title: 'FOMC Zinsentscheid', startsAt: '2026-07-29T14:00:00-04:00', category: 'macro', source: 'Fed', url: 'https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm?mod=article_inline' },
+    { id: 'fomc-2026-09', title: 'FOMC Zinsentscheid', startsAt: '2026-09-16T14:00:00-04:00', category: 'macro', source: 'Fed', url: 'https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm?mod=article_inline' },
+    { id: 'fomc-2026-10', title: 'FOMC Zinsentscheid', startsAt: '2026-10-28T14:00:00-04:00', category: 'macro', source: 'Fed', url: 'https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm?mod=article_inline' },
+    { id: 'fomc-2026-12', title: 'FOMC Zinsentscheid', startsAt: '2026-12-09T14:00:00-05:00', category: 'macro', source: 'Fed', url: 'https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm?mod=article_inline' }
+];
 
 let countdownInterval = null;
 let remainingSeconds = 300;
@@ -563,6 +590,30 @@ async function fetchLongShortRatio() {
     } catch (error) {
         console.error('Error fetching L/S ratio:', error);
         state.longShortRatio = { long: 50, short: 50 };
+        return false;
+    }
+}
+
+async function fetchCryptoNews() {
+    try {
+        const data = await fetchWithTimeout(
+            `${CONFIG.apis.cryptoCompareNews}?lang=EN&categories=BTC,Regulation,Market&excludeCategories=Sponsored`,
+            10000
+        );
+
+        state.newsItems = Array.isArray(data?.Data)
+            ? data.Data.slice(0, 12).map(item => ({
+                title: item?.title || 'Untitled',
+                source: item?.source_info?.name || item?.source || 'CryptoCompare',
+                url: item?.url || '',
+                publishedAt: item?.published_on ? new Date(item.published_on * 1000).toISOString() : null
+            }))
+            : [];
+
+        return state.newsItems.length > 0;
+    } catch (error) {
+        console.error('Error fetching crypto news:', error);
+        state.newsItems = [];
         return false;
     }
 }
@@ -1198,6 +1249,87 @@ function formatDecisionPrice(value) {
     return Number.isFinite(value) ? `$${formatNumber(value, 0)}` : '--';
 }
 
+function getUpcomingScheduledEvents(horizonDays = 14) {
+    const now = Date.now();
+    const horizonMs = horizonDays * 24 * 60 * 60 * 1000;
+
+    return OFFICIAL_EVENT_SCHEDULE
+        .map(event => {
+            const ts = new Date(event.startsAt).getTime();
+            return { ...event, ts, hoursUntil: (ts - now) / 3600000 };
+        })
+        .filter(event => event.ts >= now - (6 * 3600000) && event.ts <= now + horizonMs)
+        .sort((a, b) => a.ts - b.ts);
+}
+
+function analyzeNewsHeadlineImpact(items = []) {
+    const keywords = {
+        red: ['fomc', 'powell', 'cpi', 'nfp', 'sec', 'etf outflow', 'lawsuit', 'hack', 'liquidation', 'ban'],
+        yellow: ['etf', 'regulation', 'fed', 'inflation', 'approval', 'outflow', 'whale', 'liquid'],
+        bullish: ['approval', 'inflow', 'reclaim', 'accumulation', 'adoption'],
+        bearish: ['outflow', 'ban', 'hack', 'liquidation', 'lawsuit', 'dump']
+    };
+
+    return items.map(item => {
+        const text = `${item.title} ${item.source}`.toLowerCase();
+        let score = 0;
+        if (keywords.red.some(keyword => text.includes(keyword))) score += 3;
+        if (keywords.yellow.some(keyword => text.includes(keyword))) score += 1;
+
+        const bias = keywords.bullish.some(keyword => text.includes(keyword))
+            ? 'bullish'
+            : keywords.bearish.some(keyword => text.includes(keyword))
+                ? 'bearish'
+                : 'neutral';
+
+        return {
+            ...item,
+            score,
+            bias
+        };
+    }).filter(item => item.score > 0);
+}
+
+function buildEventFilter() {
+    const upcoming = getUpcomingScheduledEvents();
+    const impactfulHeadlines = analyzeNewsHeadlineImpact(state.newsItems).slice(0, 4);
+    const reasons = [];
+    let level = 'green';
+
+    if (upcoming.some(event => event.hoursUntil <= 24)) {
+        level = 'red';
+        reasons.push('Makro-Event innerhalb von 24h');
+    } else if (upcoming.some(event => event.hoursUntil <= 72)) {
+        level = 'yellow';
+        reasons.push('Makro-Event innerhalb von 72h');
+    }
+
+    if (impactfulHeadlines.some(item => item.score >= 3)) {
+        level = 'red';
+        reasons.push('marktbewegende News erkannt');
+    } else if (impactfulHeadlines.length && level !== 'red') {
+        level = 'yellow';
+        reasons.push('relevante News im Feed');
+    }
+
+    if (!reasons.length) {
+        reasons.push('keine akuten Event-/News-Blocker');
+    }
+
+    return {
+        level,
+        label: level === 'red' ? 'Rot' : level === 'yellow' ? 'Gelb' : 'Gruen',
+        summary: reasons.join(' | '),
+        upcoming,
+        headlines: impactfulHeadlines,
+        sources: [
+            'Federal Reserve Kalender',
+            'BLS Release Schedule',
+            'CryptoCompare News API'
+        ]
+    };
+}
+
 function getMarketPhase(unified, trend, rsi, volatilityPercent) {
     if (state.dataQuality?.mode === 'degraded') return 'Risk-Off';
     if (unified?.filters?.isHighVolatility && Math.abs(state.priceChange24h || 0) >= 4) {
@@ -1216,9 +1348,12 @@ function getMarketPhase(unified, trend, rsi, volatilityPercent) {
 
 function getEventRisk(unified) {
     const labels = [];
-    let level = 'green';
+    let level = state.eventFilter?.level === 'red' ? 'red' : state.eventFilter?.level === 'yellow' ? 'yellow' : 'green';
     const isWeekend = [0, 6].includes(new Date().getDay());
 
+    if (state.eventFilter?.summary) {
+        labels.push(state.eventFilter.summary);
+    }
     if (state.dataQuality?.mode === 'degraded') {
         level = 'red';
         labels.push('Datenqualitaet eingeschraenkt');
@@ -1294,6 +1429,8 @@ function buildDecisionModel() {
     if (weightedRR > 0 && weightedRR < TRADER_PROFILE.minRR) noTradeReasons.push(`R:R unter ${TRADER_PROFILE.minRR}:1`);
     if (unified?.filters?.isHighVolatility) noTradeReasons.push('Volatilitaet zu chaotisch fuer sauberen Hebel-Entry');
     if (unified?.filters?.isLowLiquidity) noTradeReasons.push('Liquiditaet ist zu duenn');
+    if (eventRisk.level === 'red') noTradeReasons.push(`Event-/News-Risiko rot: ${eventRisk.summary}`);
+    else if (eventRisk.level === 'yellow') noTradeReasons.push(`Event-/News-Risiko gelb: ${eventRisk.summary}`);
     if (trend === 'sideways') noTradeReasons.push('Trend ist nicht eindeutig');
     if ((state.fundingRate ?? 0) > 0 && (state.longShortRatio.long ?? 50) > 55 && unified.signal === 'LONG') noTradeReasons.push('Funding und Positioning sprechen gegen aggressiven Long-Entry');
     if (unified?.blockedReasons?.length) noTradeReasons.push(...unified.blockedReasons);
@@ -1482,6 +1619,7 @@ function updateKeyLevels() {
 
 function updateRiskFactors() {
     const price = state.price;
+    const eventFilter = state.eventFilter || { upcoming: [], headlines: [], summary: 'Keine Event-Daten' };
 
     // Invalidation factors
     const invalidations = [];
@@ -1503,14 +1641,23 @@ function updateRiskFactors() {
         `<li>${i}</li>`
     ).join('');
 
-    // Upcoming events
     const events = [
-        'FOMC Meeting - Zinsentscheid',
-        'US CPI Daten - Inflation',
-        'ETF Flow Report - Wöchentlich'
+        ...eventFilter.upcoming.slice(0, 3).map(event => {
+            const ts = Number.isFinite(event.ts) ? new Date(event.ts).toLocaleString('de-DE', {
+                day: '2-digit',
+                month: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            }) : '--';
+            return `${event.title} | ${ts} | ${event.source}`;
+        }),
+        ...eventFilter.headlines.slice(0, 2).map(item => {
+            const bias = item.bias === 'bullish' ? 'bullish' : item.bias === 'bearish' ? 'bearish' : 'neutral';
+            return `News (${bias}): ${item.title}`;
+        })
     ];
 
-    document.getElementById('eventsList').innerHTML = events.map(e =>
+    document.getElementById('eventsList').innerHTML = (events.length ? events : [eventFilter.summary]).map(e =>
         `<li>${e}</li>`
     ).join('');
 }
@@ -1712,7 +1859,7 @@ function updateLastUpdate() {
 }
 
 function buildDashboardDataQuality(fetchResults) {
-    const [priceOk, historyOk, fgOk, fundingOk, oiOk, lsOk] = fetchResults;
+    const [priceOk, historyOk, fgOk, fundingOk, oiOk, lsOk, newsOk] = fetchResults;
     const issues = [];
     const warnings = [];
 
@@ -1721,6 +1868,7 @@ function buildDashboardDataQuality(fetchResults) {
     if (!fundingOk) warnings.push('Funding fehlt');
     if (!oiOk) warnings.push('Open Interest fehlt');
     if (!lsOk) warnings.push('L/S Ratio fehlt');
+    if (!newsOk) warnings.push('News-Feed fehlt');
 
     const mode = issues.length > 0 ? 'degraded' : warnings.length > 0 ? 'partial' : 'live';
     const summary = mode === 'live'
@@ -1757,9 +1905,11 @@ async function updateDashboard() {
             fetchFearGreedIndex(),
             fetchFundingRate(),
             fetchOpenInterest(),
-            fetchLongShortRatio()
+            fetchLongShortRatio(),
+            fetchCryptoNews()
         ]);
         state.dataQuality = buildDashboardDataQuality(fetchResults);
+        state.eventFilter = buildEventFilter();
 
         // Calculate scores
         calculateScores();
@@ -1787,6 +1937,7 @@ async function updateDashboard() {
             issues: ['Dashboard-Update fehlgeschlagen'],
             warnings: []
         };
+        state.eventFilter = buildEventFilter();
         updateDataQualityStatus();
         console.error('Error updating dashboard:', error);
     } finally {
