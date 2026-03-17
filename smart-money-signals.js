@@ -50,6 +50,7 @@ const SmartMoneySignal = {
 
         // Metadata
         lastCandle: null,
+        priceChange24h: null,
         lastUpdate: null,
         error: null
     },
@@ -199,6 +200,10 @@ const SmartMoneySignal = {
 
             const closePrices = candles.map(c => c.close);
             const currentPrice = closePrices[closePrices.length - 1];
+            const candle24hAgo = candles.length >= 25 ? candles[candles.length - 25] : null;
+            const priceChange24h = candle24hAgo && candle24hAgo.close
+                ? ((currentPrice - candle24hAgo.close) / candle24hAgo.close) * 100
+                : null;
 
             // Calculate indicators
             const emaFast = this.calculateEMA(closePrices, this.config.emaFast);
@@ -215,6 +220,7 @@ const SmartMoneySignal = {
             this.state.rsi = rsi;
             this.state.atr = atr;
             this.state.lastCandle = candles[candles.length - 1];
+            this.state.priceChange24h = priceChange24h;
             this.state.lastUpdate = new Date();
             this.state.error = null;
 
@@ -533,7 +539,10 @@ const SmartMoneySignal = {
         message += `📅 ${dateStr}\n\n`;
 
         message += `💰 *Marktübersicht:*\n`;
-        message += `BTC Preis: $${s.currentPrice?.toLocaleString()} (${0.00}%)\n`; // Price change not tracked in SM state, us 0 placeholder or pass it
+        const priceChangeText = Number.isFinite(s.priceChange24h)
+            ? `${s.priceChange24h >= 0 ? '+' : ''}${s.priceChange24h.toFixed(2)}%`
+            : 'n/a';
+        message += `BTC Preis: $${s.currentPrice?.toLocaleString()} (${priceChangeText})\n`;
         message += `Fear & Greed: ${fearGreed.value} (${fearGreed.text})\n`;
         message += `Score: ${score.toFixed(1)}/10\n\n`;
 

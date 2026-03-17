@@ -463,8 +463,7 @@ async function fetchFundingRate() {
         return true;
     } catch (error) {
         console.error('Error fetching funding rate:', error);
-        // Set a mock value for demo
-        state.fundingRate = -0.005;
+        state.fundingRate = null;
         return false;
     }
 }
@@ -612,8 +611,10 @@ function calculateScores() {
     else if (state.fearGreedIndex >= 65) sentimentScore -= 1.5;
 
     // Funding rate
-    if (state.fundingRate < -0.01) sentimentScore += 1.5; // Negative = bullish
-    else if (state.fundingRate > 0.05) sentimentScore -= 1.5; // High positive = bearish
+    if (Number.isFinite(state.fundingRate)) {
+        if (state.fundingRate < -0.01) sentimentScore += 1.5; // Negative = bullish
+        else if (state.fundingRate > 0.05) sentimentScore -= 1.5; // High positive = bearish
+    }
 
     // Long/Short ratio (contrarian)
     if (state.longShortRatio.short > 55) sentimentScore += 1; // More shorts = bullish
@@ -865,11 +866,17 @@ function updateTechnicalCard() {
 function updateDerivativesCard() {
     // Funding Rate
     const fundingEl = document.getElementById('fundingRate');
-    fundingEl.textContent = `${state.fundingRate >= 0 ? '+' : ''}${formatNumber(state.fundingRate, 4)}%`;
-    fundingEl.className = `derivative-value ${state.fundingRate < 0 ? 'positive' : state.fundingRate > 0.02 ? 'negative' : ''}`;
+    if (Number.isFinite(state.fundingRate)) {
+        fundingEl.textContent = `${state.fundingRate >= 0 ? '+' : ''}${formatNumber(state.fundingRate, 4)}%`;
+    } else {
+        fundingEl.textContent = '--';
+    }
+    fundingEl.className = `derivative-value ${Number.isFinite(state.fundingRate) && state.fundingRate < 0 ? 'positive' : Number.isFinite(state.fundingRate) && state.fundingRate > 0.02 ? 'negative' : ''}`;
 
     const fundingStatus = document.getElementById('fundingStatus');
-    if (state.fundingRate < -0.01) {
+    if (!Number.isFinite(state.fundingRate)) {
+        fundingStatus.textContent = 'Nicht verfügbar';
+    } else if (state.fundingRate < -0.01) {
         fundingStatus.textContent = 'Shorts zahlen Longs → Bullish';
     } else if (state.fundingRate > 0.03) {
         fundingStatus.textContent = 'Longs zahlen Shorts → Bearish';
@@ -894,7 +901,8 @@ function updateDerivativesCard() {
 
     // Badge
     const badge = document.getElementById('derivativesBadge');
-    const derivScore = (state.fundingRate < 0 ? 6 : 4) + (state.longShortRatio.short > 50 ? 1 : -1);
+    const fundingBaseScore = !Number.isFinite(state.fundingRate) ? 5 : state.fundingRate < 0 ? 6 : 4;
+    const derivScore = fundingBaseScore + (state.longShortRatio.short > 50 ? 1 : -1);
     badge.textContent = `${formatNumber(derivScore, 1)}/10`;
 }
 
@@ -920,7 +928,10 @@ function updateSentimentCard() {
     }
 
     const fundingSignal = document.getElementById('fundingSignal');
-    if (state.fundingRate < -0.005) {
+    if (!Number.isFinite(state.fundingRate)) {
+        fundingSignal.textContent = 'N/A';
+        fundingSignal.className = 'factor-signal neutral';
+    } else if (state.fundingRate < -0.005) {
         fundingSignal.textContent = 'Bullish';
         fundingSignal.className = 'factor-signal bullish';
     } else if (state.fundingRate > 0.03) {
@@ -1338,7 +1349,7 @@ function updateNoTradeWarning() {
             reasons.push(`<strong>Fear & Greed ist bei ${state.fearGreedIndex}</strong> - keine Extremzone`);
         }
 
-        if (Math.abs(state.fundingRate) < 0.01) {
+        if (Number.isFinite(state.fundingRate) && Math.abs(state.fundingRate) < 0.01) {
             reasons.push(`<strong>Funding Rate ist bei ${formatNumber(state.fundingRate, 4)}%</strong> - kein klares Futures-Signal`);
         }
 

@@ -629,6 +629,24 @@
       background: rgba(245, 197, 66, .1);
     }
 
+    .src-chip.cache {
+      color: #8ab4ff;
+      border-color: rgba(138, 180, 255, .35);
+      background: rgba(138, 180, 255, .12);
+    }
+
+    .src-chip.fallback {
+      color: #ffb86b;
+      border-color: rgba(255, 184, 107, .35);
+      background: rgba(255, 184, 107, .12);
+    }
+
+    .src-chip.derived {
+      color: #b6a6ff;
+      border-color: rgba(182, 166, 255, .35);
+      background: rgba(182, 166, 255, .12);
+    }
+
     .src-chip.static {
       color: var(--red);
       border-color: rgba(255, 107, 107, .35);
@@ -725,7 +743,7 @@
       </div>
       <div style="text-align:center;min-width:120px">
         <div style="font-size:12px;color:var(--muted);margin-bottom:5px"><span class="status-dot ok"
-            id="statusDot"></span>Live</div>
+            id="statusDot"></span><span id="statusText">Live</span></div>
         <div style="font-size:11px;color:var(--muted)" id="lastUpdated">Lade...</div>
       </div>
     </div>
@@ -881,6 +899,97 @@
       } catch (_) {
         return { ok: false, data: fallback };
       }
+    }
+
+    function makeSourceEntry(status, label, detail) {
+      return { status, label, detail };
+    }
+
+    function getSourceMetaDefaults() {
+      return {
+        price: makeSourceEntry('static', 'Static', 'Keine Herkunft bekannt'),
+        fearGreed: makeSourceEntry('static', 'Static', 'Keine Herkunft bekannt'),
+        funding: makeSourceEntry('static', 'Static', 'Keine Herkunft bekannt'),
+        oi: makeSourceEntry('static', 'Static', 'Keine Herkunft bekannt'),
+        ls: makeSourceEntry('static', 'Static', 'Keine Herkunft bekannt'),
+        news: makeSourceEntry('static', 'Static', 'Keine Herkunft bekannt'),
+        macd: makeSourceEntry('static', 'Static', 'Keine Herkunft bekannt'),
+        onchain: makeSourceEntry('static', 'Static', 'Keine Herkunft bekannt'),
+        cycle: makeSourceEntry('derived', 'Berechnet', 'Halving-Zyklus aus festem Zeitmodell')
+      };
+    }
+
+    function buildSourceMetaFromFlags(flags = {}, mode = 'live') {
+      const fallbackStatus = mode === 'cache' ? 'cache' : mode === 'fallback' ? 'fallback' : 'static';
+      const fallbackLabel = mode === 'cache' ? 'Cache' : mode === 'fallback' ? 'Fallback' : 'Static';
+      return {
+        price: flags.price
+          ? makeSourceEntry('live', 'Live', 'Direkt aus Markt-Kerzendaten')
+          : makeSourceEntry(fallbackStatus, fallbackLabel, 'Preis nicht live verifiziert'),
+        fearGreed: flags.fearGreed
+          ? makeSourceEntry('live', 'Live', 'Alternative.me Fear & Greed API')
+          : makeSourceEntry(fallbackStatus, fallbackLabel, 'Fear & Greed Defaultwert'),
+        funding: flags.funding
+          ? makeSourceEntry('live', 'Live', 'Binance Funding Rate API')
+          : makeSourceEntry(fallbackStatus, fallbackLabel, 'Funding Defaultwert'),
+        oi: flags.oi
+          ? makeSourceEntry('live', 'Live', 'Binance Open Interest API')
+          : makeSourceEntry(fallbackStatus, fallbackLabel, 'Open Interest Defaultwert'),
+        ls: flags.ls
+          ? makeSourceEntry('live', 'Live', 'Binance Long/Short Ratio API')
+          : makeSourceEntry(fallbackStatus, fallbackLabel, 'L/S Ratio Defaultwert'),
+        news: flags.news
+          ? makeSourceEntry('live', 'Live', 'CryptoCompare News API')
+          : makeSourceEntry(fallbackStatus, fallbackLabel, 'News-Score ohne Live-News'),
+        macd: flags.macd
+          ? makeSourceEntry(mode === 'cache' ? 'cache' : mode === 'fallback' ? 'fallback' : 'derived', mode === 'cache' ? 'Cache' : mode === 'fallback' ? 'Fallback' : 'Berechnet', 'Aus geladenen Kerzendaten berechnet')
+          : makeSourceEntry(fallbackStatus, fallbackLabel, 'MACD nicht aus vollständigen Kerzendaten berechnet'),
+        onchain: flags.onchain
+          ? makeSourceEntry(mode === 'cache' ? 'cache' : 'proxy', mode === 'cache' ? 'Cache' : 'Proxy', 'Proxy aus AggTrades und Volumen')
+          : makeSourceEntry(fallbackStatus, fallbackLabel, 'On-Chain Proxy nicht verfügbar'),
+        cycle: makeSourceEntry(mode === 'cache' ? 'cache' : 'derived', mode === 'cache' ? 'Cache' : 'Berechnet', 'Halving-Zyklus aus festem Zeitmodell')
+      };
+    }
+
+    function ensureSourceMeta(data, mode = 'live') {
+      if (!data) return data;
+      const fallbackMeta = buildSourceMetaFromFlags(data.sourceFlags || {}, mode);
+      data.sourceMeta = { ...getSourceMetaDefaults(), ...fallbackMeta, ...(data.sourceMeta || {}) };
+      if (!data.dataStatus) data.dataStatus = { mode, label: mode === 'live' ? 'Live' : mode === 'cache' ? 'Cache' : mode === 'offline' ? 'Offline' : 'Fallback' };
+      return data;
+    }
+
+    function setDataStatus(mode, text) {
+      const label = mode === 'live' ? 'Live' : mode === 'cache' ? 'Cache' : mode === 'offline' ? 'Offline' : 'Fallback';
+      const statusText = document.getElementById('statusText');
+      if (statusText) statusText.textContent = label;
+      document.getElementById('lastUpdated').textContent = text;
+      const dot = document.getElementById('statusDot');
+      dot.className = mode === 'live' ? 'status-dot ok' : mode === 'cache' ? 'status-dot' : 'status-dot err';
+    }
+
+    function getDataModeLabel(mode) {
+      return mode === 'live' ? 'Live' : mode === 'cache' ? 'Cache' : mode === 'offline' ? 'Offline' : 'Fallback';
+    }
+
+    function getDataModeIntro() {
+      const mode = mktData?.dataStatus?.mode || 'fallback';
+      return mode === 'live'
+        ? 'Live-Daten'
+        : mode === 'cache'
+          ? 'Cache-Daten'
+          : mode === 'offline'
+            ? 'Offline-Fallback'
+            : 'Fallback-Daten';
+    }
+
+    function summarizeSources(d) {
+      if (!d?.sourceMeta) return 'Quellenstatus unbekannt';
+      return [
+        `Preis ${d.sourceMeta.price.label.toLowerCase()}`,
+        `Funding ${d.sourceMeta.funding.label.toLowerCase()}`,
+        `News ${d.sourceMeta.news.label.toLowerCase()}`
+      ].join(' · ');
     }
 
     function mapBinanceKlines(rows) {
@@ -1194,6 +1303,23 @@
           macd: price > 0,
           onchain: false,
           cycle: true
+        },
+        sourceMeta: {
+          price: price > 0
+            ? makeSourceEntry('fallback', 'Fallback', 'Nur Preis-Fallback aus CoinGecko/CryptoCompare')
+            : makeSourceEntry('static', 'Offline', 'Kein Live-Preis verfügbar'),
+          fearGreed: makeSourceEntry('fallback', 'Fallback', 'Fear & Greed Defaultwert 50'),
+          funding: makeSourceEntry('fallback', 'Fallback', 'Funding Defaultwert 0'),
+          oi: makeSourceEntry('fallback', 'Fallback', 'Open Interest Defaultwert 0'),
+          ls: makeSourceEntry('fallback', 'Fallback', 'Long/Short Defaultwert 50/50'),
+          news: makeSourceEntry('fallback', 'Fallback', 'News-Score neutral ohne Live-News'),
+          macd: makeSourceEntry('fallback', 'Fallback', 'MACD aus Notfall-Daten abgeleitet'),
+          onchain: makeSourceEntry('fallback', 'Fallback', 'On-Chain Proxy deaktiviert'),
+          cycle: makeSourceEntry('derived', 'Berechnet', 'Halving-Zyklus aus festem Zeitmodell')
+        },
+        dataStatus: {
+          mode: price > 0 ? 'fallback' : 'offline',
+          label: price > 0 ? 'Fallback' : 'Offline'
         }
       };
     }
@@ -1250,6 +1376,9 @@
         const shortThreshold = 100 - minScore;
         const sig = sc >= minScore ? 'LONG' : sc <= shortThreshold ? 'SHORT' : (!goldenCross ? 'EXIT' : 'NEUTRAL');
         const change24 = ((price - dayOpen) / dayOpen * 100);
+        const candleLabel = candlePack.source === 'cryptocompare' ? 'CryptoCompare' : candlePack.source === 'binance' ? 'Binance' : 'CoinGecko';
+        const candleStatus = candlePack.source === 'coingecko' ? 'fallback' : 'live';
+        const candleChipLabel = candlePack.source === 'coingecko' ? 'Fallback' : 'Live';
         mktData = {
           price, ema15, ema300, ema800, rsi, atr, macd, goldenCross, htfFilter, rsiZone, strength, signal: sig, score: sc, scoreObj: scObj,
           mtf, change24, fg, funding, oi: parseFloat(oiNow?.openInterest || 0), oiChange, lsLong, lsShort, news, onchain, cycle, closes: cl,
@@ -1263,27 +1392,54 @@
             macd: true,
             onchain: aggRes.ok,
             cycle: true
+          },
+          sourceMeta: {
+            price: makeSourceEntry(candleStatus, candleChipLabel, `${candleLabel} Kerzendaten`),
+            fearGreed: fgRes.ok
+              ? makeSourceEntry('live', 'Live', 'Alternative.me Fear & Greed API')
+              : makeSourceEntry('fallback', 'Fallback', 'Fear & Greed Defaultwert 50'),
+            funding: fundingRes.ok
+              ? makeSourceEntry('live', 'Live', 'Binance Funding Rate API')
+              : makeSourceEntry('fallback', 'Fallback', 'Funding Defaultwert 0'),
+            oi: oiNowRes.ok && oiHistRes.ok
+              ? makeSourceEntry('live', 'Live', 'Binance Open Interest APIs')
+              : makeSourceEntry('fallback', 'Fallback', 'Open Interest nicht live verfügbar'),
+            ls: lsRes.ok
+              ? makeSourceEntry('live', 'Live', 'Binance Long/Short Ratio API')
+              : makeSourceEntry('fallback', 'Fallback', 'Long/Short Defaultwert 50/50'),
+            news: newsRes.ok
+              ? makeSourceEntry('live', 'Live', 'CryptoCompare News API')
+              : makeSourceEntry('fallback', 'Fallback', 'News-Score ohne Live-News'),
+            macd: makeSourceEntry(candleStatus === 'live' ? 'derived' : 'fallback', candleStatus === 'live' ? 'Berechnet' : 'Fallback', `${candleLabel} Kerzendaten`),
+            onchain: aggRes.ok
+              ? makeSourceEntry('proxy', 'Proxy', 'Aus Binance AggTrades und Volumen abgeleitet')
+              : makeSourceEntry('fallback', 'Fallback', 'On-Chain Proxy nicht live verfügbar'),
+            cycle: makeSourceEntry('derived', 'Berechnet', 'Halving-Zyklus aus festem Zeitmodell')
+          },
+          dataStatus: {
+            mode: candleStatus === 'live' ? 'live' : 'fallback',
+            label: candleStatus === 'live' ? 'Live' : 'Fallback'
           }
         };
+        ensureSourceMeta(mktData, mktData.dataStatus.mode);
         persistMarketData(mktData);
         updateUI();
-        document.getElementById('statusDot').className = 'status-dot ok';
+        setDataStatus(mktData.dataStatus.mode, 'Update ' + new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
       } catch (e) {
         const cached = loadCachedMarketData();
         if (!mktData && cached?.data) {
-          mktData = cached.data;
+          mktData = ensureSourceMeta(cached.data, 'cache');
           updateUI();
-          document.getElementById('lastUpdated').textContent = 'Cache aktiv ' + new Date(cached.ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+          setDataStatus('cache', 'Cache aktiv ' + new Date(cached.ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
         } else if (!mktData) {
           mktData = await buildEmergencyMarketData();
           updateUI();
-          document.getElementById('lastUpdated').textContent = mktData.price > 0
+          setDataStatus('fallback', mktData.price > 0
             ? 'Preis-Fallback aktiv'
-            : 'Offline-Fallback aktiv';
+            : 'Offline-Fallback aktiv');
         } else {
-          document.getElementById('lastUpdated').textContent = 'Fehler, alte Daten aktiv';
+          setDataStatus('cache', 'Fehler, alte Daten aktiv');
         }
-        document.getElementById('statusDot').className = 'status-dot err';
         console.error(e);
       } finally {
         marketDataLoading = false;
@@ -1326,7 +1482,6 @@
       document.getElementById('iNews').textContent = `${d.news.score.toFixed(1)}/10`;
       document.getElementById('iCycle').textContent = d.cycle.phase;
       document.getElementById('iOnchain').textContent = `Whales ${d.onchain.whaleTrades}, Flow ${d.onchain.exchangeFlowPct.toFixed(1)}%`;
-      document.getElementById('lastUpdated').textContent = 'Update ' + new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
       updateSourceAudit();
     }
 
@@ -1334,19 +1489,20 @@
       const d = mktData;
       const list = document.getElementById('srcAuditCoach');
       if (!d || !list) return;
+      ensureSourceMeta(d, d.dataStatus?.mode || 'live');
       const rows = [
-        ['BTC Preis', d.sourceFlags.price ? 'live' : 'static'],
-        ['Fear & Greed', d.sourceFlags.fearGreed ? 'live' : 'static'],
-        ['Funding', d.sourceFlags.funding ? 'live' : 'static'],
-        ['Open Interest', d.sourceFlags.oi ? 'live' : 'static'],
-        ['L/S Ratio', d.sourceFlags.ls ? 'live' : 'static'],
-        ['News', d.sourceFlags.news ? 'live' : 'static'],
-        ['MACD', d.sourceFlags.macd ? 'live' : 'static'],
-        ['On-Chain Proxy', d.sourceFlags.onchain ? 'proxy' : 'static'],
-        ['Cycle', d.sourceFlags.cycle ? 'static' : 'static']
+        ['BTC Preis', d.sourceMeta.price],
+        ['Fear & Greed', d.sourceMeta.fearGreed],
+        ['Funding', d.sourceMeta.funding],
+        ['Open Interest', d.sourceMeta.oi],
+        ['L/S Ratio', d.sourceMeta.ls],
+        ['News', d.sourceMeta.news],
+        ['MACD', d.sourceMeta.macd],
+        ['On-Chain Proxy', d.sourceMeta.onchain],
+        ['Cycle', d.sourceMeta.cycle]
       ];
-      list.innerHTML = rows.map(([name, st]) =>
-        `<li class="src-item"><span>${name}</span><span class="src-chip ${st}">${st.toUpperCase()}</span></li>`
+      list.innerHTML = rows.map(([name, meta]) =>
+        `<li class="src-item" title="${meta.detail || ''}"><span>${name}</span><span class="src-chip ${meta.status}">${(meta.label || meta.status || '--').toUpperCase()}</span></li>`
       ).join('');
     }
 
@@ -1374,11 +1530,12 @@
       const d = mktData;
       const { price, ema800, rsi, atr, mtf, goldenCross, htfFilter, rsiZone, signal, score, change24, fg, funding, oiChange, news, cycle } = d;
       const ctx = getCtx();
+      const modeLabel = getDataModeLabel(d.dataStatus?.mode || 'fallback');
       q = q.toLowerCase();
       if (/ema|800|trigger/.test(q)) { const dist = ((price - ema800) / ema800 * 100); return `📏 EMA 800\n\nEMA 800: $${fmt(ema800)}\nBTC: $${fmt(price)}\n\n${price >= ema800 ? '✅ Preis ÜBER EMA 800 → bullisch' : '❌ Preis UNTER EMA 800 → bearisch'}\nAbstand: ${dist >= 0 ? '+' : ''}${dist.toFixed(2)}%\n\n${price >= ema800 ? 'Trigger fällt unter $' + fmt(ema800) : 'Bull-Signal: Close über $' + fmt(ema800)}`; }
       if (/score|qualit|stärk/.test(q)) { const bar = '█'.repeat(Math.round(score / 10)) + '░'.repeat(10 - Math.round(score / 10)); return `📊 Signal-Score\n\n${score}/100\n${bar}\n\nTech/OnChain/Sent/Macro/News: ${d.scoreObj.tech.toFixed(1)}/${d.scoreObj.onchain.toFixed(1)}/${d.scoreObj.sentiment.toFixed(1)}/${d.scoreObj.macro.toFixed(1)}/${d.scoreObj.news.toFixed(1)}\nMTF: 1h=${mtf.t1h} | 4h=${mtf.t4h} | 1d=${mtf.t1d}\nFG: ${fg} | Funding: ${funding.toFixed(4)}% | OIΔ: ${oiChange.toFixed(2)}%\nNews: ${news.score.toFixed(1)}/10 | Cycle: ${cycle.phase}\n\n${score >= 70 ? '🟢 Starkes Setup' : score >= 50 ? '🟡 Mittleres Setup' : '🔴 Schwaches Signal — abwarten'}`; }
       if (/plan|entry|setup|long|short|stop|tp|trade|kauf/.test(q)) { const plan = buildPlan(ctx); if (!plan) return '⏳'; if (plan.blocked) return `🚫 No Trade\n\n${plan.guards.map(g => '• ' + g).join('\n')}\n\nScore: ${plan.score}/100`; if (plan.action === 'wait') return `⏸️ Kein Signal\n\nMTF: ${mtf.t1h}/${mtf.t4h}/${mtf.t1d}\nScore: ${plan.score}/100`; const dir = plan.action === 'long' ? '📈 LONG' : '📉 SHORT'; return `${plan.action === 'long' ? '🟢' : '🔴'} ${dir}\n\nEntry: $${fmt(plan.entry)}\nStop:  $${fmt(plan.sl)}\nTP1:   $${fmt(plan.tp1)} (${plan.rr1?.toFixed(1)}:1)\nTP2:   $${fmt(plan.tp2)} (${plan.rr2?.toFixed(1)}:1)\n\nGröße: ${plan.size?.toFixed(5)} BTC\n(${ctx.riskPct}% Risiko · $${ctx.account.toLocaleString('de-DE')} Konto)\n\nScore: ${plan.score}/100 | ${mtf.aligned}`; }
-      if (/status|preis|live|rsi|indi/.test(q)) { return `📡 Live Status\n\nBTC: $${fmt(price)} (${change24 >= 0 ? '+' : ''}${change24.toFixed(2)}% 24h)\n\nEMA 15:  $${fmt(d.ema15)}\nEMA 300: $${fmt(d.ema300)}\nEMA 800: $${fmt(ema800)}\nRSI 14:  ${rsi.toFixed(1)} | ATR: $${fmt(atr)} | MACD: ${d.macd.trend}\nFG: ${fg} | Funding: ${funding.toFixed(4)}% | OIΔ: ${oiChange.toFixed(2)}%\nNews Score: ${news.score.toFixed(1)}/10 | Cycle: ${cycle.phase}\n\nSignal: ${signal} (${d.strength}/3) | Score: ${score}/100\n${goldenCross ? '✅' : '❌'} Golden Cross · ${htfFilter ? '✅' : '❌'} Über EMA800 · ${rsiZone ? '✅' : '❌'} RSI`; }
+      if (/status|preis|live|rsi|indi/.test(q)) { return `📡 ${modeLabel} Status\n\nBTC: $${fmt(price)} (${change24 >= 0 ? '+' : ''}${change24.toFixed(2)}% 24h)\n\nEMA 15:  $${fmt(d.ema15)}\nEMA 300: $${fmt(d.ema300)}\nEMA 800: $${fmt(ema800)}\nRSI 14:  ${rsi.toFixed(1)} | ATR: $${fmt(atr)} | MACD: ${d.macd.trend}\nFG: ${fg} | Funding: ${funding.toFixed(4)}% | OIΔ: ${oiChange.toFixed(2)}%\nNews Score: ${news.score.toFixed(1)}/10 | Cycle: ${cycle.phase}\n\nQuellen: ${summarizeSources(d)}\nSignal: ${signal} (${d.strength}/3) | Score: ${score}/100\n${goldenCross ? '✅' : '❌'} Golden Cross · ${htfFilter ? '✅' : '❌'} Über EMA800 · ${rsiZone ? '✅' : '❌'} RSI`; }
       return `🤖 TraderCoach\n\nFrag mich:\n• "Gib mir einen Trade-Plan"\n• "Wie ist der Score?"\n• "EMA 800 Analyse"\n• "Live Status"\n• "Soll ich kaufen?"\n\nScore: ${score}/100 | ${signal}`;
     }
 
@@ -1391,7 +1548,7 @@
 
       const systemPrompt = `Du bist TraderCoach, ein professioneller BTC Trading-Coach. Du antwortest präzise, direkt und auf Deutsch.
 
-AKTUELLE MARKTDATEN (Live):
+AKTUELLE MARKTDATEN (${getDataModeLabel(d.dataStatus?.mode || 'fallback')}):
 - BTC Preis: $${fmt(d.price)} (${d.change24 >= 0 ? '+' : ''}${d.change24.toFixed(2)}% 24h)
 - Signal: ${d.signal} | Score: ${d.score}/100
 - RSI 14: ${d.rsi.toFixed(1)} | ATR: $${fmt(d.atr)}
@@ -1404,6 +1561,7 @@ AKTUELLE MARKTDATEN (Live):
 - News Score: ${d.news.score.toFixed(1)}/10 (Bull ${d.news.bullish} / Bear ${d.news.bearish}, HI ${d.news.highImpact})
 - Cycle: ${d.cycle.phase}
 - On-Chain Proxy: Whale Trades ${d.onchain.whaleTrades} | Exchange Flow ${d.onchain.exchangeFlowPct.toFixed(2)}%
+- Quellenstatus: ${summarizeSources(d)}
 - Weighted Scores (0-10): Tech ${d.scoreObj.tech.toFixed(1)} | OnChain ${d.scoreObj.onchain.toFixed(1)} | Sent ${d.scoreObj.sentiment.toFixed(1)} | Macro ${d.scoreObj.macro.toFixed(1)} | News ${d.scoreObj.news.toFixed(1)}
 ${plan && plan.action !== 'wait' && !plan.blocked ? `- Trade-Plan: ${plan.action.toUpperCase()} Entry $${fmt(plan.entry)} | SL $${fmt(plan.sl)} | TP1 $${fmt(plan.tp1)} | TP2 $${fmt(plan.tp2)} | RR ${plan.rr1?.toFixed(1)}:1` : '- Kein klares Trade-Setup (MTF nicht aligned oder Guardrails aktiv)'}
 - Konto: $${ctx.account} | Risiko: ${ctx.riskPct}% | Tages-PnL: ${ctx.dailyPnl}%
@@ -1481,11 +1639,11 @@ WICHTIG: Gib keine Anlageberatung. Weise immer auf Risiken hin. Antworte prägna
 
     // ─── INIT ───
     (async () => {
-      addMsg('bot', '👋 Hallo! Ich bin dein BTC TraderCoach.\n\nLade Live-Daten...');
+      addMsg('bot', '👋 Hallo! Ich bin dein BTC TraderCoach.\n\nLade Marktdaten...');
       await loadMarketData();
       if (mktData) {
         const gptHint = gptKey ? '\n🧠 GPT-4o ist aktiv — stell mir jede Frage!' : '\n💡 Tipp: Gib deinen OpenAI API-Key ein für noch intelligentere Antworten!';
-        addMsg('bot', `✅ Marktdaten geladen!\n\nBTC: $${fmt(mktData.price)} | Score: ${mktData.score}/100 | Signal: ${mktData.signal}\nMTF: ${mktData.mtf.t1h}/${mktData.mtf.t4h}/${mktData.mtf.t1d}${gptHint}`);
+        addMsg('bot', `✅ ${getDataModeIntro()} geladen!\n\nBTC: $${fmt(mktData.price)} | Score: ${mktData.score}/100 | Signal: ${mktData.signal}\nMTF: ${mktData.mtf.t1h}/${mktData.mtf.t4h}/${mktData.mtf.t1d}\nQuellen: ${summarizeSources(mktData)}${gptHint}`);
       } else {
         addMsg('bot', '⚠️ Daten konnten nicht geladen werden. Seite neu laden.');
       }
