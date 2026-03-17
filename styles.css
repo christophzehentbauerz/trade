@@ -848,6 +848,32 @@ body::after {
     line-height: 1.45;
 }
 
+.decision-note {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    line-height: 1.45;
+}
+
+.setup-grade-card.grade-a-plus {
+    border-color: rgba(34, 197, 94, 0.35);
+    background: rgba(34, 197, 94, 0.09);
+}
+
+.setup-grade-card.grade-a {
+    border-color: rgba(59, 130, 246, 0.35);
+    background: rgba(59, 130, 246, 0.08);
+}
+
+.setup-grade-card.grade-b {
+    border-color: rgba(245, 158, 11, 0.35);
+    background: rgba(245, 158, 11, 0.08);
+}
+
+.setup-grade-card.grade-no-trade {
+    border-color: rgba(239, 68, 68, 0.35);
+    background: rgba(239, 68, 68, 0.08);
+}
+
 .event-green {
     color: var(--bullish);
 }

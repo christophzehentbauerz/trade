@@ -1528,6 +1528,25 @@ function buildDecisionModel() {
             : 'Spot heute aussetzen'
     };
 
+    let setupGrade = 'NO TRADE';
+    const gradeReasons = [];
+    if (permission === 'TRADE ERLAUBT' && unified.confidence >= 78 && weightedRR >= (TRADER_PROFILE.minRR + 0.4) && eventRisk.level === 'green' && !unified.filters.isLowLiquidity) {
+        setupGrade = 'A+';
+        gradeReasons.push('starke Konfluenz');
+        gradeReasons.push('sauberes R:R');
+        gradeReasons.push('kein Event-Risiko');
+    } else if (permission === 'TRADE ERLAUBT' && unified.confidence >= 68 && weightedRR >= TRADER_PROFILE.minRR && eventRisk.level !== 'red') {
+        setupGrade = 'A';
+        gradeReasons.push('handelbar mit Disziplin');
+        gradeReasons.push('Risiko kontrollierbar');
+    } else if ((permission === 'NUR BEI TRIGGER' || permission === 'WAIT FOR CONFIRMATION') && weightedRR >= Math.max(1.5, TRADER_PROFILE.minRR - 0.5)) {
+        setupGrade = 'B';
+        gradeReasons.push('nur bei sauberem Trigger');
+        gradeReasons.push('kein Blind Entry');
+    } else {
+        gradeReasons.push('Edge nicht stark genug');
+    }
+
     const bestStrategy = getBestStrategyForPhase(phase, unified.signal);
     const strategyStatus = permission === 'TRADE ERLAUBT' ? 'bestaetigt' : permission === 'NUR BEI TRIGGER' ? 'vorbereitet' : permission === 'WAIT FOR CONFIRMATION' ? 'trigger abwarten' : 'inaktiv';
 
@@ -1535,6 +1554,8 @@ function buildDecisionModel() {
         unified,
         bias,
         permission,
+        setupGrade,
+        gradeReasons,
         phase,
         eventRisk,
         leverageAllowed,
@@ -1569,6 +1590,9 @@ function updateDecisionPanel() {
     const permissionCard = document.getElementById('tradePermissionCard');
     const phaseEl = document.getElementById('marketPhaseValue');
     const biasEl = document.getElementById('preferredDirectionValue');
+    const gradeEl = document.getElementById('setupGradeValue');
+    const gradeCard = document.getElementById('setupGradeCard');
+    const gradeReasonEl = document.getElementById('setupGradeReason');
     const strategyEl = document.getElementById('bestStrategyValue');
     const eventRiskEl = document.getElementById('eventRiskValue');
     const leverageEl = document.getElementById('leveragePermissionValue');
@@ -1584,6 +1608,9 @@ function updateDecisionPanel() {
     permissionCard.className = `decision-permission ${model.permission.toLowerCase().replace(/\s+/g, '-')}`;
     phaseEl.textContent = model.phase;
     biasEl.textContent = model.bias;
+    gradeEl.textContent = model.setupGrade;
+    gradeCard.className = `decision-item setup-grade-card grade-${model.setupGrade.toLowerCase().replace('+', 'plus').replace(/\s+/g, '-')}`;
+    gradeReasonEl.textContent = model.gradeReasons.join(' | ');
     strategyEl.textContent = `${model.bestStrategy.name} (${model.strategyStatus})`;
     eventRiskEl.textContent = `${model.eventRisk.label} - ${model.eventRisk.summary}`;
     eventRiskEl.className = `decision-value event-${model.eventRisk.level}`;
