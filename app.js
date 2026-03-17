@@ -1321,8 +1321,10 @@ function updateSignalBanner() {
     const summary = document.getElementById('signalSummary');
     const explanation = document.getElementById('signalExplanationContent');
 
-    banner.className = `signal-banner ${(qualityBlocked ? 'neutral' : activeSignal.toLowerCase())}`;
+    const bannerMode = qualityBlocked ? 'no-trade' : activeSignal.toLowerCase();
+    banner.className = `signal-banner ${bannerMode}`;
     signalValue.textContent = qualityBlocked ? 'NO TRADE' : activeSignal;
+    signalValue.dataset.state = bannerMode;
     confidenceFill.style.width = `${activeConfidence}%`;
     confidenceValue.textContent = `${Math.round(activeConfidence)}%`;
 
@@ -1496,7 +1498,7 @@ function updateDataQualityStatus() {
     const q = state.dataQuality || { mode: 'loading', summary: 'Lade...', issues: [], warnings: [] };
     el.textContent = q.summary;
     el.title = [...q.issues, ...q.warnings].join(' | ') || q.summary;
-    el.style.color = q.mode === 'live' ? 'var(--bullish)' : q.mode === 'partial' ? 'var(--warning)' : q.mode === 'degraded' ? 'var(--bearish)' : '';
+    el.className = `update-time data-quality-${q.mode}`;
 }
 
 // =====================================================
