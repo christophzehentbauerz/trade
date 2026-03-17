@@ -1084,7 +1084,7 @@
     <div class="decision-card">
       <div class="decision-top">
         <div>
-          <div class="decision-kicker">Execution Decision</div>
+          <div class="decision-kicker">Heute Entscheidend</div>
           <div class="decision-main" id="coachPermission">Lade...</div>
           <div class="decision-sub" id="coachPermissionHint">Marktdaten werden geladen...</div>
         </div>
@@ -1128,9 +1128,9 @@
           </div>
         </div>
         <div class="guard-panel">
-          <div class="panel-title">Warum Nicht Traden?</div>
+          <div class="panel-title">Was Dich Heute Blockiert</div>
           <ul class="guard-list" id="coachGuardList">
-            <li>Warte auf Daten...</li>
+            <li>Daten werden geladen...</li>
           </ul>
         </div>
       </div>
@@ -1978,11 +1978,11 @@
       const spotAllowed = !d.dataQuality?.blocked && (d.signal === 'LONG' || d.score >= 55);
       const reasons = [...(plan?.guards || [])];
 
-      if (mixedTrend) reasons.push('MTF Alignment ist nicht sauber');
-      if (highVol) reasons.push('24h Bewegung ist zu impulsiv fuer sauberen Hebel');
-      if (overextended) reasons.push('RSI ist ueberdehnt');
-      if (d.signal === 'NEUTRAL') reasons.push('Signal ist aktuell neutral');
-      if (d.score <= shortThreshold && d.signal !== 'SHORT') reasons.push('Short-Edge ist noch nicht bestaetigt');
+      if (mixedTrend) reasons.push('Trendbild ist nicht sauber');
+      if (highVol) reasons.push('Bewegung ist heute zu hektisch fuer Hebel');
+      if (overextended) reasons.push('Markt ist kurzfristig ueberdehnt');
+      if (d.signal === 'NEUTRAL') reasons.push('Es gibt noch kein klares Signal');
+      if (d.score <= shortThreshold && d.signal !== 'SHORT') reasons.push('Short ist noch nicht bestaetigt');
 
       let permission = 'WAIT FOR CONFIRMATION';
       if (plan?.blocked) permission = 'HIGH RISK DAY';
@@ -2014,7 +2014,7 @@
         permission,
         permissionClass,
         permissionHint: plan?.blocked
-          ? reasons[0] || 'Guardrails blockieren heute'
+          ? reasons[0] || 'Heute blockieren die Guardrails'
           : permission === 'TRADE ERLAUBT'
             ? `Score ${d.score}/100 | ${bias} | ${(plan?.rr1 || 0).toFixed(1)}:1 bis TP1`
             : `Score ${d.score}/100 | ${formatCoachQuality(d)}`,
@@ -2022,8 +2022,8 @@
         setupGrade,
         leverageAllowed,
         spotAllowed,
-        today: permission === 'TRADE ERLAUBT' ? `${bias} fuer heute` : permission === 'HIGH RISK DAY' ? 'Heute kein Trade' : 'Heute nur Trigger handeln',
-        intraday: permission === 'TRADE ERLAUBT' ? `${bias} intraday priorisiert` : mixedTrend ? 'Nur schnelle Reaktionen, kein Blind Entry' : 'Auf Bestaetigung warten',
+        today: permission === 'TRADE ERLAUBT' ? `${bias} heute` : permission === 'HIGH RISK DAY' ? 'Heute kein Trade' : 'Nur bei sauberem Trigger',
+        intraday: permission === 'TRADE ERLAUBT' ? `${bias} intraday bevorzugt` : mixedTrend ? 'Nur schnelle Reaktionen, kein Blind Entry' : 'Erst Bestaetigung abwarten',
         strategy,
         quality: formatCoachQuality(d),
         longTrigger,
@@ -2054,7 +2054,7 @@
       const guardList = document.getElementById('coachGuardList');
       guardList.innerHTML = decision.reasons.length
         ? decision.reasons.map(reason => `<li>${reason}</li>`).join('')
-        : '<li>Keine harten Blocker aktiv. Warte nur auf den sauberen Trigger.</li>';
+        : '<li>Kein harter Blocker aktiv. Warte nur auf den sauberen Trigger.</li>';
 
       ['coachSetupGrade', 'coachBias', 'coachLeverage', 'coachSpot'].forEach(id => {
         document.getElementById(id).className = 'decision-badge';
@@ -2075,13 +2075,13 @@
       q = q.toLowerCase();
 
       if (/freigabe|traden|heute|warten|erlaubt/.test(q)) {
-        return `⛳ Execution Decision\n\n${decision.permission}\n${decision.permissionHint}\n\nTagesurteil: ${decision.today}\nIntraday: ${decision.intraday}\nStrategie: ${decision.strategy}\nLong Trigger: ${decision.longTrigger}\nShort Trigger: ${decision.shortTrigger}\n\n${decision.reasons.length ? decision.reasons.map(r => '• ' + r).join('\n') : '• Keine harten Blocker aktiv'}`;
+        return `⛳ Heute entscheiden\n\n${decision.permission}\n${decision.permissionHint}\n\nHeute: ${decision.today}\nIntraday: ${decision.intraday}\nStrategie: ${decision.strategy}\nLong Trigger: ${decision.longTrigger}\nShort Trigger: ${decision.shortTrigger}\n\n${decision.reasons.length ? decision.reasons.map(r => '• ' + r).join('\n') : '• Kein harter Blocker aktiv'}`;
       }
       if (/ema|800|trigger/.test(q)) { const dist = ((price - ema800) / ema800 * 100); return `📏 EMA 800\n\nEMA 800: $${fmt(ema800)}\nBTC: $${fmt(price)}\n\n${price >= ema800 ? '✅ Preis UEBER EMA 800 -> bullisch' : '❌ Preis UNTER EMA 800 -> bearisch'}\nAbstand: ${dist >= 0 ? '+' : ''}${dist.toFixed(2)}%\n\n${price >= ema800 ? 'Long Trigger verliert sich unter $' + fmt(ema800) : 'Bull-Trigger erst bei Close ueber $' + fmt(ema800)}`; }
       if (/score|qualit|stark/.test(q)) { const bar = '█'.repeat(Math.round(score / 10)) + '░'.repeat(10 - Math.round(score / 10)); return `📊 Signal-Score\n\n${score}/100\n${bar}\n\nTech/OnChain/Sent/Macro/News: ${d.scoreObj.tech.toFixed(1)}/${d.scoreObj.onchain.toFixed(1)}/${d.scoreObj.sentiment.toFixed(1)}/${d.scoreObj.macro.toFixed(1)}/${d.scoreObj.news.toFixed(1)}\nMTF: 1h=${mtf.t1h} | 4h=${mtf.t4h} | 1d=${mtf.t1d}\nFG: ${fg} | Funding: ${funding.toFixed(4)}% | OIΔ: ${oiChange.toFixed(2)}%\nNews: ${news.score.toFixed(1)}/10 | Cycle: ${cycle.phase}\n\n${formatCoachQuality(d)}\n\n${score >= 70 ? '🟢 Starkes Setup' : score >= 50 ? '🟡 Mittleres Setup' : '🔴 Schwaches Signal - abwarten'}`; }
-      if (/plan|entry|setup|long|short|stop|tp|trade|kauf/.test(q)) { if (!plan) return '⏳'; if (plan.blocked) return `🚫 No Trade\n\n${decision.permission}\n${decision.permissionHint}\n\n${plan.guards.map(g => '• ' + g).join('\n')}\n\nScore: ${plan.score}/100`; if (plan.action === 'wait') return `⏸️ Kein Signal\n\n${decision.today}\n${decision.intraday}\nLong Trigger: ${decision.longTrigger}\nShort Trigger: ${decision.shortTrigger}\n\nScore: ${plan.score}/100`; const dir = plan.action === 'long' ? '📈 LONG' : '📉 SHORT'; return `${plan.action === 'long' ? '🟢' : '🔴'} ${dir}\n\nFreigabe: ${decision.permission}\nEntry: $${fmt(plan.entry)}\nStop:  $${fmt(plan.sl)}\nTP1:   $${fmt(plan.tp1)} (${plan.rr1?.toFixed(1)}:1)\nTP2:   $${fmt(plan.tp2)} (${plan.rr2?.toFixed(1)}:1)\n\nGroesse: ${plan.size?.toFixed(5)} BTC\n(${ctx.riskPct}% Risiko · $${ctx.account.toLocaleString('de-DE')} Konto)\n\nStrategie: ${decision.strategy}\nScore: ${plan.score}/100 | ${mtf.aligned}`; }
+      if (/plan|entry|setup|long|short|stop|tp|trade|kauf/.test(q)) { if (!plan) return '⏳'; if (plan.blocked) return `🚫 Kein Trade\n\n${decision.permission}\n${decision.permissionHint}\n\n${plan.guards.map(g => '• ' + g).join('\n')}\n\nScore: ${plan.score}/100`; if (plan.action === 'wait') return `⏸️ Noch kein Setup\n\n${decision.today}\n${decision.intraday}\nLong Trigger: ${decision.longTrigger}\nShort Trigger: ${decision.shortTrigger}\n\nScore: ${plan.score}/100`; const dir = plan.action === 'long' ? '📈 LONG' : '📉 SHORT'; return `${plan.action === 'long' ? '🟢' : '🔴'} ${dir}\n\nFreigabe: ${decision.permission}\nEntry: $${fmt(plan.entry)}\nStop:  $${fmt(plan.sl)}\nTP1:   $${fmt(plan.tp1)} (${plan.rr1?.toFixed(1)}:1)\nTP2:   $${fmt(plan.tp2)} (${plan.rr2?.toFixed(1)}:1)\n\nGroesse: ${plan.size?.toFixed(5)} BTC\n(${ctx.riskPct}% Risiko · $${ctx.account.toLocaleString('de-DE')} Konto)\n\nStrategie: ${decision.strategy}\nScore: ${plan.score}/100 | ${mtf.aligned}`; }
       if (/status|preis|live|rsi|indi/.test(q)) { return `📡 ${modeLabel} Status\n\nBTC: $${fmt(price)} (${change24 >= 0 ? '+' : ''}${change24.toFixed(2)}% 24h)\n\nEMA 15:  $${fmt(d.ema15)}\nEMA 300: $${fmt(d.ema300)}\nEMA 800: $${fmt(ema800)}\nRSI 14:  ${rsi.toFixed(1)} | ATR: $${fmt(atr)} | MACD: ${d.macd.trend}\nFG: ${fg} | Funding: ${funding.toFixed(4)}% | OIΔ: ${oiChange.toFixed(2)}%\nNews Score: ${news.score.toFixed(1)}/10 | Cycle: ${cycle.phase}\n\nQuellen: ${summarizeSources(d)}\n${formatCoachQuality(d)}\nSignal: ${signal} (${d.strength}/3) | Score: ${score}/100\n${goldenCross ? '✅' : '❌'} Golden Cross · ${htfFilter ? '✅' : '❌'} Ueber EMA800 · ${rsiZone ? '✅' : '❌'} RSI`; }
-      return `🤖 TraderCoach\n\nFrag mich:\n• "Darf ich heute traden?"\n• "Gib mir einen Trade-Plan"\n• "Wie ist der Score?"\n• "EMA 800 Analyse"\n• "Live Status"\n\nFreigabe: ${decision.permission}\nScore: ${score}/100 | ${signal}`;
+      return `🤖 TraderCoach\n\nFrag mich:\n• "Darf ich heute traden?"\n• "Gib mir einen Trade-Plan"\n• "Wie stark ist das Signal?"\n• "EMA 800 Analyse"\n• "Live Status"\n\nFreigabe: ${decision.permission}\nScore: ${score}/100 | ${signal}`;
     }
 
     // â”€â”€â”€ GPT-4o CALL â”€â”€â”€
@@ -2111,9 +2111,9 @@ AKTUELLE MARKTDATEN (${getDataModeLabel(d.dataStatus?.mode || 'fallback')}):
 - Weighted Scores (0-10): Tech ${d.scoreObj.tech.toFixed(1)} | OnChain ${d.scoreObj.onchain.toFixed(1)} | Sent ${d.scoreObj.sentiment.toFixed(1)} | Macro ${d.scoreObj.macro.toFixed(1)} | News ${d.scoreObj.news.toFixed(1)}
 ${plan && plan.action !== 'wait' && !plan.blocked ? `- Trade-Plan: ${plan.action.toUpperCase()} Entry $${fmt(plan.entry)} | SL $${fmt(plan.sl)} | TP1 $${fmt(plan.tp1)} | TP2 $${fmt(plan.tp2)} | RR ${plan.rr1?.toFixed(1)}:1` : '- Kein klares Trade-Setup (MTF nicht aligned oder Guardrails aktiv)'}
 - Konto: $${ctx.account} | Risiko: ${ctx.riskPct}% | Tages-PnL: ${ctx.dailyPnl}%
-- Execution Decision: ${decision.permission} | ${decision.today}
+- Entscheidung: ${decision.permission} | ${decision.today}
 - Trigger: Long ${decision.longTrigger} | Short ${decision.shortTrigger}
-- Guardrails: ${decision.reasons.join('; ') || 'keine harten Blocker'}
+- Blocker: ${decision.reasons.join('; ') || 'keine harten Blocker'}
 
 WICHTIG: Gib keine Anlageberatung. Weise immer auf Risiken hin. Antworte praegnant (max 200 Woerter).`;
 
@@ -2200,7 +2200,7 @@ WICHTIG: Gib keine Anlageberatung. Weise immer auf Risiken hin. Antworte praegna
       if (mktData) {
         const gptHint = gptKey ? '\nðŸ§  GPT-4o ist aktiv â€” stell mir jede Frage!' : '\nðŸ’¡ Tipp: Gib deinen OpenAI API-Key ein fÃ¼r noch intelligentere Antworten!';
         const decision = buildCoachDecision(getCtx());
-        addMsg('bot', `âœ… ${getDataModeIntro()} geladen!\n\nBTC: $${fmt(mktData.price)} | Score: ${mktData.score}/100 | Signal: ${mktData.signal}\nMTF: ${mktData.mtf.t1h}/${mktData.mtf.t4h}/${mktData.mtf.t1d}\nFreigabe: ${decision?.permission || 'Lade...'}\nHeute: ${decision?.today || 'Lade...'}\nQuellen: ${summarizeSources(mktData)}${gptHint}`);
+        addMsg('bot', `âœ… ${getDataModeIntro()} geladen!\n\nBTC: $${fmt(mktData.price)} | Score: ${mktData.score}/100 | Signal: ${mktData.signal}\nMTF: ${mktData.mtf.t1h}/${mktData.mtf.t4h}/${mktData.mtf.t1d}\nHeute: ${decision?.today || 'Lade...'}\nFreigabe: ${decision?.permission || 'Lade...'}\nQuellen: ${summarizeSources(mktData)}${gptHint}`);
       } else {
         addMsg('bot', 'âš ï¸ Daten konnten nicht geladen werden. Seite neu laden.');
       }
