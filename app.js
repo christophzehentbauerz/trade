@@ -87,6 +87,7 @@ let TRADER_PROFILE = { ...DEFAULT_TRADER_PROFILE };
 
 const EVENT_OVERRIDE_KEY = 'btc-event-risk-override';
 const TRADER_PROFILE_KEY = 'btc-trader-profile';
+const SIGNAL_AUDIT_COLLAPSED_KEY = 'btc-signal-audit-collapsed';
 
 const OFFICIAL_EVENT_SCHEDULE = [
     { id: 'fomc-2026-03', title: 'FOMC Zinsentscheid', startsAt: '2026-03-18T14:00:00-04:00', category: 'macro', source: 'Fed', url: 'https://www.federalreserve.gov/newsevents/2026-march.htm' },
@@ -153,6 +154,37 @@ function renderSignalAuditLog() {
     }
 }
 
+function setSignalAuditCollapsed(collapsed) {
+    const section = document.getElementById('signalAuditSection');
+    const toggleBtn = document.getElementById('toggleSignalAudit');
+    if (!section || !toggleBtn) return;
+
+    section.classList.toggle('collapsed', collapsed);
+    toggleBtn.setAttribute('aria-expanded', String(!collapsed));
+    toggleBtn.textContent = collapsed ? 'Signal Audit oeffnen' : 'Signal Audit schliessen';
+}
+
+function initSignalAuditToggle() {
+    const toggleBtn = document.getElementById('toggleSignalAudit');
+    if (!toggleBtn) return;
+
+    let collapsed = true;
+    try {
+        const saved = localStorage.getItem(SIGNAL_AUDIT_COLLAPSED_KEY);
+        collapsed = saved === null ? true : saved === 'true';
+    } catch (_) {
+        collapsed = true;
+    }
+
+    setSignalAuditCollapsed(collapsed);
+
+    toggleBtn.addEventListener('click', () => {
+        const nextCollapsed = !document.getElementById('signalAuditSection')?.classList.contains('collapsed');
+        localStorage.setItem(SIGNAL_AUDIT_COLLAPSED_KEY, String(nextCollapsed));
+        setSignalAuditCollapsed(nextCollapsed);
+    });
+}
+
 function loadTraderProfile() {
     try {
         const saved = JSON.parse(localStorage.getItem(TRADER_PROFILE_KEY) || '{}');
@@ -200,6 +232,7 @@ const NotificationSystem = {
     audioContext: null,
     notificationsEnabled: false,
     soundEnabled: true,
+    alertHideTimeout: null,
 
     // Initialize notification permissions
     async init() {
@@ -390,9 +423,36 @@ const NotificationSystem = {
     },
 
     // Show in-page alert popup
+    hideInPageAlert(immediate = false) {
+        const alertBox = document.getElementById('signalAlert');
+        if (!alertBox) return;
+
+        if (this.alertHideTimeout) {
+            clearTimeout(this.alertHideTimeout);
+            this.alertHideTimeout = null;
+        }
+
+        alertBox.classList.remove('show');
+
+        const cleanup = () => {
+            if (!alertBox.classList.contains('show')) {
+                alertBox.innerHTML = '';
+            }
+        };
+
+        if (immediate) {
+            cleanup();
+            return;
+        }
+
+        window.setTimeout(cleanup, 360);
+    },
+
     showInPageAlert(type, confidence, price, source = 'Coach-Konfluenz') {
         const alertBox = document.getElementById('signalAlert');
         if (!alertBox) return;
+
+        this.hideInPageAlert(true);
 
         const emoji = type === 'long' ? 'LONG' : 'SHORT';
         const signal = type === 'long' ? 'LONG' : 'SHORT';
@@ -407,14 +467,20 @@ const NotificationSystem = {
                     <div class="alert-details">BTC: $${price.toLocaleString()} | Konfidenz: ${Math.round(confidence)}%</div>
                     <div class="alert-details">Quelle: ${source}</div>
                 </div>
-                <button class="alert-close" onclick="document.getElementById('signalAlert').classList.remove('show')">x</button>
+                <button class="alert-close" type="button" aria-label="Signal schliessen">x</button>
             </div>
         `;
+
+        const closeBtn = alertBox.querySelector('.alert-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.hideInPageAlert());
+        }
+
         alertBox.classList.add('show');
 
         // Auto hide after 10 seconds
-        setTimeout(() => {
-            alertBox.classList.remove('show');
+        this.alertHideTimeout = window.setTimeout(() => {
+            this.hideInPageAlert();
         }, 10000);
     }
 };
@@ -2224,6 +2290,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize notification system
     NotificationSystem.init();
     renderSignalAuditLog();
+    initSignalAuditToggle();
     loadTraderProfile();
     updateTraderProfileUI();
 

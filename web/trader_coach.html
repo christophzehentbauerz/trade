@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TraderCoach — BTC Smart Money</title>
+  <title>TraderCoach - BTC Smart Money</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -106,6 +106,11 @@
       font-size: 15px
     }
 
+    .hero p strong {
+      color: var(--text);
+      font-weight: 600
+    }
+
     /* GPT KEY BANNER */
     .gpt-banner {
       max-width: 900px;
@@ -180,10 +185,9 @@
 
     /* TICKER */
     .ticker-bar {
-      display: flex;
-      gap: 20px;
-      justify-content: center;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
       padding: 14px 20px;
       background: var(--panel);
       border: 1px solid var(--border);
@@ -193,7 +197,11 @@
     }
 
     .tick {
-      text-align: center
+      text-align: center;
+      background: rgba(10, 17, 32, .55);
+      border: 1px solid rgba(30, 47, 77, .65);
+      border-radius: 12px;
+      padding: 10px 8px
     }
 
     .tick-label {
@@ -233,6 +241,187 @@
       gap: 18px;
       align-items: center;
       flex-wrap: wrap
+    }
+
+    .decision-wrap {
+      max-width: 900px;
+      margin: 0 auto 20px;
+      padding: 0 16px
+    }
+
+    .decision-card {
+      background: linear-gradient(180deg, rgba(14, 24, 40, .96), rgba(10, 17, 32, .96));
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, .18)
+    }
+
+    .decision-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 14px;
+      flex-wrap: wrap
+    }
+
+    .decision-kicker {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      font-size: 11px;
+      margin-bottom: 6px
+    }
+
+    .decision-main {
+      font-size: clamp(26px, 4vw, 38px);
+      font-weight: 700;
+      line-height: 1.05
+    }
+
+    .decision-main.ok {
+      color: var(--green)
+    }
+
+    .decision-main.warn {
+      color: var(--yellow)
+    }
+
+    .decision-main.block {
+      color: var(--red)
+    }
+
+    .decision-sub {
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--muted);
+      max-width: 580px;
+      line-height: 1.5
+    }
+
+    .decision-badges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end
+    }
+
+    .decision-badge {
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, .04);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text)
+    }
+
+    .decision-badge.green {
+      color: var(--green);
+      border-color: rgba(52, 217, 139, .34);
+      background: rgba(52, 217, 139, .12)
+    }
+
+    .decision-badge.yellow {
+      color: var(--yellow);
+      border-color: rgba(245, 197, 66, .34);
+      background: rgba(245, 197, 66, .12)
+    }
+
+    .decision-badge.red {
+      color: var(--red);
+      border-color: rgba(255, 107, 107, .34);
+      background: rgba(255, 107, 107, .12)
+    }
+
+    .decision-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px
+    }
+
+    .decision-box {
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, .03);
+      border: 1px solid rgba(30, 47, 77, .8)
+    }
+
+    .decision-label {
+      color: var(--muted);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .7px;
+      margin-bottom: 6px
+    }
+
+    .decision-value {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.45
+    }
+
+    .decision-bottom {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 12px
+    }
+
+    .trigger-panel,
+    .guard-panel {
+      padding: 14px;
+      border-radius: 14px;
+      background: rgba(8, 14, 26, .58);
+      border: 1px solid rgba(30, 47, 77, .9)
+    }
+
+    .panel-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--muted);
+      margin-bottom: 10px
+    }
+
+    .trigger-item {
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(30, 47, 77, .7)
+    }
+
+    .trigger-item:last-child {
+      padding-bottom: 0;
+      border-bottom: none
+    }
+
+    .trigger-name {
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 4px
+    }
+
+    .trigger-meta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45
+    }
+
+    .guard-list {
+      list-style: none;
+      display: grid;
+      gap: 8px
+    }
+
+    .guard-list li {
+      padding: 9px 10px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, .03);
+      border: 1px solid rgba(30, 47, 77, .7);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45
     }
 
     .score-num {
@@ -333,6 +522,12 @@
       max-width: 900px;
       margin: 0 auto;
       padding: 0 16px 40px
+    }
+
+    .sidebar-col {
+      display: flex;
+      flex-direction: column;
+      gap: 16px
     }
 
     @media(max-width:700px) {
@@ -489,7 +684,8 @@
       flex-wrap: wrap;
       gap: 6px;
       padding: 8px 12px;
-      border-top: 1px solid var(--border)
+      border-top: 1px solid var(--border);
+      background: rgba(10, 17, 32, .5)
     }
 
     .quick button {
@@ -514,7 +710,8 @@
       display: flex;
       gap: 7px;
       padding: 10px 12px;
-      border-top: 1px solid var(--border)
+      border-top: 1px solid var(--border);
+      background: rgba(15, 24, 41, .96)
     }
 
     .input-row input {
@@ -652,6 +849,140 @@
       border-color: rgba(255, 107, 107, .35);
       background: rgba(255, 107, 107, .1);
     }
+
+    @media(max-width:960px) {
+      .ticker-bar {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .decision-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .decision-bottom {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media(max-width:700px) {
+      nav {
+        padding: 12px 14px;
+      }
+
+      .nav-links a {
+        padding: 6px 9px;
+        font-size: 12px
+      }
+
+      .hero {
+        padding: 26px 16px 18px;
+      }
+
+      .hero p {
+        font-size: 13px;
+      }
+
+      .gpt-banner {
+        margin-bottom: 12px;
+      }
+
+      .gpt-banner-inner {
+        padding: 12px;
+      }
+
+      .decision-card,
+      .score-card,
+      .ticker-bar,
+      .card {
+        border-radius: 16px;
+      }
+
+      .decision-top {
+        align-items: stretch;
+      }
+
+      .decision-badges {
+        justify-content: flex-start;
+      }
+
+      .decision-grid,
+      .ticker-bar {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .grid {
+        gap: 14px;
+        padding-bottom: 24px;
+      }
+
+      .sidebar-col {
+        order: 2;
+      }
+
+      .chat-card {
+        order: 1;
+        height: min(72vh, 760px);
+      }
+
+      .quick {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 10px;
+      }
+
+      .quick button {
+        flex: 0 0 auto;
+        white-space: nowrap;
+      }
+
+      .messages {
+        padding: 10px;
+      }
+
+      .bubble {
+        max-width: 96%;
+      }
+
+      .input-row {
+        position: sticky;
+        bottom: 0;
+      }
+
+      .input-row input {
+        min-width: 0;
+      }
+    }
+
+    @media(max-width:480px) {
+      .ticker-bar,
+      .decision-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .score-card {
+        padding: 16px;
+      }
+
+      .decision-card {
+        padding: 16px;
+      }
+
+      .decision-main {
+        font-size: 24px;
+      }
+
+      .chat-card {
+        height: 70vh;
+      }
+
+      .input-row {
+        flex-direction: column;
+      }
+
+      .input-row button {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 
@@ -660,32 +991,32 @@
   <nav>
     <div class="logo">BTC<span>Coach</span></div>
     <div class="nav-links">
-      <a href="../index.html" id="navDashboard">← Dashboard</a>
-      <a href="trader_coach.html" class="active">🤖 Coach</a>
+      <a href="../index.html" id="navDashboard">â† Dashboard</a>
+      <a href="trader_coach.html" class="active">ðŸ¤– Coach</a>
     </div>
   </nav>
 
   <div class="hero">
     <h1>Dein BTC Trading Coach</h1>
-    <p>Live Daten · Signal-Score · Trade-Plan · GPT-4o powered</p>
+    <p><strong>Weniger Deutung, mehr Entscheidung:</strong> klare Trade-Freigabe, Trigger und Guardrails auf einen Blick.</p>
   </div>
 
   <!-- GPT KEY BANNER -->
   <div class="gpt-banner">
     <div class="gpt-banner-inner">
-      <span class="gpt-badge">🧠 KI-Modell</span>
-      <span id="gptStatus">Kein API-Key — Coach antwortet mit eingebautem Regelwerk</span>
+      <span class="gpt-badge">ðŸ§  KI-Modell</span>
+      <span id="gptStatus">Kein API-Key â€” Coach antwortet mit eingebautem Regelwerk</span>
       <select id="gptModel"
         style="background:#0a1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:inherit;font-size:12px;outline:none;max-width:160px;">
-        <option value="gpt-4o-mini" selected>⚡ gpt-4o-mini (günstig)</option>
-        <option value="gpt-4o">🧠 gpt-4o (besser)</option>
-        <option value="o3-mini">🔬 o3-mini (Reasoning)</option>
+        <option value="gpt-4o-mini" selected>âš¡ gpt-4o-mini (gÃ¼nstig)</option>
+        <option value="gpt-4o">ðŸ§  gpt-4o (besser)</option>
+        <option value="o3-mini">ðŸ”¬ o3-mini (Reasoning)</option>
       </select>
       <input type="password" id="gptKeyInput" placeholder="sk-... OpenAI API Key" autocomplete="off"
         style="min-width:160px;" />
       <button class="btn-sm btn-purple" id="gptSaveBtn">Speichern</button>
       <button class="btn-sm" id="gptClearBtn"
-        style="background:#1a2740;color:var(--muted);border:1px solid var(--border);">Löschen</button>
+        style="background:#1a2740;color:var(--muted);border:1px solid var(--border);">LÃ¶schen</button>
     </div>
   </div>
 
@@ -749,12 +1080,69 @@
     </div>
   </div>
 
+  <div class="decision-wrap">
+    <div class="decision-card">
+      <div class="decision-top">
+        <div>
+          <div class="decision-kicker">Execution Decision</div>
+          <div class="decision-main" id="coachPermission">Lade...</div>
+          <div class="decision-sub" id="coachPermissionHint">Marktdaten werden geladen...</div>
+        </div>
+        <div class="decision-badges">
+          <span class="decision-badge" id="coachSetupGrade">Setup --</span>
+          <span class="decision-badge" id="coachBias">Bias --</span>
+          <span class="decision-badge" id="coachLeverage">Hebel --</span>
+          <span class="decision-badge" id="coachSpot">Spot --</span>
+        </div>
+      </div>
+
+      <div class="decision-grid">
+        <div class="decision-box">
+          <div class="decision-label">Tagesurteil</div>
+          <div class="decision-value" id="coachToday">--</div>
+        </div>
+        <div class="decision-box">
+          <div class="decision-label">Intraday</div>
+          <div class="decision-value" id="coachIntraday">--</div>
+        </div>
+        <div class="decision-box">
+          <div class="decision-label">Strategie Heute</div>
+          <div class="decision-value" id="coachStrategy">--</div>
+        </div>
+        <div class="decision-box">
+          <div class="decision-label">Datenqualitaet</div>
+          <div class="decision-value" id="coachQuality">--</div>
+        </div>
+      </div>
+
+      <div class="decision-bottom">
+        <div class="trigger-panel">
+          <div class="panel-title">Trigger</div>
+          <div class="trigger-item">
+            <div class="trigger-name">Long Trigger</div>
+            <div class="trigger-meta" id="coachLongTrigger">--</div>
+          </div>
+          <div class="trigger-item">
+            <div class="trigger-name">Short Trigger</div>
+            <div class="trigger-meta" id="coachShortTrigger">--</div>
+          </div>
+        </div>
+        <div class="guard-panel">
+          <div class="panel-title">Warum Nicht Traden?</div>
+          <ul class="guard-list" id="coachGuardList">
+            <li>Warte auf Daten...</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- GRID -->
   <div class="grid">
     <!-- Left: Config + Indicators -->
-    <div style="display:flex;flex-direction:column;gap:16px;">
+    <div class="sidebar-col">
       <div class="card">
-        <div class="card-head">⚙️ Einstellungen</div>
+        <div class="card-head">âš™ï¸ Einstellungen</div>
         <div class="card-body cfg">
           <label>Konto (USDT)</label>
           <input id="cfgAccount" type="number" value="5000" />
@@ -769,7 +1157,7 @@
         </div>
       </div>
       <div class="card">
-        <div class="card-head">📊 Indikatoren</div>
+        <div class="card-head">ðŸ“Š Indikatoren</div>
         <div class="card-body">
           <div class="ind-row"><span class="ind-label">EMA 15</span><span class="ind-val" id="iEma15">---</span></div>
           <div class="ind-row"><span class="ind-label">EMA 300</span><span class="ind-val" id="iEma300">---</span></div>
@@ -778,13 +1166,13 @@
           <div class="ind-row"><span class="ind-label">ATR 14</span><span class="ind-val" id="iAtr">---</span></div>
           <div class="ind-row"><span class="ind-label">Golden Cross</span><span class="ind-val" id="iGc">---</span>
           </div>
-          <div class="ind-row"><span class="ind-label">Über EMA 800</span><span class="ind-val" id="iHtf">---</span>
+          <div class="ind-row"><span class="ind-label">Ãœber EMA 800</span><span class="ind-val" id="iHtf">---</span>
           </div>
           <div class="ind-row"><span class="ind-label">MACD (1h)</span><span class="ind-val" id="iMacd">---</span>
           </div>
           <div class="ind-row"><span class="ind-label">Funding</span><span class="ind-val" id="iFunding">---</span>
           </div>
-          <div class="ind-row"><span class="ind-label">Open Interest Δ</span><span class="ind-val" id="iOi">---</span>
+          <div class="ind-row"><span class="ind-label">Open Interest Î”</span><span class="ind-val" id="iOi">---</span>
           </div>
           <div class="ind-row"><span class="ind-label">L/S Ratio</span><span class="ind-val" id="iLs">---</span>
           </div>
@@ -797,7 +1185,7 @@
         </div>
       </div>
       <div class="card">
-        <div class="card-head">🔎 Faktor-Check</div>
+        <div class="card-head">ðŸ”Ž Faktor-Check</div>
         <div class="card-body">
           <ul class="src-list" id="srcAuditCoach">
             <li class="src-item"><span>BTC Preis</span><span class="src-chip">--</span></li>
@@ -809,14 +1197,15 @@
     <!-- Right: Chat -->
     <div class="card chat-card">
       <div class="gpt-indicator" id="gptIndicator" style="display:none">
-        <span class="gpt-dot"></span> GPT-4o aktiv — intelligente Antworten eingeschaltet
+        <span class="gpt-dot"></span> GPT-4o aktiv â€” intelligente Antworten eingeschaltet
       </div>
       <div class="quick">
-        <button data-q="Gib mir einen Trade-Plan">📋 Plan</button>
-        <button data-q="Wie ist der Signal-Score gerade?">📊 Score</button>
-        <button data-q="EMA 800 Analyse und Trigger">📏 EMA 800</button>
-        <button data-q="Live Status alle Indikatoren">📡 Status</button>
-        <button data-q="Soll ich jetzt kaufen oder warten?">💬 Kaufen?</button>
+        <button data-q="Darf ich heute traden oder lieber warten?">Freigabe</button>
+        <button data-q="Gib mir einen Trade-Plan">ðŸ“‹ Plan</button>
+        <button data-q="Wie ist der Signal-Score gerade?">ðŸ“Š Score</button>
+        <button data-q="EMA 800 Analyse und Trigger">ðŸ“ EMA 800</button>
+        <button data-q="Live Status alle Indikatoren">ðŸ“¡ Status</button>
+        <button data-q="Soll ich jetzt kaufen oder warten?">ðŸ’¬ Kaufen?</button>
       </div>
       <div class="messages" id="messages"></div>
       <div class="input-row">
@@ -828,8 +1217,8 @@
   </div>
 
   <script>
-    // __OPENAI_KEY_INJECT__  ← GitHub Actions replaces this line with the key
-    // ─── GPT KEY MANAGEMENT ───
+    // __OPENAI_KEY_INJECT__  â† GitHub Actions replaces this line with the key
+    // â”€â”€â”€ GPT KEY MANAGEMENT â”€â”€â”€
     // Auto-save injected key to localStorage on first load
     if (typeof _presetKey !== 'undefined' && _presetKey && !localStorage.getItem('coach_gpt_key')) {
       localStorage.setItem('coach_gpt_key', _presetKey);
@@ -838,11 +1227,11 @@
     function updateGptUI() {
       const hasKey = !!gptKey;
       document.getElementById('gptStatus').textContent = hasKey
-        ? '🧠 GPT-4o aktiv — alle Fragen werden intelligent beantwortet'
-        : 'Kein API-Key — Coach antwortet mit eingebautem Regelwerk';
+        ? 'ðŸ§  GPT-4o aktiv â€” alle Fragen werden intelligent beantwortet'
+        : 'Kein API-Key â€” Coach antwortet mit eingebautem Regelwerk';
       document.getElementById('gptStatus').style.color = hasKey ? 'var(--green)' : 'var(--muted)';
       document.getElementById('gptIndicator').style.display = hasKey ? 'flex' : 'none';
-      if (hasKey) document.getElementById('gptKeyInput').placeholder = 'API-Key gespeichert ✓';
+      if (hasKey) document.getElementById('gptKeyInput').placeholder = 'API-Key gespeichert âœ“';
     }
     document.getElementById('gptSaveBtn').addEventListener('click', () => {
       const val = document.getElementById('gptKeyInput').value.trim();
@@ -851,9 +1240,9 @@
         localStorage.setItem('coach_gpt_key', val);
         document.getElementById('gptKeyInput').value = '';
         updateGptUI();
-        addMsg('bot', '✅ GPT-4o API-Key gespeichert! Deine nächsten Fragen werden von GPT-4o beantwortet.');
+        addMsg('bot', 'âœ… GPT-4o API-Key gespeichert! Deine nÃ¤chsten Fragen werden von GPT-4o beantwortet.');
       } else {
-        addMsg('bot', '❌ Ungültiger Key — muss mit sk- beginnen. Key findest du unter: platform.openai.com/api-keys');
+        addMsg('bot', 'âŒ UngÃ¼ltiger Key â€” muss mit sk- beginnen. Key findest du unter: platform.openai.com/api-keys');
       }
     });
     document.getElementById('gptClearBtn').addEventListener('click', () => {
@@ -861,11 +1250,11 @@
       localStorage.removeItem('coach_gpt_key');
       document.getElementById('gptKeyInput').placeholder = 'sk-... OpenAI API Key eingeben';
       updateGptUI();
-      addMsg('bot', '🗑️ API-Key gelöscht. Coach läuft wieder im Regelwerk-Modus.');
+      addMsg('bot', 'ðŸ—‘ï¸ API-Key gelÃ¶scht. Coach lÃ¤uft wieder im Regelwerk-Modus.');
     });
     updateGptUI();
 
-    // ─── MARKET DATA ───
+    // â”€â”€â”€ MARKET DATA â”€â”€â”€
     let mktData = null;
 
     async function fetchJSON(url, timeoutMs = 12000) {
@@ -943,10 +1332,10 @@
           : makeSourceEntry(fallbackStatus, fallbackLabel, 'News-Score ohne Live-News'),
         macd: flags.macd
           ? makeSourceEntry(mode === 'cache' ? 'cache' : mode === 'fallback' ? 'fallback' : 'derived', mode === 'cache' ? 'Cache' : mode === 'fallback' ? 'Fallback' : 'Berechnet', 'Aus geladenen Kerzendaten berechnet')
-          : makeSourceEntry(fallbackStatus, fallbackLabel, 'MACD nicht aus vollständigen Kerzendaten berechnet'),
+          : makeSourceEntry(fallbackStatus, fallbackLabel, 'MACD nicht aus vollstÃ¤ndigen Kerzendaten berechnet'),
         onchain: flags.onchain
           ? makeSourceEntry(mode === 'cache' ? 'cache' : 'proxy', mode === 'cache' ? 'Cache' : 'Proxy', 'Proxy aus AggTrades und Volumen')
-          : makeSourceEntry(fallbackStatus, fallbackLabel, 'On-Chain Proxy nicht verfügbar'),
+          : makeSourceEntry(fallbackStatus, fallbackLabel, 'On-Chain Proxy nicht verfÃ¼gbar'),
         cycle: makeSourceEntry(mode === 'cache' ? 'cache' : 'derived', mode === 'cache' ? 'Cache' : 'Berechnet', 'Halving-Zyklus aus festem Zeitmodell')
       };
     }
@@ -990,7 +1379,7 @@
         `Preis ${d.sourceMeta.price.label.toLowerCase()}`,
         `Funding ${d.sourceMeta.funding.label.toLowerCase()}`,
         `News ${d.sourceMeta.news.label.toLowerCase()}`
-      ].join(' · ');
+      ].join(' Â· ');
     }
 
     function getDataAgeMinutes(ts) {
@@ -1006,14 +1395,14 @@
       const priceStatus = data?.sourceMeta?.price?.status || 'static';
       const macdStatus = data?.sourceMeta?.macd?.status || 'static';
 
-      if (mode === 'offline') issues.push('Keine Marktdaten verfügbar');
+      if (mode === 'offline') issues.push('Keine Marktdaten verfÃ¼gbar');
       else if (mode === 'fallback') issues.push('Nur Fallback-Daten aktiv');
 
       if (mode === 'cache' && ageMinutes !== null && ageMinutes > 30) issues.push(`Cache zu alt (${ageMinutes.toFixed(0)} min)`);
-      else if (ageMinutes !== null && ageMinutes > 10) warnings.push(`Daten älter als ${ageMinutes.toFixed(0)} min`);
+      else if (ageMinutes !== null && ageMinutes > 10) warnings.push(`Daten Ã¤lter als ${ageMinutes.toFixed(0)} min`);
 
-      if (!['live', 'cache', 'fallback'].includes(priceStatus)) issues.push('Preisquelle nicht verlässlich');
-      if (!['derived', 'cache', 'fallback'].includes(macdStatus)) issues.push('MACD-Quelle nicht verlässlich');
+      if (!['live', 'cache', 'fallback'].includes(priceStatus)) issues.push('Preisquelle nicht verlÃ¤sslich');
+      if (!['derived', 'cache', 'fallback'].includes(macdStatus)) issues.push('MACD-Quelle nicht verlÃ¤sslich');
 
       return {
         ageMinutes,
@@ -1032,9 +1421,9 @@
     function formatCoachQuality(data) {
       const q = buildCoachQuality(data);
       const age = q.ageMinutes === null ? 'Alter n/a' : `Alter ${q.ageMinutes.toFixed(0)} min`;
-      if (q.blocked) return `Qualität blockiert · ${q.issues[0]} · ${age}`;
-      if (q.warnings.length) return `Qualität eingeschränkt · ${q.warnings[0]} · ${age}`;
-      return `Qualität ok · ${age}`;
+      if (q.blocked) return `QualitÃ¤t blockiert Â· ${q.issues[0]} Â· ${age}`;
+      if (q.warnings.length) return `QualitÃ¤t eingeschrÃ¤nkt Â· ${q.warnings[0]} Â· ${age}`;
+      return `QualitÃ¤t ok Â· ${age}`;
     }
 
     function mapBinanceKlines(rows) {
@@ -1353,7 +1742,7 @@
         sourceMeta: {
           price: price > 0
             ? makeSourceEntry('fallback', 'Fallback', 'Nur Preis-Fallback aus CoinGecko/CryptoCompare')
-            : makeSourceEntry('static', 'Offline', 'Kein Live-Preis verfügbar'),
+            : makeSourceEntry('static', 'Offline', 'Kein Live-Preis verfÃ¼gbar'),
           fearGreed: makeSourceEntry('fallback', 'Fallback', 'Fear & Greed Defaultwert 50'),
           funding: makeSourceEntry('fallback', 'Fallback', 'Funding Defaultwert 0'),
           oi: makeSourceEntry('fallback', 'Fallback', 'Open Interest Defaultwert 0'),
@@ -1387,7 +1776,7 @@
         ]);
         const fgData = fgRes.data, fundingData = fundingRes.data, oiNow = oiNowRes.data, oiHist = oiHistRes.data, lsData = lsRes.data, newsData = newsRes.data, aggTrades = aggRes.data;
         const c1h = candlePack.c1h || [], c4h = candlePack.c4h || [], c1d = candlePack.c1d || [];
-        if (!c1h.length || !c4h.length || !c1d.length) throw new Error('Keine Kerzendaten verfügbar');
+        if (!c1h.length || !c4h.length || !c1d.length) throw new Error('Keine Kerzendaten verfÃ¼gbar');
         const cl = c1h.map(c => c.close), price = cl[cl.length - 1];
         const ema15 = calcEMA(cl, 15), ema300 = calcEMA(cl, 300), ema800 = calcEMA(cl, 800);
         const rsi = calcRSI(cl, 14), atr = calcATR(c1h.map(c => ({ high: c.high, low: c.low, close: c.close })), 14);
@@ -1450,7 +1839,7 @@
               : makeSourceEntry('fallback', 'Fallback', 'Funding Defaultwert 0'),
             oi: oiNowRes.ok && oiHistRes.ok
               ? makeSourceEntry('live', 'Live', 'Binance Open Interest APIs')
-              : makeSourceEntry('fallback', 'Fallback', 'Open Interest nicht live verfügbar'),
+              : makeSourceEntry('fallback', 'Fallback', 'Open Interest nicht live verfÃ¼gbar'),
             ls: lsRes.ok
               ? makeSourceEntry('live', 'Live', 'Binance Long/Short Ratio API')
               : makeSourceEntry('fallback', 'Fallback', 'Long/Short Defaultwert 50/50'),
@@ -1460,7 +1849,7 @@
             macd: makeSourceEntry(candleStatus === 'live' ? 'derived' : 'fallback', candleStatus === 'live' ? 'Berechnet' : 'Fallback', `${candleLabel} Kerzendaten`),
             onchain: aggRes.ok
               ? makeSourceEntry('proxy', 'Proxy', 'Aus Binance AggTrades und Volumen abgeleitet')
-              : makeSourceEntry('fallback', 'Fallback', 'On-Chain Proxy nicht live verfügbar'),
+              : makeSourceEntry('fallback', 'Fallback', 'On-Chain Proxy nicht live verfÃ¼gbar'),
             cycle: makeSourceEntry('derived', 'Berechnet', 'Halving-Zyklus aus festem Zeitmodell')
           },
           dataStatus: {
@@ -1520,8 +1909,8 @@
       document.getElementById('iEma800').textContent = '$' + fmt(d.ema800);
       document.getElementById('iRsi').textContent = d.rsi.toFixed(1);
       document.getElementById('iAtr').textContent = '$' + fmt(d.atr);
-      document.getElementById('iGc').textContent = d.goldenCross ? '✅ Ja' : '❌ Nein';
-      document.getElementById('iHtf').textContent = d.htfFilter ? '✅ Ja' : '❌ Nein';
+      document.getElementById('iGc').textContent = d.goldenCross ? 'âœ… Ja' : 'âŒ Nein';
+      document.getElementById('iHtf').textContent = d.htfFilter ? 'âœ… Ja' : 'âŒ Nein';
       document.getElementById('iMacd').textContent = `${d.macd.trend} (${d.macd.histogram.toFixed(2)})`;
       document.getElementById('iFunding').textContent = `${d.funding >= 0 ? '+' : ''}${d.funding.toFixed(4)}%`;
       document.getElementById('iOi').textContent = `${d.oiChange >= 0 ? '+' : ''}${d.oiChange.toFixed(2)}%`;
@@ -1530,6 +1919,7 @@
       document.getElementById('iCycle').textContent = d.cycle.phase;
       document.getElementById('iOnchain').textContent = `Whales ${d.onchain.whaleTrades}, Flow ${d.onchain.exchangeFlowPct.toFixed(1)}%`;
       updateSourceAudit();
+      updateCoachDecision();
     }
 
     function updateSourceAudit() {
@@ -1553,7 +1943,7 @@
       ).join('');
     }
 
-    // ─── BUILT-IN COACH ───
+    // â”€â”€â”€ BUILT-IN COACH â”€â”€â”€
     function getCtx() { return { account: +document.getElementById('cfgAccount').value || 5000, riskPct: +document.getElementById('cfgRisk').value || 1, minScore: +document.getElementById('cfgMinScore').value || 60, dailyPnl: +document.getElementById('cfgDailyPnl').value || 0, openRisk: +document.getElementById('cfgOpenRisk').value || 0 }; }
 
     function buildPlan(ctx) {
@@ -1576,27 +1966,133 @@
       return { action, entry, sl, tp1, tp2, rr1, rr2, size, score, blocked, guards };
     }
 
+    function buildCoachDecision(ctx) {
+      if (!mktData) return null;
+      const d = refreshCoachQuality(mktData);
+      const plan = buildPlan(ctx);
+      const shortThreshold = 100 - ctx.minScore;
+      const highVol = d.change24 !== null && Math.abs(d.change24) >= 4.5;
+      const overextended = d.rsi >= 72 || d.rsi <= 28;
+      const mixedTrend = d.mtf.aligned === 'mixed';
+      const leverageAllowed = !plan?.blocked && (plan?.action === 'long' || plan?.action === 'short') && (plan?.rr1 || 0) >= 2 && !highVol && !overextended;
+      const spotAllowed = !d.dataQuality?.blocked && (d.signal === 'LONG' || d.score >= 55);
+      const reasons = [...(plan?.guards || [])];
+
+      if (mixedTrend) reasons.push('MTF Alignment ist nicht sauber');
+      if (highVol) reasons.push('24h Bewegung ist zu impulsiv fuer sauberen Hebel');
+      if (overextended) reasons.push('RSI ist ueberdehnt');
+      if (d.signal === 'NEUTRAL') reasons.push('Signal ist aktuell neutral');
+      if (d.score <= shortThreshold && d.signal !== 'SHORT') reasons.push('Short-Edge ist noch nicht bestaetigt');
+
+      let permission = 'WAIT FOR CONFIRMATION';
+      if (plan?.blocked) permission = 'HIGH RISK DAY';
+      else if (plan?.action === 'long' || plan?.action === 'short') permission = 'TRADE ERLAUBT';
+      else if (d.signal === 'NEUTRAL' || mixedTrend) permission = 'WAIT FOR CONFIRMATION';
+      else permission = 'NUR BEI TRIGGER';
+
+      const permissionClass = permission === 'TRADE ERLAUBT' ? 'ok' : permission === 'HIGH RISK DAY' ? 'block' : 'warn';
+      const bias = d.signal === 'LONG' ? 'LONG BIAS' : d.signal === 'SHORT' ? 'SHORT BIAS' : mixedTrend ? 'NEUTRAL / RANGE' : 'WAIT';
+      const setupGrade = permission === 'TRADE ERLAUBT'
+        ? leverageAllowed && d.score >= 75 ? 'A SETUP' : 'B SETUP'
+        : permission === 'NUR BEI TRIGGER' ? 'TRIGGER SETUP' : 'NO TRADE';
+      const strategy = d.signal === 'LONG'
+        ? 'Trend-Follow Long'
+        : d.signal === 'SHORT'
+          ? 'Rejection / Defensive Short'
+          : mixedTrend
+            ? 'Abwarten oder nur Scalps'
+            : 'Kein Setup';
+
+      const longTrigger = plan?.action === 'long'
+        ? `Entry nahe $${fmt(plan.entry)} | SL $${fmt(plan.sl)} | TP1 $${fmt(plan.tp1)}`
+        : `Long erst ueber $${fmt(Math.max(d.price, d.ema800) + d.atr * 0.35)} mit Bestaetigung`;
+      const shortTrigger = plan?.action === 'short'
+        ? `Entry nahe $${fmt(plan.entry)} | SL $${fmt(plan.sl)} | TP1 $${fmt(plan.tp1)}`
+        : `Short erst unter $${fmt(Math.min(d.price, d.ema300) - d.atr * 0.35)} mit Rejection / Breakdown`;
+
+      return {
+        permission,
+        permissionClass,
+        permissionHint: plan?.blocked
+          ? reasons[0] || 'Guardrails blockieren heute'
+          : permission === 'TRADE ERLAUBT'
+            ? `Score ${d.score}/100 | ${bias} | ${(plan?.rr1 || 0).toFixed(1)}:1 bis TP1`
+            : `Score ${d.score}/100 | ${formatCoachQuality(d)}`,
+        bias,
+        setupGrade,
+        leverageAllowed,
+        spotAllowed,
+        today: permission === 'TRADE ERLAUBT' ? `${bias} fuer heute` : permission === 'HIGH RISK DAY' ? 'Heute kein Trade' : 'Heute nur Trigger handeln',
+        intraday: permission === 'TRADE ERLAUBT' ? `${bias} intraday priorisiert` : mixedTrend ? 'Nur schnelle Reaktionen, kein Blind Entry' : 'Auf Bestaetigung warten',
+        strategy,
+        quality: formatCoachQuality(d),
+        longTrigger,
+        shortTrigger,
+        reasons: [...new Set(reasons)].filter(Boolean).slice(0, 4)
+      };
+    }
+
+    function updateCoachDecision() {
+      const decision = buildCoachDecision(getCtx());
+      if (!decision) return;
+
+      const permissionEl = document.getElementById('coachPermission');
+      permissionEl.textContent = decision.permission;
+      permissionEl.className = `decision-main ${decision.permissionClass}`;
+      document.getElementById('coachPermissionHint').textContent = decision.permissionHint;
+      document.getElementById('coachSetupGrade').textContent = decision.setupGrade;
+      document.getElementById('coachBias').textContent = decision.bias;
+      document.getElementById('coachLeverage').textContent = `Hebel ${decision.leverageAllowed ? 'Ja' : 'Nein'}`;
+      document.getElementById('coachSpot').textContent = `Spot ${decision.spotAllowed ? 'Ja' : 'Nein'}`;
+      document.getElementById('coachToday').textContent = decision.today;
+      document.getElementById('coachIntraday').textContent = decision.intraday;
+      document.getElementById('coachStrategy').textContent = decision.strategy;
+      document.getElementById('coachQuality').textContent = decision.quality;
+      document.getElementById('coachLongTrigger').textContent = decision.longTrigger;
+      document.getElementById('coachShortTrigger').textContent = decision.shortTrigger;
+
+      const guardList = document.getElementById('coachGuardList');
+      guardList.innerHTML = decision.reasons.length
+        ? decision.reasons.map(reason => `<li>${reason}</li>`).join('')
+        : '<li>Keine harten Blocker aktiv. Warte nur auf den sauberen Trigger.</li>';
+
+      ['coachSetupGrade', 'coachBias', 'coachLeverage', 'coachSpot'].forEach(id => {
+        document.getElementById(id).className = 'decision-badge';
+      });
+      document.getElementById('coachSetupGrade').classList.add(decision.permission === 'TRADE ERLAUBT' ? 'green' : decision.permission === 'HIGH RISK DAY' ? 'red' : 'yellow');
+      document.getElementById('coachBias').classList.add(decision.bias.includes('LONG') ? 'green' : decision.bias.includes('SHORT') ? 'red' : 'yellow');
+      document.getElementById('coachLeverage').classList.add(decision.leverageAllowed ? 'green' : 'yellow');
+      document.getElementById('coachSpot').classList.add(decision.spotAllowed ? 'green' : 'red');
+    }
+
     function builtinAnswer(q) {
       const d = mktData;
       const { price, ema800, rsi, atr, mtf, goldenCross, htfFilter, rsiZone, signal, score, change24, fg, funding, oiChange, news, cycle } = d;
       const ctx = getCtx();
+      const plan = buildPlan(ctx);
+      const decision = buildCoachDecision(ctx);
       const modeLabel = getDataModeLabel(d.dataStatus?.mode || 'fallback');
       q = q.toLowerCase();
-      if (/ema|800|trigger/.test(q)) { const dist = ((price - ema800) / ema800 * 100); return `📏 EMA 800\n\nEMA 800: $${fmt(ema800)}\nBTC: $${fmt(price)}\n\n${price >= ema800 ? '✅ Preis ÜBER EMA 800 → bullisch' : '❌ Preis UNTER EMA 800 → bearisch'}\nAbstand: ${dist >= 0 ? '+' : ''}${dist.toFixed(2)}%\n\n${price >= ema800 ? 'Trigger fällt unter $' + fmt(ema800) : 'Bull-Signal: Close über $' + fmt(ema800)}`; }
-      if (/score|qualit|stärk/.test(q)) { const bar = '█'.repeat(Math.round(score / 10)) + '░'.repeat(10 - Math.round(score / 10)); return `📊 Signal-Score\n\n${score}/100\n${bar}\n\nTech/OnChain/Sent/Macro/News: ${d.scoreObj.tech.toFixed(1)}/${d.scoreObj.onchain.toFixed(1)}/${d.scoreObj.sentiment.toFixed(1)}/${d.scoreObj.macro.toFixed(1)}/${d.scoreObj.news.toFixed(1)}\nMTF: 1h=${mtf.t1h} | 4h=${mtf.t4h} | 1d=${mtf.t1d}\nFG: ${fg} | Funding: ${funding.toFixed(4)}% | OIΔ: ${oiChange.toFixed(2)}%\nNews: ${news.score.toFixed(1)}/10 | Cycle: ${cycle.phase}\n\n${formatCoachQuality(d)}\n\n${score >= 70 ? '🟢 Starkes Setup' : score >= 50 ? '🟡 Mittleres Setup' : '🔴 Schwaches Signal — abwarten'}`; }
-      if (/plan|entry|setup|long|short|stop|tp|trade|kauf/.test(q)) { const plan = buildPlan(ctx); if (!plan) return '⏳'; if (plan.blocked) return `🚫 No Trade\n\n${plan.guards.map(g => '• ' + g).join('\n')}\n\nScore: ${plan.score}/100`; if (plan.action === 'wait') return `⏸️ Kein Signal\n\nMTF: ${mtf.t1h}/${mtf.t4h}/${mtf.t1d}\nScore: ${plan.score}/100`; const dir = plan.action === 'long' ? '📈 LONG' : '📉 SHORT'; return `${plan.action === 'long' ? '🟢' : '🔴'} ${dir}\n\nEntry: $${fmt(plan.entry)}\nStop:  $${fmt(plan.sl)}\nTP1:   $${fmt(plan.tp1)} (${plan.rr1?.toFixed(1)}:1)\nTP2:   $${fmt(plan.tp2)} (${plan.rr2?.toFixed(1)}:1)\n\nGröße: ${plan.size?.toFixed(5)} BTC\n(${ctx.riskPct}% Risiko · $${ctx.account.toLocaleString('de-DE')} Konto)\n\nScore: ${plan.score}/100 | ${mtf.aligned}`; }
-      if (/status|preis|live|rsi|indi/.test(q)) { return `📡 ${modeLabel} Status\n\nBTC: $${fmt(price)} (${change24 >= 0 ? '+' : ''}${change24.toFixed(2)}% 24h)\n\nEMA 15:  $${fmt(d.ema15)}\nEMA 300: $${fmt(d.ema300)}\nEMA 800: $${fmt(ema800)}\nRSI 14:  ${rsi.toFixed(1)} | ATR: $${fmt(atr)} | MACD: ${d.macd.trend}\nFG: ${fg} | Funding: ${funding.toFixed(4)}% | OIΔ: ${oiChange.toFixed(2)}%\nNews Score: ${news.score.toFixed(1)}/10 | Cycle: ${cycle.phase}\n\nQuellen: ${summarizeSources(d)}\n${formatCoachQuality(d)}\nSignal: ${signal} (${d.strength}/3) | Score: ${score}/100\n${goldenCross ? '✅' : '❌'} Golden Cross · ${htfFilter ? '✅' : '❌'} Über EMA800 · ${rsiZone ? '✅' : '❌'} RSI`; }
-      return `🤖 TraderCoach\n\nFrag mich:\n• "Gib mir einen Trade-Plan"\n• "Wie ist der Score?"\n• "EMA 800 Analyse"\n• "Live Status"\n• "Soll ich kaufen?"\n\nScore: ${score}/100 | ${signal}`;
+
+      if (/freigabe|traden|heute|warten|erlaubt/.test(q)) {
+        return `⛳ Execution Decision\n\n${decision.permission}\n${decision.permissionHint}\n\nTagesurteil: ${decision.today}\nIntraday: ${decision.intraday}\nStrategie: ${decision.strategy}\nLong Trigger: ${decision.longTrigger}\nShort Trigger: ${decision.shortTrigger}\n\n${decision.reasons.length ? decision.reasons.map(r => '• ' + r).join('\n') : '• Keine harten Blocker aktiv'}`;
+      }
+      if (/ema|800|trigger/.test(q)) { const dist = ((price - ema800) / ema800 * 100); return `📏 EMA 800\n\nEMA 800: $${fmt(ema800)}\nBTC: $${fmt(price)}\n\n${price >= ema800 ? '✅ Preis UEBER EMA 800 -> bullisch' : '❌ Preis UNTER EMA 800 -> bearisch'}\nAbstand: ${dist >= 0 ? '+' : ''}${dist.toFixed(2)}%\n\n${price >= ema800 ? 'Long Trigger verliert sich unter $' + fmt(ema800) : 'Bull-Trigger erst bei Close ueber $' + fmt(ema800)}`; }
+      if (/score|qualit|stark/.test(q)) { const bar = '█'.repeat(Math.round(score / 10)) + '░'.repeat(10 - Math.round(score / 10)); return `📊 Signal-Score\n\n${score}/100\n${bar}\n\nTech/OnChain/Sent/Macro/News: ${d.scoreObj.tech.toFixed(1)}/${d.scoreObj.onchain.toFixed(1)}/${d.scoreObj.sentiment.toFixed(1)}/${d.scoreObj.macro.toFixed(1)}/${d.scoreObj.news.toFixed(1)}\nMTF: 1h=${mtf.t1h} | 4h=${mtf.t4h} | 1d=${mtf.t1d}\nFG: ${fg} | Funding: ${funding.toFixed(4)}% | OIΔ: ${oiChange.toFixed(2)}%\nNews: ${news.score.toFixed(1)}/10 | Cycle: ${cycle.phase}\n\n${formatCoachQuality(d)}\n\n${score >= 70 ? '🟢 Starkes Setup' : score >= 50 ? '🟡 Mittleres Setup' : '🔴 Schwaches Signal - abwarten'}`; }
+      if (/plan|entry|setup|long|short|stop|tp|trade|kauf/.test(q)) { if (!plan) return '⏳'; if (plan.blocked) return `🚫 No Trade\n\n${decision.permission}\n${decision.permissionHint}\n\n${plan.guards.map(g => '• ' + g).join('\n')}\n\nScore: ${plan.score}/100`; if (plan.action === 'wait') return `⏸️ Kein Signal\n\n${decision.today}\n${decision.intraday}\nLong Trigger: ${decision.longTrigger}\nShort Trigger: ${decision.shortTrigger}\n\nScore: ${plan.score}/100`; const dir = plan.action === 'long' ? '📈 LONG' : '📉 SHORT'; return `${plan.action === 'long' ? '🟢' : '🔴'} ${dir}\n\nFreigabe: ${decision.permission}\nEntry: $${fmt(plan.entry)}\nStop:  $${fmt(plan.sl)}\nTP1:   $${fmt(plan.tp1)} (${plan.rr1?.toFixed(1)}:1)\nTP2:   $${fmt(plan.tp2)} (${plan.rr2?.toFixed(1)}:1)\n\nGroesse: ${plan.size?.toFixed(5)} BTC\n(${ctx.riskPct}% Risiko · $${ctx.account.toLocaleString('de-DE')} Konto)\n\nStrategie: ${decision.strategy}\nScore: ${plan.score}/100 | ${mtf.aligned}`; }
+      if (/status|preis|live|rsi|indi/.test(q)) { return `📡 ${modeLabel} Status\n\nBTC: $${fmt(price)} (${change24 >= 0 ? '+' : ''}${change24.toFixed(2)}% 24h)\n\nEMA 15:  $${fmt(d.ema15)}\nEMA 300: $${fmt(d.ema300)}\nEMA 800: $${fmt(ema800)}\nRSI 14:  ${rsi.toFixed(1)} | ATR: $${fmt(atr)} | MACD: ${d.macd.trend}\nFG: ${fg} | Funding: ${funding.toFixed(4)}% | OIΔ: ${oiChange.toFixed(2)}%\nNews Score: ${news.score.toFixed(1)}/10 | Cycle: ${cycle.phase}\n\nQuellen: ${summarizeSources(d)}\n${formatCoachQuality(d)}\nSignal: ${signal} (${d.strength}/3) | Score: ${score}/100\n${goldenCross ? '✅' : '❌'} Golden Cross · ${htfFilter ? '✅' : '❌'} Ueber EMA800 · ${rsiZone ? '✅' : '❌'} RSI`; }
+      return `🤖 TraderCoach\n\nFrag mich:\n• "Darf ich heute traden?"\n• "Gib mir einen Trade-Plan"\n• "Wie ist der Score?"\n• "EMA 800 Analyse"\n• "Live Status"\n\nFreigabe: ${decision.permission}\nScore: ${score}/100 | ${signal}`;
     }
 
-    // ─── GPT-4o CALL ───
+    // â”€â”€â”€ GPT-4o CALL â”€â”€â”€
     async function askGPT(question) {
       if (!mktData) return null;
       const d = mktData;
       const ctx = getCtx();
       const plan = buildPlan(ctx);
+      const decision = buildCoachDecision(ctx);
 
-      const systemPrompt = `Du bist TraderCoach, ein professioneller BTC Trading-Coach. Du antwortest präzise, direkt und auf Deutsch.
+      const systemPrompt = `Du bist TraderCoach, ein professioneller BTC Trading-Coach. Du antwortest praezise, direkt und auf Deutsch.
 
 AKTUELLE MARKTDATEN (${getDataModeLabel(d.dataStatus?.mode || 'fallback')}):
 - BTC Preis: $${fmt(d.price)} (${d.change24 >= 0 ? '+' : ''}${d.change24.toFixed(2)}% 24h)
@@ -1604,8 +2100,8 @@ AKTUELLE MARKTDATEN (${getDataModeLabel(d.dataStatus?.mode || 'fallback')}):
 - RSI 14: ${d.rsi.toFixed(1)} | ATR: $${fmt(d.atr)}
 - MACD: ${d.macd.trend} (${d.macd.histogram.toFixed(2)})
 - EMA 15: $${fmt(d.ema15)} | EMA 300: $${fmt(d.ema300)} | EMA 800: $${fmt(d.ema800)}
-- Golden Cross: ${d.goldenCross ? 'JA' : 'NEIN'} | Über EMA800: ${d.htfFilter ? 'JA' : 'NEIN'} | RSI Zone: ${d.rsiZone ? 'JA' : 'NEIN'}
-- MTF: 1h=${d.mtf.t1h} / 4h=${d.mtf.t4h} / 1d=${d.mtf.t1d} → Alignment: ${d.mtf.aligned}
+- Golden Cross: ${d.goldenCross ? 'JA' : 'NEIN'} | Ueber EMA800: ${d.htfFilter ? 'JA' : 'NEIN'} | RSI Zone: ${d.rsiZone ? 'JA' : 'NEIN'}
+- MTF: 1h=${d.mtf.t1h} / 4h=${d.mtf.t4h} / 1d=${d.mtf.t1d} -> Alignment: ${d.mtf.aligned}
 - Fear & Greed: ${d.fg} | Funding: ${d.funding.toFixed(4)}% | OIΔ: ${d.oiChange.toFixed(2)}%
 - L/S Ratio: ${d.lsLong.toFixed(1)}% Long / ${d.lsShort.toFixed(1)}% Short
 - News Score: ${d.news.score.toFixed(1)}/10 (Bull ${d.news.bullish} / Bear ${d.news.bearish}, HI ${d.news.highImpact})
@@ -1615,8 +2111,11 @@ AKTUELLE MARKTDATEN (${getDataModeLabel(d.dataStatus?.mode || 'fallback')}):
 - Weighted Scores (0-10): Tech ${d.scoreObj.tech.toFixed(1)} | OnChain ${d.scoreObj.onchain.toFixed(1)} | Sent ${d.scoreObj.sentiment.toFixed(1)} | Macro ${d.scoreObj.macro.toFixed(1)} | News ${d.scoreObj.news.toFixed(1)}
 ${plan && plan.action !== 'wait' && !plan.blocked ? `- Trade-Plan: ${plan.action.toUpperCase()} Entry $${fmt(plan.entry)} | SL $${fmt(plan.sl)} | TP1 $${fmt(plan.tp1)} | TP2 $${fmt(plan.tp2)} | RR ${plan.rr1?.toFixed(1)}:1` : '- Kein klares Trade-Setup (MTF nicht aligned oder Guardrails aktiv)'}
 - Konto: $${ctx.account} | Risiko: ${ctx.riskPct}% | Tages-PnL: ${ctx.dailyPnl}%
+- Execution Decision: ${decision.permission} | ${decision.today}
+- Trigger: Long ${decision.longTrigger} | Short ${decision.shortTrigger}
+- Guardrails: ${decision.reasons.join('; ') || 'keine harten Blocker'}
 
-WICHTIG: Gib keine Anlageberatung. Weise immer auf Risiken hin. Antworte prägnant (max 200 Wörter).`;
+WICHTIG: Gib keine Anlageberatung. Weise immer auf Risiken hin. Antworte praegnant (max 200 Woerter).`;
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -1639,7 +2138,7 @@ WICHTIG: Gib keine Anlageberatung. Weise immer auf Risiken hin. Antworte prägna
       return data.choices[0].message.content;
     }
 
-    // ─── CHAT ───
+    // â”€â”€â”€ CHAT â”€â”€â”€
     const msgsEl = document.getElementById('messages');
     const qEl = document.getElementById('question');
 
@@ -1659,21 +2158,21 @@ WICHTIG: Gib keine Anlageberatung. Weise immer auf Risiken hin. Antworte prägna
       qEl.value = '';
 
       if (!mktData) {
-        const ld = addMsg('bot', '⏳ Lade Marktdaten...');
+        const ld = addMsg('bot', 'â³ Lade Marktdaten...');
         await loadMarketData();
         ld.remove();
-        if (!mktData) { addMsg('bot', '⚠️ Daten konnten nicht geladen werden.'); return; }
+        if (!mktData) { addMsg('bot', 'âš ï¸ Daten konnten nicht geladen werden.'); return; }
       }
 
       if (gptKey) {
-        const ld = addMsg('bot', '🧠 GPT-4o denkt nach...', 'loading');
+        const ld = addMsg('bot', 'ðŸ§  GPT-4o denkt nach...', 'loading');
         try {
           const reply = await askGPT(question);
           ld.remove();
           addMsg('bot', reply, 'gpt-reply');
         } catch (e) {
           ld.remove();
-          addMsg('bot', `⚠️ GPT-Fehler: ${e.message}\n\nFallback auf Regelwerk:`, 'bot');
+          addMsg('bot', `âš ï¸ GPT-Fehler: ${e.message}\n\nFallback auf Regelwerk:`, 'bot');
           addMsg('bot', builtinAnswer(question));
         }
       } else {
@@ -1686,16 +2185,24 @@ WICHTIG: Gib keine Anlageberatung. Weise immer auf Risiken hin. Antworte prägna
     document.querySelectorAll('.quick button').forEach(b => {
       b.addEventListener('click', () => ask(b.dataset.q || ''));
     });
+    ['cfgAccount', 'cfgRisk', 'cfgMinScore', 'cfgDailyPnl', 'cfgOpenRisk'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('input', () => {
+        if (mktData) updateCoachDecision();
+      });
+    });
 
-    // ─── INIT ───
+    // â”€â”€â”€ INIT â”€â”€â”€
     (async () => {
-      addMsg('bot', '👋 Hallo! Ich bin dein BTC TraderCoach.\n\nLade Marktdaten...');
+      addMsg('bot', 'ðŸ‘‹ Hallo! Ich bin dein BTC TraderCoach.\n\nLade Marktdaten...');
       await loadMarketData();
       if (mktData) {
-        const gptHint = gptKey ? '\n🧠 GPT-4o ist aktiv — stell mir jede Frage!' : '\n💡 Tipp: Gib deinen OpenAI API-Key ein für noch intelligentere Antworten!';
-        addMsg('bot', `✅ ${getDataModeIntro()} geladen!\n\nBTC: $${fmt(mktData.price)} | Score: ${mktData.score}/100 | Signal: ${mktData.signal}\nMTF: ${mktData.mtf.t1h}/${mktData.mtf.t4h}/${mktData.mtf.t1d}\nQuellen: ${summarizeSources(mktData)}${gptHint}`);
+        const gptHint = gptKey ? '\nðŸ§  GPT-4o ist aktiv â€” stell mir jede Frage!' : '\nðŸ’¡ Tipp: Gib deinen OpenAI API-Key ein fÃ¼r noch intelligentere Antworten!';
+        const decision = buildCoachDecision(getCtx());
+        addMsg('bot', `âœ… ${getDataModeIntro()} geladen!\n\nBTC: $${fmt(mktData.price)} | Score: ${mktData.score}/100 | Signal: ${mktData.signal}\nMTF: ${mktData.mtf.t1h}/${mktData.mtf.t4h}/${mktData.mtf.t1d}\nFreigabe: ${decision?.permission || 'Lade...'}\nHeute: ${decision?.today || 'Lade...'}\nQuellen: ${summarizeSources(mktData)}${gptHint}`);
       } else {
-        addMsg('bot', '⚠️ Daten konnten nicht geladen werden. Seite neu laden.');
+        addMsg('bot', 'âš ï¸ Daten konnten nicht geladen werden. Seite neu laden.');
       }
     })();
 
@@ -1704,3 +2211,4 @@ WICHTIG: Gib keine Anlageberatung. Weise immer auf Risiken hin. Antworte prägna
 </body>
 
 </html>
+

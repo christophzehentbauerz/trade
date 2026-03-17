@@ -2708,6 +2708,33 @@ body::after {
         var(--bg-card);
 }
 
+.signal-audit-tools {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.signal-audit-toggle {
+    border: 1px solid rgba(245, 158, 11, 0.28);
+    background: rgba(245, 158, 11, 0.08);
+    color: var(--text-primary);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.signal-audit-toggle:hover {
+    background: rgba(245, 158, 11, 0.16);
+    border-color: rgba(245, 158, 11, 0.45);
+}
+
+.signal-audit-section.collapsed .card-body {
+    display: none;
+}
+
 .signal-audit-list {
     display: flex;
     flex-direction: column;
@@ -2781,6 +2808,16 @@ body::after {
 }
 
 @media (max-width: 768px) {
+    .signal-audit-tools {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .signal-audit-toggle {
+        padding: 6px 10px;
+        font-size: 0.72rem;
+    }
+
     .audit-item {
         grid-template-columns: 1fr;
         gap: 6px;
@@ -3173,15 +3210,22 @@ body::after {
 /* Signal Alert Popup */
 .signal-alert {
     position: fixed;
-    top: -120px;
+    top: 0;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translate(-50%, -120%);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
     z-index: 10000;
-    transition: top 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    width: min(100vw - 24px, 640px);
+    transition: transform 0.35s ease, opacity 0.25s ease, visibility 0.25s ease;
 }
 
 .signal-alert.show {
-    top: 20px;
+    transform: translate(-50%, 20px);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
 }
 
 .signal-alert .alert-content {
@@ -3370,6 +3414,7 @@ body::after {
     .signal-alert .alert-content {
         padding: 12px 16px;
         gap: 12px;
+        align-items: flex-start;
     }
 
     .signal-alert .alert-icon {
@@ -3382,6 +3427,10 @@ body::after {
 
     .signal-alert .alert-details {
         font-size: 0.8rem;
+    }
+
+    .signal-alert {
+        width: calc(100vw - 20px);
     }
 }
 

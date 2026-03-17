@@ -448,10 +448,69 @@ const SmartMoneySignal = {
         return this.state.signal === 'EXIT' || !this.state.goldenCross;
     },
 
+    getExecutionContext() {
+        try {
+            if (typeof buildDecisionModel === 'function') {
+                const model = buildDecisionModel();
+                if (model) {
+                    return {
+                        permission: model.permission,
+                        setupGrade: model.setupGrade,
+                        bias: model.bias,
+                        phase: model.phase,
+                        eventRisk: `${model.eventRisk?.label || 'n/a'} - ${model.eventRisk?.summary || 'n/a'}`,
+                        bestStrategy: `${model.bestStrategy?.name || 'n/a'} (${model.strategyStatus || 'n/a'})`,
+                        leverage: model.leverageAllowed ? 'Ja' : 'Nein',
+                        spot: model.spotAllowed ? 'Ja' : 'Nein',
+                        today: model.horizons?.day || 'n/a',
+                        intraday: model.horizons?.intraday || 'n/a',
+                        swing: model.horizons?.swing || 'n/a',
+                        spotVerdict: model.horizons?.spot || 'n/a',
+                        longTrigger: model.triggerLong?.label || 'n/a',
+                        shortTrigger: model.triggerShort?.label || 'n/a',
+                        longEntry: model.triggerLong?.entry || 'n/a',
+                        shortEntry: model.triggerShort?.entry || 'n/a',
+                        styleFit: model.styleFit || 'n/a',
+                        noTradeReasons: Array.isArray(model.noTradeReasons) ? model.noTradeReasons.slice(0, 3) : []
+                    };
+                }
+            }
+        } catch (error) {
+            console.warn('Decision model unavailable for Telegram message:', error);
+        }
+
+        const text = (id) => document.getElementById(id)?.textContent?.trim() || 'n/a';
+        const whyNoTradeList = document.getElementById('whyNoTradeList');
+
+        return {
+            permission: text('tradePermissionValue'),
+            setupGrade: text('setupGradeValue'),
+            bias: text('preferredDirectionValue'),
+            phase: text('marketPhaseValue'),
+            eventRisk: text('eventRiskValue'),
+            bestStrategy: text('bestStrategyValue'),
+            leverage: text('leveragePermissionValue'),
+            spot: text('spotPermissionValue'),
+            today: text('todayVerdict'),
+            intraday: text('intradayVerdict'),
+            swing: text('swingVerdict'),
+            spotVerdict: text('spotVerdict'),
+            longTrigger: text('longTriggerLabel'),
+            shortTrigger: text('shortTriggerLabel'),
+            longEntry: text('longTriggerEntry'),
+            shortEntry: text('shortTriggerEntry'),
+            styleFit: text('styleFitValue'),
+            noTradeReasons: whyNoTradeList
+                ? Array.from(whyNoTradeList.querySelectorAll('li')).map(li => li.textContent.trim()).filter(Boolean).slice(0, 3)
+                : []
+        };
+    },
+
     // Generate Telegram Signal Check message
     generateSignalCheckMessage() {
         const s = this.state;
         const now = new Date().toLocaleString('de-DE');
+        const context = this.getExecutionContext();
 
         let message = `🤖 *BTC Smart Money Signal*\n`;
         message += `📅 ${now}\n\n`;
@@ -468,11 +527,35 @@ const SmartMoneySignal = {
 
         message += `💰 Preis: $${s.currentPrice?.toLocaleString()}\n\n`;
 
+        message += `🧭 *Execution Filter:*\n`;
+        message += `Trade Permission: ${context.permission}\n`;
+        message += `Setup-Qualitaet: ${context.setupGrade}\n`;
+        message += `Richtung: ${context.bias}\n`;
+        message += `Marktphase: ${context.phase}\n`;
+        message += `Event-Risiko: ${context.eventRisk}\n`;
+        message += `Hebel erlaubt: ${context.leverage} | Spot erlaubt: ${context.spot}\n\n`;
+
+        message += `🕒 *Urteile:*\n`;
+        message += `Heute: ${context.today}\n`;
+        message += `Intraday: ${context.intraday}\n`;
+        message += `Swing: ${context.swing}\n`;
+        message += `Spot: ${context.spotVerdict}\n\n`;
+
+        message += `🎯 *Trigger:*\n`;
+        message += `Long: ${context.longTrigger}\n`;
+        message += `Long Entry: ${context.longEntry}\n`;
+        message += `Short: ${context.shortTrigger}\n`;
+        message += `Short Entry: ${context.shortEntry}\n\n`;
+
         // Conditions
         message += `📋 *Entry Bedingungen (${s.signalStrength}/3):*\n`;
         message += `${s.goldenCross ? '✅' : '❌'} Golden Cross: EMA(15) $${s.emaFast?.toFixed(0)} ${s.goldenCross ? '>' : '<'} EMA(300) $${s.emaSlow?.toFixed(0)}\n`;
         message += `${s.htfFilter ? '✅' : '❌'} HTF Filter: Preis ${s.htfFilter ? '>' : '<'} EMA(800) $${s.emaHTF?.toFixed(0)}\n`;
         message += `${s.rsiInZone ? '✅' : '❌'} RSI Zone: ${s.rsi?.toFixed(1)} ${s.rsiInZone ? '✓' : '✗'} [45-70]\n\n`;
+
+        message += `🧠 *Strategie heute:*\n`;
+        message += `Beste Strategie: ${context.bestStrategy}\n`;
+        message += `Style Fit: ${context.styleFit}\n\n`;
 
         if (s.signal === 'LONG') {
             message += `📊 *Trade Levels:*\n`;
@@ -483,6 +566,13 @@ const SmartMoneySignal = {
             message += `🎯 TP3: $${s.takeProfit3?.toLocaleString(undefined, { maximumFractionDigits: 0 })} (4.0R)\n`;
         }
 
+        if (context.noTradeReasons.length) {
+            message += `\n⛔ *Warum nicht traden / Vorsicht:*\n`;
+            context.noTradeReasons.forEach(reason => {
+                message += `- ${reason}\n`;
+            });
+        }
+
         return message;
     },
 
@@ -491,6 +581,7 @@ const SmartMoneySignal = {
         const s = this.state;
         const now = new Date();
         const dateStr = now.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        const context = this.getExecutionContext();
 
         // Fetch external data if needed (Browser side)
         let fearGreed = { value: 0, text: 'Neutral' };
@@ -555,6 +646,25 @@ const SmartMoneySignal = {
         message += `• Sentiment (20%): ${(fearGreed.value / 10).toFixed(1)}/10\n`;
         message += `• Macro (20%): ${(s.htfFilter ? 7 : 3).toFixed(1)}/10\n\n`;
 
+        message += `⚙️ *Execution Summary:*\n`;
+        message += `Trade Permission: ${context.permission}\n`;
+        message += `Setup-Qualitaet: ${context.setupGrade}\n`;
+        message += `Bias: ${context.bias}\n`;
+        message += `Marktphase: ${context.phase}\n`;
+        message += `Event-Risiko: ${context.eventRisk}\n`;
+        message += `Hebel: ${context.leverage} | Spot: ${context.spot}\n`;
+        message += `Beste Strategie: ${context.bestStrategy}\n\n`;
+
+        message += `🕒 *Zeithorizonte:*\n`;
+        message += `Heute: ${context.today}\n`;
+        message += `Intraday: ${context.intraday}\n`;
+        message += `Swing: ${context.swing}\n`;
+        message += `Spot: ${context.spotVerdict}\n\n`;
+
+        message += `🎯 *Trigger fuer heute:*\n`;
+        message += `Long: ${context.longTrigger}\n`;
+        message += `Short: ${context.shortTrigger}\n\n`;
+
         message += `🎯 *Tages-Fazit:*\n`;
         if (s.signal === 'LONG') {
             message += `🟢 *LONG* - Aufwärtstrend aktiv.\n`;
@@ -565,6 +675,14 @@ const SmartMoneySignal = {
         } else {
             message += `⚪ *Neutral* - Abwarten.\n`;
             message += `Keine klare Richtung erkennbar. Kapital schützen und auf besseres Signal warten.\n\n`;
+        }
+
+        if (context.noTradeReasons.length) {
+            message += `⛔ *Warum heute vorsichtig sein:*\n`;
+            context.noTradeReasons.forEach(reason => {
+                message += `- ${reason}\n`;
+            });
+            message += `\n`;
         }
 
         message += `Viel Erfolg heute! ☕\n\n`;
