@@ -65,6 +65,21 @@ let countdownInterval = null;
 let remainingSeconds = 300;
 let previousSignal = 'NEUTRAL'; // Track signal changes for notifications
 
+function logSignalSnapshot(source, payload) {
+    try {
+        const key = 'btc_signal_audit_log';
+        const existing = JSON.parse(localStorage.getItem(key) || '[]');
+        existing.unshift({
+            ts: new Date().toISOString(),
+            source,
+            payload
+        });
+        localStorage.setItem(key, JSON.stringify(existing.slice(0, 100)));
+    } catch (_) {
+        // Ignore logging failures
+    }
+}
+
 // =====================================================
 // Notification System
 // =====================================================
@@ -507,7 +522,7 @@ async function fetchLongShortRatio() {
         return true;
     } catch (error) {
         console.error('Error fetching L/S ratio:', error);
-        state.longShortRatio = { long: 48.5, short: 51.5 };
+        state.longShortRatio = { long: 50, short: 50 };
         return false;
     }
 }
@@ -1269,6 +1284,7 @@ function updateSignalBanner() {
     const unified = getUnifiedTradeRecommendation();
     const activeSignal = unified?.signal || state.signal;
     const activeConfidence = unified?.confidence ?? state.confidence;
+    const qualityBlocked = state.dataQuality?.mode === 'degraded';
 
     const banner = document.getElementById('signalBanner');
     const signalValue = document.getElementById('primarySignal');
@@ -1277,15 +1293,21 @@ function updateSignalBanner() {
     const summary = document.getElementById('signalSummary');
     const explanation = document.getElementById('signalExplanationContent');
 
-    banner.className = `signal-banner ${activeSignal.toLowerCase()}`;
-    signalValue.textContent = activeSignal;
+    banner.className = `signal-banner ${(qualityBlocked ? 'neutral' : activeSignal.toLowerCase())}`;
+    signalValue.textContent = qualityBlocked ? 'NO TRADE' : activeSignal;
     confidenceFill.style.width = `${activeConfidence}%`;
     confidenceValue.textContent = `${Math.round(activeConfidence)}%`;
 
     let summaryText = '';
     let explanationText = '';
 
-    if (activeSignal === 'LONG') {
+    if (qualityBlocked) {
+        summaryText = 'Datenqualität ist zu schwach für eine operative Freigabe.';
+        explanationText = `<strong>NO TRADE bedeutet:</strong> Das Dashboard blockiert die operative Nutzung.
+            <br><br><strong>Datenstatus:</strong> ${state.dataQuality.summary}
+            <br><strong>Probleme:</strong> ${state.dataQuality.issues.join(' | ') || 'n/a'}
+            ${state.dataQuality.warnings?.length ? `<br><strong>Warnungen:</strong> ${state.dataQuality.warnings.join(' | ')}` : ''}`;
+    } else if (activeSignal === 'LONG') {
         summaryText = 'Coach-Konfluenz zeigt ein bullisches Setup.';
         explanationText = `<strong>LONG bedeutet:</strong> Die Daten deuten auf steigende Preise hin.
             <br><br><strong>Konfidenz:</strong> ${Math.round(activeConfidence)}%
@@ -1307,6 +1329,12 @@ function updateSignalBanner() {
 
     summary.textContent = summaryText;
     explanation.innerHTML = explanationText;
+    logSignalSnapshot('dashboard', {
+        signal: qualityBlocked ? 'NO_TRADE' : activeSignal,
+        confidence: Math.round(activeConfidence),
+        quality: state.dataQuality,
+        blockedReasons: unified?.blockedReasons || []
+    });
 
     updateNoTradeWarning();
     updateScoreInterpretation();
