@@ -956,7 +956,8 @@
       const fallbackMeta = buildSourceMetaFromFlags(data.sourceFlags || {}, mode);
       data.sourceMeta = { ...getSourceMetaDefaults(), ...fallbackMeta, ...(data.sourceMeta || {}) };
       if (!data.dataStatus) data.dataStatus = { mode, label: mode === 'live' ? 'Live' : mode === 'cache' ? 'Cache' : mode === 'offline' ? 'Offline' : 'Fallback' };
-      return data;
+      if (!Number.isFinite(data.fetchedAt) && Number.isFinite(data.ts)) data.fetchedAt = data.ts;
+      return refreshCoachQuality(data);
     }
 
     function setDataStatus(mode, text) {
@@ -990,6 +991,50 @@
         `Funding ${d.sourceMeta.funding.label.toLowerCase()}`,
         `News ${d.sourceMeta.news.label.toLowerCase()}`
       ].join(' · ');
+    }
+
+    function getDataAgeMinutes(ts) {
+      if (!Number.isFinite(ts)) return null;
+      return Math.max(0, (Date.now() - ts) / 60000);
+    }
+
+    function buildCoachQuality(data) {
+      const ageMinutes = getDataAgeMinutes(data?.fetchedAt);
+      const issues = [];
+      const warnings = [];
+      const mode = data?.dataStatus?.mode || 'fallback';
+      const priceStatus = data?.sourceMeta?.price?.status || 'static';
+      const macdStatus = data?.sourceMeta?.macd?.status || 'static';
+
+      if (mode === 'offline') issues.push('Keine Marktdaten verfügbar');
+      else if (mode === 'fallback') issues.push('Nur Fallback-Daten aktiv');
+
+      if (mode === 'cache' && ageMinutes !== null && ageMinutes > 30) issues.push(`Cache zu alt (${ageMinutes.toFixed(0)} min)`);
+      else if (ageMinutes !== null && ageMinutes > 10) warnings.push(`Daten älter als ${ageMinutes.toFixed(0)} min`);
+
+      if (!['live', 'cache', 'fallback'].includes(priceStatus)) issues.push('Preisquelle nicht verlässlich');
+      if (!['derived', 'cache', 'fallback'].includes(macdStatus)) issues.push('MACD-Quelle nicht verlässlich');
+
+      return {
+        ageMinutes,
+        blocked: issues.length > 0,
+        issues,
+        warnings
+      };
+    }
+
+    function refreshCoachQuality(data) {
+      if (!data) return data;
+      data.dataQuality = buildCoachQuality(data);
+      return data;
+    }
+
+    function formatCoachQuality(data) {
+      const q = buildCoachQuality(data);
+      const age = q.ageMinutes === null ? 'Alter n/a' : `Alter ${q.ageMinutes.toFixed(0)} min`;
+      if (q.blocked) return `Qualität blockiert · ${q.issues[0]} · ${age}`;
+      if (q.warnings.length) return `Qualität eingeschränkt · ${q.warnings[0]} · ${age}`;
+      return `Qualität ok · ${age}`;
     }
 
     function mapBinanceKlines(rows) {
@@ -1267,6 +1312,7 @@
       });
       const sc = price > 0 ? scObj.total : 0;
       return {
+        fetchedAt: Date.now(),
         price,
         ema15: price,
         ema300: price,
@@ -1380,6 +1426,7 @@
         const candleStatus = candlePack.source === 'coingecko' ? 'fallback' : 'live';
         const candleChipLabel = candlePack.source === 'coingecko' ? 'Fallback' : 'Live';
         mktData = {
+          fetchedAt: Date.now(),
           price, ema15, ema300, ema800, rsi, atr, macd, goldenCross, htfFilter, rsiZone, strength, signal: sig, score: sc, scoreObj: scObj,
           mtf, change24, fg, funding, oi: parseFloat(oiNow?.openInterest || 0), oiChange, lsLong, lsShort, news, onchain, cycle, closes: cl,
           sourceFlags: {
@@ -1513,10 +1560,13 @@
       if (!mktData) return null;
       const { price, ema300, atr, rsi, mtf, score } = mktData;
       const guards = [];
+      const quality = refreshCoachQuality(mktData).dataQuality;
+      if (quality.blocked) guards.push(...quality.issues);
+      else if (quality.warnings.length) guards.push(...quality.warnings);
       if (score < ctx.minScore) guards.push(`Score ${score} < Min ${ctx.minScore}`);
       if (ctx.dailyPnl <= -3) guards.push('Daily-Loss-Limit erreicht');
       if (ctx.openRisk >= 2.5) guards.push('Open-Risk-Limit erreicht');
-      const blocked = guards.length > 0;
+      const blocked = quality.blocked || score < ctx.minScore || ctx.dailyPnl <= -3 || ctx.openRisk >= 2.5;
       let action = 'wait', entry = null, sl = null, tp1 = null, tp2 = null;
       const shortThreshold = 100 - ctx.minScore;
       if (!blocked && score >= ctx.minScore && mktData.signal === 'LONG' && rsi < 74) { action = 'long'; entry = price; sl = Math.min(ema300, price - 1.5 * atr); const r = Math.max(entry - sl, .0001); tp1 = entry + 2 * r; tp2 = entry + 3.5 * r; }
@@ -1533,9 +1583,9 @@
       const modeLabel = getDataModeLabel(d.dataStatus?.mode || 'fallback');
       q = q.toLowerCase();
       if (/ema|800|trigger/.test(q)) { const dist = ((price - ema800) / ema800 * 100); return `📏 EMA 800\n\nEMA 800: $${fmt(ema800)}\nBTC: $${fmt(price)}\n\n${price >= ema800 ? '✅ Preis ÜBER EMA 800 → bullisch' : '❌ Preis UNTER EMA 800 → bearisch'}\nAbstand: ${dist >= 0 ? '+' : ''}${dist.toFixed(2)}%\n\n${price >= ema800 ? 'Trigger fällt unter $' + fmt(ema800) : 'Bull-Signal: Close über $' + fmt(ema800)}`; }
-      if (/score|qualit|stärk/.test(q)) { const bar = '█'.repeat(Math.round(score / 10)) + '░'.repeat(10 - Math.round(score / 10)); return `📊 Signal-Score\n\n${score}/100\n${bar}\n\nTech/OnChain/Sent/Macro/News: ${d.scoreObj.tech.toFixed(1)}/${d.scoreObj.onchain.toFixed(1)}/${d.scoreObj.sentiment.toFixed(1)}/${d.scoreObj.macro.toFixed(1)}/${d.scoreObj.news.toFixed(1)}\nMTF: 1h=${mtf.t1h} | 4h=${mtf.t4h} | 1d=${mtf.t1d}\nFG: ${fg} | Funding: ${funding.toFixed(4)}% | OIΔ: ${oiChange.toFixed(2)}%\nNews: ${news.score.toFixed(1)}/10 | Cycle: ${cycle.phase}\n\n${score >= 70 ? '🟢 Starkes Setup' : score >= 50 ? '🟡 Mittleres Setup' : '🔴 Schwaches Signal — abwarten'}`; }
+      if (/score|qualit|stärk/.test(q)) { const bar = '█'.repeat(Math.round(score / 10)) + '░'.repeat(10 - Math.round(score / 10)); return `📊 Signal-Score\n\n${score}/100\n${bar}\n\nTech/OnChain/Sent/Macro/News: ${d.scoreObj.tech.toFixed(1)}/${d.scoreObj.onchain.toFixed(1)}/${d.scoreObj.sentiment.toFixed(1)}/${d.scoreObj.macro.toFixed(1)}/${d.scoreObj.news.toFixed(1)}\nMTF: 1h=${mtf.t1h} | 4h=${mtf.t4h} | 1d=${mtf.t1d}\nFG: ${fg} | Funding: ${funding.toFixed(4)}% | OIΔ: ${oiChange.toFixed(2)}%\nNews: ${news.score.toFixed(1)}/10 | Cycle: ${cycle.phase}\n\n${formatCoachQuality(d)}\n\n${score >= 70 ? '🟢 Starkes Setup' : score >= 50 ? '🟡 Mittleres Setup' : '🔴 Schwaches Signal — abwarten'}`; }
       if (/plan|entry|setup|long|short|stop|tp|trade|kauf/.test(q)) { const plan = buildPlan(ctx); if (!plan) return '⏳'; if (plan.blocked) return `🚫 No Trade\n\n${plan.guards.map(g => '• ' + g).join('\n')}\n\nScore: ${plan.score}/100`; if (plan.action === 'wait') return `⏸️ Kein Signal\n\nMTF: ${mtf.t1h}/${mtf.t4h}/${mtf.t1d}\nScore: ${plan.score}/100`; const dir = plan.action === 'long' ? '📈 LONG' : '📉 SHORT'; return `${plan.action === 'long' ? '🟢' : '🔴'} ${dir}\n\nEntry: $${fmt(plan.entry)}\nStop:  $${fmt(plan.sl)}\nTP1:   $${fmt(plan.tp1)} (${plan.rr1?.toFixed(1)}:1)\nTP2:   $${fmt(plan.tp2)} (${plan.rr2?.toFixed(1)}:1)\n\nGröße: ${plan.size?.toFixed(5)} BTC\n(${ctx.riskPct}% Risiko · $${ctx.account.toLocaleString('de-DE')} Konto)\n\nScore: ${plan.score}/100 | ${mtf.aligned}`; }
-      if (/status|preis|live|rsi|indi/.test(q)) { return `📡 ${modeLabel} Status\n\nBTC: $${fmt(price)} (${change24 >= 0 ? '+' : ''}${change24.toFixed(2)}% 24h)\n\nEMA 15:  $${fmt(d.ema15)}\nEMA 300: $${fmt(d.ema300)}\nEMA 800: $${fmt(ema800)}\nRSI 14:  ${rsi.toFixed(1)} | ATR: $${fmt(atr)} | MACD: ${d.macd.trend}\nFG: ${fg} | Funding: ${funding.toFixed(4)}% | OIΔ: ${oiChange.toFixed(2)}%\nNews Score: ${news.score.toFixed(1)}/10 | Cycle: ${cycle.phase}\n\nQuellen: ${summarizeSources(d)}\nSignal: ${signal} (${d.strength}/3) | Score: ${score}/100\n${goldenCross ? '✅' : '❌'} Golden Cross · ${htfFilter ? '✅' : '❌'} Über EMA800 · ${rsiZone ? '✅' : '❌'} RSI`; }
+      if (/status|preis|live|rsi|indi/.test(q)) { return `📡 ${modeLabel} Status\n\nBTC: $${fmt(price)} (${change24 >= 0 ? '+' : ''}${change24.toFixed(2)}% 24h)\n\nEMA 15:  $${fmt(d.ema15)}\nEMA 300: $${fmt(d.ema300)}\nEMA 800: $${fmt(ema800)}\nRSI 14:  ${rsi.toFixed(1)} | ATR: $${fmt(atr)} | MACD: ${d.macd.trend}\nFG: ${fg} | Funding: ${funding.toFixed(4)}% | OIΔ: ${oiChange.toFixed(2)}%\nNews Score: ${news.score.toFixed(1)}/10 | Cycle: ${cycle.phase}\n\nQuellen: ${summarizeSources(d)}\n${formatCoachQuality(d)}\nSignal: ${signal} (${d.strength}/3) | Score: ${score}/100\n${goldenCross ? '✅' : '❌'} Golden Cross · ${htfFilter ? '✅' : '❌'} Über EMA800 · ${rsiZone ? '✅' : '❌'} RSI`; }
       return `🤖 TraderCoach\n\nFrag mich:\n• "Gib mir einen Trade-Plan"\n• "Wie ist der Score?"\n• "EMA 800 Analyse"\n• "Live Status"\n• "Soll ich kaufen?"\n\nScore: ${score}/100 | ${signal}`;
     }
 

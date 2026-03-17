@@ -52,7 +52,13 @@ let state = {
     },
     signal: 'NEUTRAL',
     confidence: 50,
-    lastUpdate: null
+    lastUpdate: null,
+    dataQuality: {
+        mode: 'loading',
+        summary: 'Lade...',
+        issues: [],
+        warnings: []
+    }
 };
 
 let countdownInterval = null;
@@ -501,7 +507,6 @@ async function fetchLongShortRatio() {
         return true;
     } catch (error) {
         console.error('Error fetching L/S ratio:', error);
-        // Mock data
         state.longShortRatio = { long: 48.5, short: 51.5 };
         return false;
     }
@@ -1407,6 +1412,36 @@ function updateLastUpdate() {
     document.getElementById('lastUpdate').textContent = timeStr;
 }
 
+function buildDashboardDataQuality(fetchResults) {
+    const [priceOk, historyOk, fgOk, fundingOk, oiOk, lsOk] = fetchResults;
+    const issues = [];
+    const warnings = [];
+
+    if (!priceOk || !historyOk) issues.push('Kursdaten unvollständig');
+    if (!fgOk) warnings.push('Fear & Greed fehlt');
+    if (!fundingOk) warnings.push('Funding fehlt');
+    if (!oiOk) warnings.push('Open Interest fehlt');
+    if (!lsOk) warnings.push('L/S Ratio fehlt');
+
+    const mode = issues.length > 0 ? 'degraded' : warnings.length > 0 ? 'partial' : 'live';
+    const summary = mode === 'live'
+        ? 'Live'
+        : mode === 'partial'
+            ? `Teilweise live (${warnings.length} Warnung${warnings.length === 1 ? '' : 'en'})`
+            : 'Kritisch eingeschränkt';
+
+    return { mode, summary, issues, warnings };
+}
+
+function updateDataQualityStatus() {
+    const el = document.getElementById('dataQualityStatus');
+    if (!el) return;
+    const q = state.dataQuality || { mode: 'loading', summary: 'Lade...', issues: [], warnings: [] };
+    el.textContent = q.summary;
+    el.title = [...q.issues, ...q.warnings].join(' | ') || q.summary;
+    el.style.color = q.mode === 'live' ? 'var(--bullish)' : q.mode === 'partial' ? 'var(--warning)' : q.mode === 'degraded' ? 'var(--bearish)' : '';
+}
+
 // =====================================================
 // Main Update Function
 // =====================================================
@@ -1417,7 +1452,7 @@ async function updateDashboard() {
 
     try {
         // Fetch all data in parallel
-        await Promise.all([
+        const fetchResults = await Promise.all([
             fetchPriceData(),
             fetchPriceHistory(),
             fetchFearGreedIndex(),
@@ -1425,6 +1460,7 @@ async function updateDashboard() {
             fetchOpenInterest(),
             fetchLongShortRatio()
         ]);
+        state.dataQuality = buildDashboardDataQuality(fetchResults);
 
         // Calculate scores
         calculateScores();
@@ -1441,9 +1477,17 @@ async function updateDashboard() {
         updateScoreCard();
         updateSignalBanner();
         updateLastUpdate();
+        updateDataQualityStatus();
 
         console.log('Dashboard updated successfully');
     } catch (error) {
+        state.dataQuality = {
+            mode: 'degraded',
+            summary: 'Update fehlgeschlagen',
+            issues: ['Dashboard-Update fehlgeschlagen'],
+            warnings: []
+        };
+        updateDataQualityStatus();
         console.error('Error updating dashboard:', error);
     } finally {
         refreshBtn.classList.remove('loading');
