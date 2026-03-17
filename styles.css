@@ -2346,6 +2346,78 @@ body::after {
     font-weight: bold;
 }
 
+.signal-audit-section {
+    background: var(--bg-card);
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 0;
+    margin-bottom: 0;
+}
+
+.signal-audit-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.audit-item {
+    display: grid;
+    grid-template-columns: 120px 100px 1fr;
+    gap: 12px;
+    align-items: start;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+}
+
+.audit-time {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-family: 'SF Mono', 'Consolas', monospace;
+}
+
+.audit-signal {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.audit-signal.long {
+    color: var(--bullish);
+}
+
+.audit-signal.short {
+    color: var(--bearish);
+}
+
+.audit-signal.neutral,
+.audit-signal.no_trade {
+    color: var(--neutral);
+}
+
+.audit-meta {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.audit-empty {
+    padding: 14px;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-sm);
+}
+
+@media (max-width: 768px) {
+    .audit-item {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+}
+
 /* =====================================================
    Signal Explanation
    ===================================================== */

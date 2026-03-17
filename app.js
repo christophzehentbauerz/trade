@@ -80,6 +80,34 @@ function logSignalSnapshot(source, payload) {
     }
 }
 
+function renderSignalAuditLog() {
+    const el = document.getElementById('signalAuditList');
+    if (!el) return;
+
+    try {
+        const entries = JSON.parse(localStorage.getItem('btc_signal_audit_log') || '[]').slice(0, 20);
+        if (!entries.length) {
+            el.innerHTML = '<div class=\"audit-empty\">Noch keine Audit-Einträge vorhanden.</div>';
+            return;
+        }
+
+        el.innerHTML = entries.map(entry => {
+            const signal = String(entry?.payload?.signal || 'NEUTRAL');
+            const signalClass = signal.toLowerCase();
+            const quality = entry?.payload?.quality?.summary || 'n/a';
+            const blocked = (entry?.payload?.blockedReasons || []).slice(0, 2).join(' | ') || 'keine';
+            const time = entry?.ts ? new Date(entry.ts).toLocaleString('de-DE') : 'n/a';
+            return `<div class=\"audit-item\">
+                <div class=\"audit-time\">${time}</div>
+                <div class=\"audit-signal ${signalClass}\">${signal.replace('_', ' ')}</div>
+                <div class=\"audit-meta\"><strong>Qualität:</strong> ${quality}<br><strong>Blocker:</strong> ${blocked}</div>
+            </div>`;
+        }).join('');
+    } catch (_) {
+        el.innerHTML = '<div class=\"audit-empty\">Audit-Log konnte nicht geladen werden.</div>';
+    }
+}
+
 // =====================================================
 // Notification System
 // =====================================================
@@ -1335,6 +1363,7 @@ function updateSignalBanner() {
         quality: state.dataQuality,
         blockedReasons: unified?.blockedReasons || []
     });
+    renderSignalAuditLog();
 
     updateNoTradeWarning();
     updateScoreInterpretation();
@@ -1707,6 +1736,7 @@ function displayBacktestResults(results) {
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize notification system
     NotificationSystem.init();
+    renderSignalAuditLog();
 
     // Fear & Greed source mode
     const savedFgMode = localStorage.getItem('btc-fg-source-mode');
