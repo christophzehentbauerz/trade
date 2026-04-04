@@ -12,7 +12,7 @@ const CONFIG = {
     apis: {
         coinGecko: 'https://api.coingecko.com/api/v3',
         fearGreed: 'https://api.alternative.me/fng/',
-        fearGreedCmc: 'https://api.coinmarketcap.com/data-api/v3/fear-and-greed/historical',
+        fearGreedCmc: 'https://pro-api.coinmarketcap.com/v3/fear-and-greed/historical',
         binance: 'https://api.binance.com/api/v3',
         binanceFutures: 'https://fapi.binance.com/fapi/v1',
         cryptoCompareNews: 'https://min-api.cryptocompare.com/data/v2/news/'
@@ -90,6 +90,7 @@ const TRADER_PROFILE_KEY = 'btc-trader-profile';
 const SIGNAL_AUDIT_COLLAPSED_KEY = 'btc-signal-audit-collapsed';
 const SIGNAL_AUDIT_STATE_KEY = 'btc-signal-audit-state';
 const SIGNAL_AUDIT_FILTER_KEY = 'btc-signal-audit-filter';
+const CMC_CONFIG_KEY = 'btc-cmc-config';
 
 const OFFICIAL_EVENT_SCHEDULE = [
     { id: 'fomc-2026-03', title: 'FOMC Zinsentscheid', startsAt: '2026-03-18T14:00:00-04:00', category: 'macro', source: 'Fed', url: 'https://www.federalreserve.gov/newsevents/2026-march.htm' },
@@ -715,12 +716,32 @@ const NotificationSystem = {
 // API Fetch Functions
 // =====================================================
 
-async function fetchWithTimeout(url, timeout = 10000) {
+function getCoinMarketCapConfig() {
+    const fileConfig = window.CMC_CONFIG || {};
+    let storedConfig = {};
+
+    try {
+        storedConfig = JSON.parse(localStorage.getItem(CMC_CONFIG_KEY) || '{}');
+    } catch (_) {
+        storedConfig = {};
+    }
+
+    return {
+        apiKey: fileConfig.apiKey || storedConfig.apiKey || '',
+        proxyUrl: fileConfig.proxyUrl || storedConfig.proxyUrl || '',
+        allowBrowserKey: Boolean(fileConfig.allowBrowserKey || storedConfig.allowBrowserKey)
+    };
+}
+
+async function fetchWithTimeout(url, timeout = 10000, options = {}) {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
 
     try {
-        const response = await fetch(url, { signal: controller.signal });
+        const response = await fetch(url, {
+            ...options,
+            signal: controller.signal
+        });
         clearTimeout(id);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return await response.json();
@@ -772,6 +793,7 @@ async function fetchPriceHistory() {
 }
 
 async function fetchFearGreedIndex() {
+    const cmcConfig = getCoinMarketCapConfig();
     const mapAlternativeFearGreed = (payload) => {
         if (!payload?.data?.length) return null;
         return {
@@ -818,8 +840,19 @@ async function fetchFearGreedIndex() {
         let alt = null;
 
         try {
-            const cmcData = await fetchWithTimeout(`${CONFIG.apis.fearGreedCmc}?limit=8`, 8000);
-            cmc = mapCmcFearGreed(cmcData);
+            const cmcUrl = cmcConfig.proxyUrl
+                ? `${cmcConfig.proxyUrl.replace(/\/$/, '')}?limit=8`
+                : `${CONFIG.apis.fearGreedCmc}?limit=8`;
+            const cmcHeaders = cmcConfig.apiKey && !cmcConfig.proxyUrl && cmcConfig.allowBrowserKey
+                ? { 'X-CMC_PRO_API_KEY': cmcConfig.apiKey }
+                : {};
+
+            if (cmcConfig.proxyUrl || (cmcConfig.apiKey && cmcConfig.allowBrowserKey)) {
+                const cmcData = await fetchWithTimeout(cmcUrl, 8000, {
+                    headers: cmcHeaders
+                });
+                cmc = mapCmcFearGreed(cmcData);
+            }
         } catch (cmcError) {
             console.warn('CMC Fear & Greed unavailable:', cmcError?.message || cmcError);
         }
@@ -838,7 +871,9 @@ async function fetchFearGreedIndex() {
         } else if (mode === 'cmc' && !cmc && alt) {
             normalized = {
                 ...alt,
-                source: 'Alternative.me (CMC nicht verfuegbar)'
+                source: cmcConfig.proxyUrl || cmcConfig.apiKey
+                    ? 'Alternative.me (CMC nicht verfuegbar)'
+                    : 'Alternative.me (CMC API-Key oder Proxy fehlt)'
             };
         } else if (mode === 'alt' && alt) {
             normalized = alt;
@@ -1264,7 +1299,11 @@ function updateFearGreedCard() {
 
     const sourceNoteEl = document.getElementById('fearGreedSourceNote');
     if (sourceNoteEl) {
-        sourceNoteEl.textContent = `Aktive Quelle: ${state.fearGreedSource}`;
+        const cmcConfig = getCoinMarketCapConfig();
+        const cmcReady = Boolean(cmcConfig.proxyUrl || (cmcConfig.apiKey && cmcConfig.allowBrowserKey));
+        sourceNoteEl.textContent = state.fearGreedMode === 'cmc' && !cmcReady
+            ? 'CoinMarketCap Pro ist noch nicht verbunden. Aktuell wird ein Fallback genutzt.'
+            : `Aktive Quelle: ${state.fearGreedSource}`;
     }
 }
 
