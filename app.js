@@ -37,8 +37,8 @@ let state = {
     ath: null,
     athChange: null,
     fearGreedIndex: null,
-    fearGreedSource: 'Alternative.me',
-    fearGreedMode: 'alt',
+    fearGreedSource: 'CoinMarketCap',
+    fearGreedMode: 'cmc',
     fearGreedHistory: [],
     fundingRate: null,
     openInterest: null,
@@ -839,7 +839,7 @@ async function fetchFearGreedIndex() {
     };
 
     try {
-        const mode = state.fearGreedMode || 'alt';
+        const mode = state.fearGreedMode || 'cmc';
         let cmc = null;
         let alt = null;
 
@@ -3029,10 +3029,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Fear & Greed source mode
     const savedFgMode = localStorage.getItem('btc-fg-source-mode');
-    if (savedFgMode === 'avg') {
-        state.fearGreedMode = 'alt';
-        localStorage.setItem('btc-fg-source-mode', 'alt');
-    } else if (savedFgMode === 'cmc' || savedFgMode === 'alt') {
+    if (savedFgMode === 'avg' || savedFgMode === 'alt') {
+        state.fearGreedMode = 'cmc';
+        localStorage.setItem('btc-fg-source-mode', 'cmc');
+    } else if (savedFgMode === 'cmc') {
         state.fearGreedMode = savedFgMode;
     }
     const fgSourceSelect = document.getElementById('fgSourceMode');
@@ -3040,7 +3040,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fgSourceSelect.value = state.fearGreedMode;
         fgSourceSelect.addEventListener('change', async (e) => {
             const mode = e.target.value;
-            state.fearGreedMode = mode === 'cmc' || mode === 'alt' || mode === 'avg' ? mode : 'alt';
+            state.fearGreedMode = mode === 'cmc' || mode === 'alt' || mode === 'avg' ? mode : 'cmc';
             localStorage.setItem('btc-fg-source-mode', state.fearGreedMode);
             await updateDashboard();
         });
