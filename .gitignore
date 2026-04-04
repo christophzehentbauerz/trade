@@ -1,5 +1,6 @@
 # Telegram Bot Credentials (enthält Bot Token!)
 telegram-config.js
+cmc-config.js
 
 # Environment files
 .env

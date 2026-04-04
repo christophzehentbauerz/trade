@@ -1,8 +1,9 @@
 window.CMC_CONFIG = {
     // Empfehlung: Nutze einen kleinen Server-/Proxy-Endpunkt, damit dein API-Key
-    // nicht im Browser offengelegt wird. Beispiel:
-    // proxyUrl: 'https://deine-domain.de/api/cmc/fear-and-greed/historical',
-    proxyUrl: '',
+    // nicht im Browser offengelegt wird. Lokales Beispiel:
+    // python cmc_proxy.py
+    // proxyUrl: 'http://127.0.0.1:8788/api/cmc/fear-and-greed/historical',
+    proxyUrl: 'http://127.0.0.1:8788/api/cmc/fear-and-greed/historical',
 
     // Nur fuer lokale private Nutzung. Im Browser ist der Key sichtbar.
     apiKey: '',

@@ -19,6 +19,27 @@ Features:
 Start lokal:
 - `index.html` im Browser öffnen
 
+### CoinMarketCap Fear & Greed Proxy
+
+Wenn der Fear & Greed Index exakt mit CoinMarketCap uebereinstimmen soll, nutze den lokalen Proxy.
+
+1. CoinMarketCap API-Key als Umgebungsvariable setzen
+```bash
+set CMC_API_KEY=DEIN_API_KEY
+```
+
+2. Proxy starten
+```bash
+python cmc_proxy.py
+```
+
+3. `cmc-config.example.js` nach `cmc-config.js` kopieren
+
+4. Dashboard neu laden
+
+Der Proxy stellt dann diesen lokalen Endpoint bereit:
+- `http://127.0.0.1:8788/api/cmc/fear-and-greed/historical`
+
 ## Python Backtester
 
 Dateien: `backtest_runner.py`, `strategy_*.py`, `data_loader.py`, `advanced_analysis.py`
