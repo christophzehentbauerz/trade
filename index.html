@@ -35,10 +35,10 @@
                     </div>
                 </div>
                 <div class="notification-buttons">
-                    <button id="testDailyUpdate" class="notif-btn telegram-test-btn">
+                    <button id="testDailyUpdate" class="notif-btn telegram-test-btn" onclick="openTelegramPreview('daily')">
                         Tagesbericht testen
                     </button>
-                    <button id="testSignalCheck" class="notif-btn telegram-test-btn active">
+                    <button id="testSignalCheck" class="notif-btn telegram-test-btn active" onclick="openTelegramPreview('signal')">
                         Signalprüfung testen
                     </button>
                 </div>
@@ -48,9 +48,23 @@
                 <div class="telegram-preview-modal">
                     <div class="telegram-preview-header">
                         <span>📱 Telegram Vorschau</span>
-                        <button id="closeTelegramPreview" class="close-preview-btn">×</button>
+                        <button id="closeTelegramPreview" class="close-preview-btn" onclick="closeTelegramPreview()">×</button>
                     </div>
                     <pre id="telegramPreviewContent"></pre>
+                    <div class="telegram-preview-footer">
+                        <div id="telegramConfigForm" style="display: none;">
+                            <input type="password" id="tgTokenInput" placeholder="Bot-Token eingeben">
+                            <input type="text" id="tgChatIdInput" placeholder="Chat-ID eingeben">
+                            <button id="tgSaveCreds" type="button">Speichern und senden</button>
+                            <div class="telegram-config-help">
+                                Alternativ kannst du eine <strong>telegram-config.js</strong> Datei mit Bot-Token und Chat-ID anlegen.
+                            </div>
+                        </div>
+                        <div class="qt-actions">
+                            <span id="tgStatusMsg"></span>
+                            <button id="sendToTelegramBtn" class="telegram-send-btn" type="button">An Telegram senden</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -1008,18 +1022,18 @@
 
                     <div class="rainbow-visual-card">
                         <div class="rainbow-header">
-                            <span class="rainbow-title">Bitcoin Rainbow</span>
+                            <span class="rainbow-title">Bitcoin Rainbow Bewertung</span>
                             <span class="rainbow-band" id="rainbowBandLabel">--</span>
                         </div>
                         <div class="rainbow-scale">
                             <div class="rainbow-marker" id="rainbowMarker"></div>
                         </div>
                         <div class="rainbow-labels">
-                            <span>Fire Sale</span>
+                            <span>Unterbewertet</span>
                             <span>Fair</span>
-                            <span>Euphoria</span>
+                            <span>Überhitzt</span>
                         </div>
-                        <div class="rainbow-meta" id="rainbowMeta">Modell: -- | Abweichung: --</div>
+                        <div class="rainbow-meta" id="rainbowMeta">Modell: -- | Abweichung zum ATH: --</div>
                     </div>
 
                     <!-- Indicators -->
@@ -1264,6 +1278,21 @@
                     </div>
                     <div class="fear-greed-interpretation" id="fearGreedInterpretation">
                         --
+                    </div>
+                    <div class="rainbow-visual-card rainbow-visual-card-top">
+                        <div class="rainbow-header">
+                            <span class="rainbow-title">Bitcoin Rainbow Bewertung</span>
+                            <span class="rainbow-band" id="rainbowBandLabelTop">--</span>
+                        </div>
+                        <div class="rainbow-scale">
+                            <div class="rainbow-marker" id="rainbowMarkerTop"></div>
+                        </div>
+                        <div class="rainbow-labels">
+                            <span>Unterbewertet</span>
+                            <span>Fair</span>
+                            <span>Überhitzt</span>
+                        </div>
+                        <div class="rainbow-meta" id="rainbowMetaTop">Modell: -- | Abweichung zum ATH: --</div>
                     </div>
                 </div>
             </section>
@@ -1729,10 +1758,10 @@
 
         .tooltip-popup {
             display: none;
-            position: absolute;
-            bottom: 125%;
-            left: 50%;
-            transform: translateX(-50%);
+            position: fixed;
+            top: 0;
+            left: 0;
+            transform: none;
             background: rgba(15, 23, 42, 0.95);
             color: #fff;
             padding: 8px 12px;
@@ -1741,7 +1770,7 @@
             font-size: 0.85rem;
             width: max-content;
             max-width: 250px;
-            z-index: 1000;
+            z-index: 5000;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
             line-height: 1.4;
             pointer-events: none;
@@ -1756,6 +1785,12 @@
             border-width: 5px;
             border-style: solid;
             border-color: rgba(15, 23, 42, 0.95) transparent transparent transparent;
+        }
+
+        .tooltip-popup.below::after {
+            top: auto;
+            bottom: 100%;
+            border-color: transparent transparent rgba(15, 23, 42, 0.95) transparent;
         }
 
         .info-badge:hover .tooltip-popup,
@@ -1781,6 +1816,51 @@
         document.addEventListener('DOMContentLoaded', () => {
             // Select all question marks with tooltips
             const infoBadges = document.querySelectorAll('.info-badge, .card-icon, .derivative-label, .meta-item, .rec-item, .level');
+            const globalTooltip = document.createElement('div');
+            globalTooltip.className = 'tooltip-popup';
+            document.body.appendChild(globalTooltip);
+
+            let activeBadge = null;
+
+            const hideTooltip = () => {
+                globalTooltip.style.display = 'none';
+                globalTooltip.classList.remove('below');
+            };
+
+            const showTooltip = (badge, text) => {
+                if (!text) return;
+
+                globalTooltip.textContent = text;
+                globalTooltip.style.display = 'block';
+                globalTooltip.classList.remove('below');
+
+                const badgeRect = badge.getBoundingClientRect();
+                const tooltipRect = globalTooltip.getBoundingClientRect();
+                const margin = 10;
+                const gap = 12;
+                const placeBelow = badgeRect.top < (tooltipRect.height + 24);
+
+                let left = badgeRect.left + (badgeRect.width / 2) - (tooltipRect.width / 2);
+                let top = placeBelow
+                    ? badgeRect.bottom + gap
+                    : badgeRect.top - tooltipRect.height - gap;
+
+                if (left < margin) left = margin;
+                if (left + tooltipRect.width > window.innerWidth - margin) {
+                    left = window.innerWidth - tooltipRect.width - margin;
+                }
+
+                if (placeBelow) {
+                    globalTooltip.classList.add('below');
+                    const maxTop = window.innerHeight - tooltipRect.height - margin;
+                    top = Math.min(top, maxTop);
+                } else if (top < margin) {
+                    top = margin;
+                }
+
+                globalTooltip.style.left = `${left}px`;
+                globalTooltip.style.top = `${top}px`;
+            };
 
             infoBadges.forEach(badge => {
                 // Get title content
@@ -1791,54 +1871,11 @@
                     badge.removeAttribute('title');
                     badge.setAttribute('data-tooltip', title);
 
-                    // Create custom popup element if not exists
-                    let popup = badge.querySelector('.tooltip-popup');
-                    if (!popup) {
-                        popup = document.createElement('div');
-                        popup.className = 'tooltip-popup';
-                        popup.textContent = title;
-                        // Only append if it's an info-badge or container that supports it
-                        // For others, we might want to wrap or handle differently, but keeping existing logic:
-                        if (badge.classList.contains('info-badge') || badge.classList.contains('rec-item') || badge.style.position === 'relative') {
-                            badge.appendChild(popup);
-                        } else {
-                            // Ensure badge has relative positioning for absolute tooltip
-                            const style = window.getComputedStyle(badge);
-                            if (style.position === 'static') {
-                                badge.style.position = 'relative';
-                            }
-                            badge.appendChild(popup);
-                        }
-                    }
-
-                    // Smart Positioning Logic
-                    const updatePosition = () => {
-                        // Reset first
-                        popup.style.left = '50%';
-                        popup.style.right = 'auto';
-                        popup.style.transform = 'translateX(-50%)';
-
-                        // Check bounds
-                        const rect = popup.getBoundingClientRect();
-                        const viewportWidth = window.innerWidth;
-                        const margin = 10;
-
-                        if (rect.right > viewportWidth - margin) {
-                            // Too far right, align to right edge
-                            popup.style.left = 'auto';
-                            popup.style.right = '0';
-                            popup.style.transform = 'none';
-                            // Adjust arrow if needed (css pseudo-element is harder to move via JS, but main popup is key)
-                        } else if (rect.left < margin) {
-                            // Too far left
-                            popup.style.left = '0';
-                            popup.style.right = 'auto';
-                            popup.style.transform = 'none';
-                        }
-                    };
-
                     // Mouse events for desktop
-                    badge.addEventListener('mouseenter', updatePosition);
+                    badge.addEventListener('mouseenter', () => showTooltip(badge, title));
+                    badge.addEventListener('mouseleave', () => {
+                        if (activeBadge !== badge) hideTooltip();
+                    });
 
                     // Click events mobile/desktop
                     badge.addEventListener('click', (e) => {
@@ -1849,7 +1886,13 @@
                         });
 
                         badge.classList.toggle('active');
-                        if (badge.classList.contains('active')) updatePosition();
+                        if (badge.classList.contains('active')) {
+                            activeBadge = badge;
+                            showTooltip(badge, title);
+                        } else {
+                            activeBadge = null;
+                            hideTooltip();
+                        }
                     });
                 }
             });
@@ -1859,6 +1902,14 @@
                 document.querySelectorAll('.info-badge.active, .active-tooltip').forEach(b => {
                     b.classList.remove('active', 'active-tooltip');
                 });
+                activeBadge = null;
+                hideTooltip();
+            });
+
+            window.addEventListener('resize', () => {
+                if (activeBadge) {
+                    showTooltip(activeBadge, activeBadge.getAttribute('data-tooltip'));
+                }
             });
         });
     </script>

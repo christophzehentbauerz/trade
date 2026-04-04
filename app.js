@@ -1670,6 +1670,254 @@ function formatDecisionPrice(value) {
     return Number.isFinite(value) ? `$${formatNumber(value, 0)}` : '--';
 }
 
+function formatSignedPercent(value, decimals = 2) {
+    if (!Number.isFinite(value)) return 'n/a';
+    return `${value >= 0 ? '+' : ''}${formatNumber(value, decimals)}%`;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function buildTelegramPreviewMessage(mode = 'signal') {
+    const model = buildDecisionModel();
+    const unified = model?.unified || getUnifiedTradeRecommendation();
+    const signal = unified?.signal || state.signal || 'NEUTRAL';
+    const confidence = Math.round(unified?.confidence ?? state.confidence ?? 0);
+    const permission = model?.permission || 'NO TRADE';
+    const price = formatDecisionPrice(state.price);
+    const priceChange = formatSignedPercent(state.priceChange24h, 2);
+    const fearGreed = Number.isFinite(state.fearGreedIndex) ? `${state.fearGreedIndex}/100` : 'n/a';
+    const fearGreedLabel = document.getElementById('fearGreedLabel')?.textContent || 'n/a';
+    const eventRisk = state.eventFilter?.label || 'n/a';
+    const dataStatus = state.dataQuality?.summary || 'n/a';
+    const timestamp = new Date().toLocaleString('de-DE');
+    const triggerDetails = signal === 'SHORT'
+        ? model?.triggerShort?.entry || model?.hardTrigger?.trigger || 'Noch kein konkreter Short-Trigger'
+        : model?.triggerLong?.entry || model?.hardTrigger?.trigger || 'Noch kein konkreter Long-Trigger';
+
+    if (mode === 'daily') {
+        return [
+            'BTC Tagesbericht',
+            `Zeit: ${timestamp}`,
+            '',
+            `Preis: ${price} (${priceChange} in 24h)`,
+            `Fear & Greed: ${fearGreed} (${fearGreedLabel})`,
+            `Hauptsignal: ${signal}`,
+            `Konfidenz: ${confidence}%`,
+            `Trade-Freigabe: ${permission}`,
+            `Event-Risiko: ${eventRisk}`,
+            `Datenstatus: ${dataStatus}`,
+            '',
+            `Naechster Fokus: ${model?.actionNow || model?.topStatus || 'Markt weiter beobachten'}`,
+            `Trigger: ${triggerDetails}`,
+            `Gueltigkeit: ${model?.validity || 'Neu mit dem naechsten 4h-Update pruefen'}`
+        ].join('\n');
+    }
+
+    return [
+        'BTC Signalpruefung',
+        `Zeit: ${timestamp}`,
+        '',
+        `Hauptsignal: ${signal}`,
+        `Konfidenz: ${confidence}%`,
+        `Trade-Freigabe: ${permission}`,
+        `Bias / Setup / Trigger / Ausfuehrung: ${model?.stages?.bias?.value || 'n/a'} / ${model?.stages?.setup?.value || 'n/a'} / ${model?.stages?.trigger?.value || 'n/a'} / ${model?.stages?.execution?.value || 'n/a'}`,
+        `Preis: ${price}`,
+        `Fear & Greed: ${fearGreed} (${fearGreedLabel})`,
+        '',
+        `Einstieg: ${triggerDetails}`,
+        `Nicht handeln wenn: ${model?.doNotTrade || 'Keine zusaetzlichen Blocker aktiv'}`,
+        `Hinweis: ${model?.bestStrategy?.summary || model?.topStatus || 'Markt weiter beobachten'}`
+    ].join('\n');
+}
+
+function buildTelegramPreviewHtml(mode = 'signal') {
+    const model = buildDecisionModel();
+    const unified = model?.unified || getUnifiedTradeRecommendation();
+    const signal = unified?.signal || state.signal || 'NEUTRAL';
+    const confidence = Math.round(unified?.confidence ?? state.confidence ?? 0);
+    const permission = model?.permission || 'NO TRADE';
+    const price = formatDecisionPrice(state.price);
+    const priceChange = formatSignedPercent(state.priceChange24h, 2);
+    const fearGreed = Number.isFinite(state.fearGreedIndex) ? `${state.fearGreedIndex}/100` : 'n/a';
+    const fearGreedLabel = document.getElementById('fearGreedLabel')?.textContent || 'n/a';
+    const triggerDetails = signal === 'SHORT'
+        ? model?.triggerShort?.entry || model?.hardTrigger?.trigger || 'Noch kein konkreter Short-Trigger'
+        : model?.triggerLong?.entry || model?.hardTrigger?.trigger || 'Noch kein konkreter Long-Trigger';
+    const title = mode === 'daily' ? 'BTC Tagesbericht' : 'BTC Signalprüfung';
+    const summary = mode === 'daily'
+        ? (model?.actionNow || model?.topStatus || 'Markt weiter beobachten')
+        : (model?.bestStrategy?.summary || model?.topStatus || 'Markt weiter beobachten');
+    const extraLine = mode === 'daily'
+        ? `Gültigkeit: ${model?.validity || 'Neu mit dem nächsten 4h-Update prüfen'}`
+        : `Nicht handeln wenn: ${model?.doNotTrade || 'Keine zusätzlichen Blocker aktiv'}`;
+
+    return `
+        <div class="telegram-report-card">
+            <div class="telegram-report-title">${escapeHtml(title)}</div>
+            <div class="telegram-report-time">${escapeHtml(new Date().toLocaleString('de-DE'))}</div>
+            <div class="telegram-report-grid">
+                <div class="telegram-report-item">
+                    <span class="telegram-report-label">Preis</span>
+                    <strong>${escapeHtml(price)}</strong>
+                    <span>${escapeHtml(priceChange)}</span>
+                </div>
+                <div class="telegram-report-item">
+                    <span class="telegram-report-label">Fear & Greed</span>
+                    <strong>${escapeHtml(fearGreed)}</strong>
+                    <span>${escapeHtml(fearGreedLabel)}</span>
+                </div>
+                <div class="telegram-report-item">
+                    <span class="telegram-report-label">Signal</span>
+                    <strong>${escapeHtml(signal)}</strong>
+                    <span>Konfidenz ${escapeHtml(`${confidence}%`)}</span>
+                </div>
+                <div class="telegram-report-item">
+                    <span class="telegram-report-label">Freigabe</span>
+                    <strong>${escapeHtml(permission)}</strong>
+                    <span>${escapeHtml(state.eventFilter?.label || 'n/a')}</span>
+                </div>
+            </div>
+            <div class="telegram-report-block">
+                <div class="telegram-report-label">Nächster Fokus</div>
+                <strong>${escapeHtml(summary)}</strong>
+            </div>
+            <div class="telegram-report-block">
+                <div class="telegram-report-label">Trigger</div>
+                <span>${escapeHtml(triggerDetails)}</span>
+            </div>
+            <div class="telegram-report-block telegram-report-block-muted">
+                <div class="telegram-report-label">Hinweis</div>
+                <span>${escapeHtml(extraLine)}</span>
+            </div>
+        </div>
+    `;
+}
+
+function setTelegramPreviewButtonState(mode) {
+    const dailyBtn = document.getElementById('testDailyUpdate');
+    const signalBtn = document.getElementById('testSignalCheck');
+    if (dailyBtn) dailyBtn.classList.toggle('active', mode === 'daily');
+    if (signalBtn) signalBtn.classList.toggle('active', mode === 'signal');
+}
+
+function getTelegramCredentials() {
+    if (window.TELEGRAM_CONFIG?.botToken && window.TELEGRAM_CONFIG?.chatId) {
+        return {
+            token: window.TELEGRAM_CONFIG.botToken,
+            chatId: window.TELEGRAM_CONFIG.chatId,
+            source: 'config'
+        };
+    }
+
+    const token = localStorage.getItem('telegram_bot_token');
+    const chatId = localStorage.getItem('telegram_chat_id');
+    if (token && chatId) {
+        return { token, chatId, source: 'localStorage' };
+    }
+
+    return null;
+}
+
+async function sendTelegramMessage(text) {
+    const creds = getTelegramCredentials();
+    if (!creds) {
+        return { success: false, error: 'credentials_missing' };
+    }
+
+    try {
+        const response = await fetch(`https://api.telegram.org/bot${creds.token}/sendMessage`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                chat_id: creds.chatId,
+                text,
+                disable_web_page_preview: true
+            })
+        });
+
+        const data = await response.json();
+        return { success: Boolean(data.ok), error: data.description || 'Unbekannter Fehler' };
+    } catch (error) {
+        return { success: false, error: error.message || 'Netzwerkfehler' };
+    }
+}
+
+function prefillTelegramConfigForm() {
+    const tokenInput = document.getElementById('tgTokenInput');
+    const chatIdInput = document.getElementById('tgChatIdInput');
+    const creds = getTelegramCredentials();
+    if (!tokenInput || !chatIdInput || !creds) return;
+    tokenInput.value = creds.token;
+    chatIdInput.value = creds.chatId;
+}
+
+function setTelegramStatus(message, tone = 'neutral') {
+    const statusEl = document.getElementById('tgStatusMsg');
+    if (!statusEl) return;
+    statusEl.textContent = message;
+    statusEl.style.color = tone === 'success'
+        ? '#10b981'
+        : tone === 'error'
+            ? '#ef4444'
+            : 'rgba(230, 238, 248, 0.88)';
+}
+
+function openTelegramPreview(mode = 'signal') {
+    const overlay = document.getElementById('telegramPreview');
+    const content = document.getElementById('telegramPreviewContent');
+    const configForm = document.getElementById('telegramConfigForm');
+    if (!overlay || !content) return;
+    content.dataset.message = buildTelegramPreviewMessage(mode);
+    content.innerHTML = buildTelegramPreviewHtml(mode);
+    overlay.style.display = 'flex';
+    if (configForm) configForm.style.display = 'none';
+    setTelegramStatus('');
+    setTelegramPreviewButtonState(mode);
+}
+
+function closeTelegramPreview() {
+    const overlay = document.getElementById('telegramPreview');
+    if (!overlay) return;
+    overlay.style.display = 'none';
+}
+
+function applyUiTextFixes() {
+    const setText = (selector, value) => {
+        const el = document.querySelector(selector);
+        if (el) el.textContent = value;
+    };
+
+    const setAttr = (selector, attr, value) => {
+        const el = document.querySelector(selector);
+        if (el) el.setAttribute(attr, value);
+    };
+
+    setText('.notification-icon', '🤖');
+    setText('#testDailyUpdate', 'Tagesbericht testen');
+    setText('#testSignalCheck', 'Signalprüfung testen');
+    setText('.telegram-preview-header span', '📱 Telegram Vorschau');
+    setText('#closeTelegramPreview', '×');
+    setText('.logo-icon', '₿');
+    setText('.how-it-works-toggle', '📚 Wie funktioniert dieses Dashboard? (Klick zum Öffnen)');
+
+    setAttr('.header-right .last-update:nth-of-type(2)', 'title', 'Qualität und Vollständigkeit der aktuellen Marktdaten');
+    setAttr('#refreshBtn', 'title', "Klicke hier oder drücke 'R' um die Daten manuell zu aktualisieren");
+    setAttr('#tradeAnalysisBtn', 'title', 'Live Coach-Analyse öffnen');
+    setAttr('.auto-refresh', 'title', 'Countdown bis zur nächsten automatischen Aktualisierung');
+}
+
+window.openTelegramPreview = openTelegramPreview;
+window.closeTelegramPreview = closeTelegramPreview;
+
 function buildLiveIntegrityModel(unified) {
     const quality = state.dataQuality || { mode: 'loading', issues: [], warnings: [] };
     const ageMinutes = state.lastUpdate ? (Date.now() - state.lastUpdate.getTime()) / 60000 : null;
@@ -2313,6 +2561,7 @@ function applyDecisionFallbackState(message) {
     applyStrategyCardState('smartMoneyDecisionCard', 'smartMoneyStatus', 'smartMoneyPriority', { state: 'UNGUELTIG', priority: 'niedrig' });
     applyStrategyCardState('trendDecisionCard', 'trendStrategyStatus', 'trendStrategyPriority', { state: 'UNGUELTIG', priority: 'niedrig' });
     applyStrategyCardState('spotDecisionCard', 'spotStrategyStatus', 'spotStrategyPriority', { state: 'UNGUELTIG', priority: 'niedrig' });
+    updateRainbowVisual();
 }
 
 function applyStrategyCardState(cardId, statusId, priorityId, payload) {
@@ -2323,6 +2572,50 @@ function applyStrategyCardState(cardId, statusId, priorityId, payload) {
     card.dataset.state = payload.state.toLowerCase().replace(/\s+/g, '-');
     statusEl.textContent = payload.state;
     priorityEl.textContent = `Prioritaet: ${payload.priority}`;
+}
+
+function renderRainbowVisual(bandId, markerId, metaId) {
+    const bandEl = document.getElementById(bandId);
+    const markerEl = document.getElementById(markerId);
+    const metaEl = document.getElementById(metaId);
+    if (!bandEl || !markerEl || !metaEl) return;
+
+    const price = Number(state.price);
+    const ath = Number(state.ath);
+    if (!Number.isFinite(price) || !Number.isFinite(ath) || ath <= 0) {
+        bandEl.textContent = 'Keine Daten';
+        markerEl.style.left = '50%';
+        markerEl.style.background = '#0b0f18';
+        metaEl.textContent = 'Modell: Warte auf Preisdaten | Abweichung zum ATH: --';
+        return;
+    }
+
+    const ratio = price / ath;
+    const bands = [
+        { max: 0.35, label: 'Fire Sale', tone: '#2f7af8', pos: 7, desc: 'deutlich unterbewertet' },
+        { max: 0.55, label: 'Buy Zone', tone: '#22c55e', pos: 22, desc: 'attraktive Kaufzone' },
+        { max: 0.78, label: 'Accumulation', tone: '#84cc16', pos: 38, desc: 'solide Akkumulation' },
+        { max: 1.05, label: 'Fair Value', tone: '#f59e0b', pos: 54, desc: 'nahe fairer Bewertung' },
+        { max: 1.35, label: 'Warm', tone: '#f97316', pos: 72, desc: 'heiss gelaufen' },
+        { max: Infinity, label: 'Euphoria', tone: '#a855f7', pos: 91, desc: 'stark ueberhitzt' }
+    ];
+
+    const activeBand = bands.find(band => ratio <= band.max) || bands[bands.length - 1];
+    const clampedRatio = Math.max(0, Math.min(1.6, ratio));
+    const markerPosition = Math.max(4, Math.min(96, (clampedRatio / 1.6) * 100));
+
+    bandEl.textContent = activeBand.label;
+    bandEl.style.color = activeBand.tone;
+    markerEl.style.left = `${markerPosition}%`;
+    markerEl.style.background = activeBand.tone;
+
+    const athGap = ((price / ath) - 1) * 100;
+    metaEl.textContent = `Modell: ${activeBand.desc} | Abweichung zum ATH: ${formatSignedPercent(athGap, 1)}`;
+}
+
+function updateRainbowVisual() {
+    renderRainbowVisual('rainbowBandLabelTop', 'rainbowMarkerTop', 'rainbowMetaTop');
+    renderRainbowVisual('rainbowBandLabel', 'rainbowMarker', 'rainbowMeta');
 }
 
 function updateStrategyDecisionCards() {
@@ -2369,6 +2662,7 @@ function updateStrategyDecisionCards() {
     setTextIfExists('spotStrategyInvalidation', model.liveIntegrity.blocked ? 'erst nach frischen Daten neu pruefen' : 'kein Spot, wenn Event-Risiko rot und Profil blockt');
     setTextIfExists('spotStrategyEntry', state.fearGreedIndex < 35 ? 'gestaffelte Spot-Kaeufe' : 'nur kleine Spot-Tranche');
     setTextIfExists('spotStrategyRisk', riskText);
+    updateRainbowVisual();
 }
 
 function updateTradeSetup() {
@@ -2973,6 +3267,7 @@ function displayBacktestResults(results) {
 
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize notification system
+    applyUiTextFixes();
     NotificationSystem.init();
     normalizeStoredAuditLog();
     initSignalAuditToggle();
@@ -3072,6 +3367,101 @@ document.addEventListener('DOMContentLoaded', () => {
         testBtn.addEventListener('click', () => {
             NotificationSystem.playSound('long');
             NotificationSystem.showInPageAlert('long', 75, state.price || 100000, 'Test');
+        });
+    }
+
+    const telegramDailyBtn = document.getElementById('testDailyUpdate');
+    if (telegramDailyBtn) {
+        telegramDailyBtn.addEventListener('click', () => {
+            openTelegramPreview('daily');
+        });
+    }
+
+    const telegramSignalBtn = document.getElementById('testSignalCheck');
+    if (telegramSignalBtn) {
+        telegramSignalBtn.addEventListener('click', () => {
+            openTelegramPreview('signal');
+        });
+    }
+
+    const closeTelegramPreviewBtn = document.getElementById('closeTelegramPreview');
+    if (closeTelegramPreviewBtn) {
+        closeTelegramPreviewBtn.addEventListener('click', () => {
+            closeTelegramPreview();
+        });
+    }
+
+    const telegramPreviewOverlay = document.getElementById('telegramPreview');
+    if (telegramPreviewOverlay) {
+        telegramPreviewOverlay.addEventListener('click', (event) => {
+            if (event.target === telegramPreviewOverlay) {
+                closeTelegramPreview();
+            }
+        });
+    }
+
+    const sendToTelegramBtn = document.getElementById('sendToTelegramBtn');
+    if (sendToTelegramBtn) {
+        sendToTelegramBtn.addEventListener('click', async () => {
+            const previewContent = document.getElementById('telegramPreviewContent')?.dataset?.message?.trim()
+                || document.getElementById('telegramPreviewContent')?.textContent?.trim()
+                || '';
+            const configForm = document.getElementById('telegramConfigForm');
+            const creds = getTelegramCredentials();
+
+            if (!previewContent) {
+                setTelegramStatus('Keine Testnachricht vorhanden.', 'error');
+                return;
+            }
+
+            if (!creds) {
+                prefillTelegramConfigForm();
+                if (configForm) configForm.style.display = 'block';
+                setTelegramStatus('Bot-Token und Chat-ID fehlen.', 'error');
+                return;
+            }
+
+            setTelegramStatus('Sende Testnachricht...', 'neutral');
+            const result = await sendTelegramMessage(previewContent);
+            if (result.success) {
+                setTelegramStatus('Testnachricht erfolgreich gesendet.', 'success');
+            } else {
+                setTelegramStatus(`Telegram-Fehler: ${result.error}`, 'error');
+            }
+        });
+    }
+
+    const saveTelegramCredsBtn = document.getElementById('tgSaveCreds');
+    if (saveTelegramCredsBtn) {
+        saveTelegramCredsBtn.addEventListener('click', async () => {
+            const token = document.getElementById('tgTokenInput')?.value?.trim() || '';
+            const chatId = document.getElementById('tgChatIdInput')?.value?.trim() || '';
+            const configForm = document.getElementById('telegramConfigForm');
+            const previewContent = document.getElementById('telegramPreviewContent')?.dataset?.message?.trim()
+                || document.getElementById('telegramPreviewContent')?.textContent?.trim()
+                || '';
+
+            if (!token || !chatId) {
+                setTelegramStatus('Bitte Bot-Token und Chat-ID eintragen.', 'error');
+                return;
+            }
+
+            localStorage.setItem('telegram_bot_token', token);
+            localStorage.setItem('telegram_chat_id', chatId);
+            if (configForm) configForm.style.display = 'none';
+
+            if (!previewContent) {
+                setTelegramStatus('Zugangsdaten gespeichert.', 'success');
+                return;
+            }
+
+            setTelegramStatus('Sende Testnachricht...', 'neutral');
+            const result = await sendTelegramMessage(previewContent);
+            if (result.success) {
+                setTelegramStatus('Testnachricht erfolgreich gesendet.', 'success');
+            } else {
+                setTelegramStatus(`Telegram-Fehler: ${result.error}`, 'error');
+            }
         });
     }
 

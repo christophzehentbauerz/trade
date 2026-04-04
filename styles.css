@@ -5056,11 +5056,59 @@ body::after {
     font-family: 'Segoe UI', sans-serif;
     font-size: 0.95rem;
     line-height: 1.6;
-    white-space: pre-wrap;
     color: #e0e0e0;
     max-height: 60vh;
     overflow-y: auto;
     background: #121220;
+}
+
+.telegram-report-card {
+    display: grid;
+    gap: 14px;
+}
+
+.telegram-report-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #f8fbff;
+}
+
+.telegram-report-time {
+    font-size: 0.84rem;
+    color: rgba(220, 231, 244, 0.72);
+}
+
+.telegram-report-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.telegram-report-item,
+.telegram-report-block {
+    display: grid;
+    gap: 4px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.telegram-report-block-muted {
+    background: rgba(120, 214, 255, 0.04);
+}
+
+.telegram-report-label {
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(201, 215, 230, 0.66);
+}
+
+.telegram-report-item strong,
+.telegram-report-block strong {
+    font-size: 1rem;
+    color: #fff;
 }
 
 @keyframes fadeIn {
@@ -5092,10 +5140,26 @@ body::after {
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.telegram-config-help {
+    font-size: 0.8rem;
+    color: rgba(214, 224, 236, 0.72);
+    margin-top: 8px;
+    line-height: 1.5;
+}
+
 .qt-actions {
     display: flex;
     justify-content: flex-end;
     align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+#tgStatusMsg {
+    flex: 1 1 180px;
+    min-height: 20px;
+    font-size: 0.9rem;
+    color: rgba(230, 238, 248, 0.88);
 }
 
 #telegramConfigForm input {
@@ -5118,6 +5182,23 @@ body::after {
 
 #telegramConfigForm button:hover {
     opacity: 0.9;
+}
+
+.telegram-send-btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+    box-shadow: 0 10px 24px rgba(22, 163, 74, 0.24);
+}
+
+.telegram-send-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.04);
 }
 
 /* =====================================================
@@ -5403,35 +5484,46 @@ body::after {
 }
 
 .rainbow-visual-card {
-    margin-top: 12px;
-    border: 1px solid var(--border-color);
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: 10px;
-    padding: 12px;
+    margin-top: 18px;
+    border: 1px solid rgba(120, 214, 255, 0.16);
+    background:
+        linear-gradient(135deg, rgba(120, 214, 255, 0.08), rgba(255, 182, 72, 0.06)),
+        rgba(255, 255, 255, 0.03);
+    border-radius: 20px;
+    padding: 18px 18px 16px;
+    box-shadow: 0 18px 34px rgba(4, 10, 20, 0.24);
+}
+
+.rainbow-visual-card-top {
+    margin-top: 18px;
 }
 
 .rainbow-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
+    gap: 12px;
+    margin-bottom: 14px;
 }
 
 .rainbow-title {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    font-weight: 600;
+    font-size: 1rem;
+    color: var(--text-primary);
+    font-weight: 700;
 }
 
 .rainbow-band {
-    font-size: 0.8rem;
+    font-size: 0.88rem;
     font-weight: 700;
     color: var(--text-primary);
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
 }
 
 .rainbow-scale {
     position: relative;
-    height: 12px;
+    height: 18px;
     border-radius: 999px;
     background: linear-gradient(90deg,
             #2f7af8 0%,
@@ -5447,27 +5539,27 @@ body::after {
     position: absolute;
     top: 50%;
     transform: translate(-50%, -50%);
-    width: 12px;
-    height: 12px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
-    border: 2px solid #fff;
-    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.28);
     background: #0b0f18;
     left: 50%;
     transition: left 0.6s ease;
 }
 
 .rainbow-labels {
-    margin-top: 6px;
+    margin-top: 10px;
     display: flex;
     justify-content: space-between;
-    font-size: 0.72rem;
+    font-size: 0.78rem;
     color: var(--text-muted);
 }
 
 .rainbow-meta {
-    margin-top: 8px;
-    font-size: 0.78rem;
+    margin-top: 12px;
+    font-size: 0.84rem;
     color: var(--text-secondary);
 }
 
@@ -5560,8 +5652,8 @@ body::after {
     background:
         linear-gradient(135deg, rgba(24, 183, 164, 0.14) 0%, rgba(120, 214, 255, 0.08) 42%, rgba(255, 182, 72, 0.08) 100%),
         rgba(6, 16, 28, 0.88);
-    position: sticky;
-    top: 14px;
+    position: relative;
+    top: auto;
     z-index: 120;
 }
 
@@ -6030,7 +6122,6 @@ body::after {
     }
 
     .header {
-        top: 8px;
         padding: 16px;
     }
 
@@ -6147,6 +6238,43 @@ body::before {
         linear-gradient(135deg, rgba(120, 214, 255, 0.07), transparent 35%),
         linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.012)),
         rgba(8, 18, 30, 0.94);
+}
+
+/* Final local UX fixes */
+.header {
+    position: static;
+    top: auto;
+}
+
+@media (max-width: 900px) {
+    .app {
+        padding-top: 16px;
+    }
+
+    .notification-settings-content,
+    .header {
+        gap: 12px;
+    }
+
+    .header {
+        padding: 14px 16px;
+    }
+
+    .header-right {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .last-update,
+    .auto-refresh,
+    .trade-analysis-btn,
+    .refresh-btn {
+        min-height: 44px;
+    }
+
+    .telegram-report-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .decision-panel .card-header,
