@@ -332,7 +332,7 @@ function renderSignalAuditLogV2() {
             const blocked = (entry?.payload?.blockedReasons || []).slice(0, 2).join(' | ') || 'keine';
             const time = entry?.ts ? new Date(entry.ts).toLocaleString('de-DE') : 'n/a';
             const eventType = entry?.payload?.eventType || 'blocked';
-            const eventLabel = eventType === 'trade-call' ? 'Trade Call' : eventType === 'watchlist' ? 'Watchlist' : 'Block';
+            const eventLabel = eventType === 'trade-call' ? 'Trade-Call' : eventType === 'watchlist' ? 'Beobachten' : 'Blocker';
             const changeSummary = entry?.payload?.changeSummary || 'Kein Delta';
             const reasonCodes = (entry?.payload?.reasonCodes || []).slice(0, 3);
             const triggerState = entry?.payload?.stages?.trigger?.value || 'n/a';
@@ -344,7 +344,7 @@ function renderSignalAuditLogV2() {
                     <div class="audit-signal ${signalClass}">${signal.replace('_', ' ')}</div>
                     <div class="audit-event ${eventType}">${eventLabel}</div>
                 </div>
-                <div class="audit-meta"><strong>Freigabe:</strong> ${permission}<br><strong>Trigger/Execution:</strong> ${triggerState} / ${executionState}<br><strong>Qualitaet:</strong> ${quality}<br><strong>Aenderung:</strong> ${changeSummary}<br><strong>Blocker:</strong> ${blocked}${reasonCodes.length ? `<br><strong>Codes:</strong> ${reasonCodes.join(', ')}` : ''}</div>
+                <div class="audit-meta"><strong>Freigabe:</strong> ${permission}<br><strong>Einstieg/Freigabe:</strong> ${triggerState} / ${executionState}<br><strong>Qualität:</strong> ${quality}<br><strong>Änderung:</strong> ${changeSummary}<br><strong>Blocker:</strong> ${blocked}${reasonCodes.length ? `<br><strong>Codes:</strong> ${reasonCodes.join(', ')}` : ''}</div>
             </div>`;
         }).join('');
     } catch (_) {
@@ -359,7 +359,7 @@ function setSignalAuditCollapsed(collapsed) {
 
     section.classList.toggle('collapsed', collapsed);
     toggleBtn.setAttribute('aria-expanded', String(!collapsed));
-    toggleBtn.textContent = collapsed ? 'Signal Audit oeffnen' : 'Signal Audit schliessen';
+    toggleBtn.textContent = collapsed ? 'Signalprotokoll öffnen' : 'Signalprotokoll schließen';
 }
 
 function initSignalAuditToggle() {
@@ -1334,7 +1334,7 @@ function updateTechnicalCard() {
     const trendArrow = document.querySelector('.trend-arrow');
 
     trendArrow.className = 'trend-arrow ' + (trend === 'up' ? 'up' : trend === 'down' ? 'down' : 'sideways');
-    trendValue.textContent = trend === 'up' ? 'Bullish' : trend === 'down' ? 'Bearish' : 'Seitwärts';
+    trendValue.textContent = trend === 'up' ? 'Aufwärts' : trend === 'down' ? 'Abwärts' : 'Seitwärts';
     trendValue.className = `indicator-value text-${trend === 'up' ? 'bullish' : trend === 'down' ? 'bearish' : 'neutral'}`;
 
     // EMA
@@ -1368,7 +1368,7 @@ function updateTechnicalCard() {
             const rvolResult = calculateRVOL(currentVol, volumes);
 
             // Text
-            let trendText = obvResult.trend === 'up' ? 'BULLISH' : obvResult.trend === 'down' ? 'BEARISH' : 'NEUTRAL';
+            let trendText = obvResult.trend === 'up' ? 'AUFWÄRTS' : obvResult.trend === 'down' ? 'ABWÄRTS' : 'NEUTRAL';
             volValueEl.textContent = `${trendText} (RVOL ${rvolResult.ratio.toFixed(1)})`;
             volValueEl.className = `indicator-value ${obvResult.trend === 'up' ? 'text-bullish' : obvResult.trend === 'down' ? 'text-bearish' : 'text-neutral'}`;
 
@@ -1400,9 +1400,9 @@ function updateDerivativesCard() {
     if (!Number.isFinite(state.fundingRate)) {
         fundingStatus.textContent = 'Nicht verfügbar';
     } else if (state.fundingRate < -0.01) {
-        fundingStatus.textContent = 'Shorts zahlen Longs → Bullish';
+        fundingStatus.textContent = 'Shorts zahlen Longs → bullisch';
     } else if (state.fundingRate > 0.03) {
-        fundingStatus.textContent = 'Longs zahlen Shorts → Bearish';
+        fundingStatus.textContent = 'Longs zahlen Shorts → bärisch';
     } else {
         fundingStatus.textContent = 'Neutral';
     }
@@ -1446,11 +1446,11 @@ function updateSentimentCard() {
     // Individual factors
     const fgSignal = document.getElementById('fgSignal');
     if (state.fearGreedIndex <= 25) {
-        fgSignal.textContent = 'Bullish';
+        fgSignal.textContent = 'Bullisch';
         fgSignal.className = 'factor-signal bullish';
         document.getElementById('fgIcon').textContent = '😱';
     } else if (state.fearGreedIndex >= 75) {
-        fgSignal.textContent = 'Bearish';
+        fgSignal.textContent = 'Bärisch';
         fgSignal.className = 'factor-signal bearish';
         document.getElementById('fgIcon').textContent = '🤑';
     } else {
@@ -1464,10 +1464,10 @@ function updateSentimentCard() {
         fundingSignal.textContent = 'N/A';
         fundingSignal.className = 'factor-signal neutral';
     } else if (state.fundingRate < -0.005) {
-        fundingSignal.textContent = 'Bullish';
+        fundingSignal.textContent = 'Bullisch';
         fundingSignal.className = 'factor-signal bullish';
     } else if (state.fundingRate > 0.03) {
-        fundingSignal.textContent = 'Bearish';
+        fundingSignal.textContent = 'Bärisch';
         fundingSignal.className = 'factor-signal bearish';
     } else {
         fundingSignal.textContent = 'Neutral';
@@ -1476,10 +1476,10 @@ function updateSentimentCard() {
 
     const lsSignal = document.getElementById('lsSignal');
     if (state.longShortRatio.short > 55) {
-        lsSignal.textContent = 'Bullish';
+        lsSignal.textContent = 'Bullisch';
         lsSignal.className = 'factor-signal bullish';
     } else if (state.longShortRatio.long > 55) {
-        lsSignal.textContent = 'Bearish';
+        lsSignal.textContent = 'Bärisch';
         lsSignal.className = 'factor-signal bearish';
     } else {
         lsSignal.textContent = 'Neutral';

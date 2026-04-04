@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BTC Market Intelligence Dashboard</title>
+    <title>BTC Markt-Dashboard</title>
     <meta name="description"
         content="Echtzeit Bitcoin Marktanalyse mit technischen Indikatoren, On-Chain Daten und Trading-Signalen">
     <link rel="stylesheet" href="styles.css">
@@ -28,7 +28,7 @@
                 <div class="notification-info">
                     <span class="notification-icon">🤖</span>
                     <div class="notification-text">
-                        <strong>Telegram Bot Test</strong>
+                        <strong>Telegram-Bot-Test</strong>
                         <span class="notification-status">
                             Teste die Bot-Nachrichten direkt im Browser
                         </span>
@@ -36,10 +36,10 @@
                 </div>
                 <div class="notification-buttons">
                     <button id="testDailyUpdate" class="notif-btn telegram-test-btn">
-                        Daily Report Test
+                        Tagesbericht testen
                     </button>
                     <button id="testSignalCheck" class="notif-btn telegram-test-btn active">
-                        Signal Check Test
+                        Signalprüfung testen
                     </button>
                 </div>
             </div>
@@ -60,7 +60,7 @@
             <div class="header-left">
                 <div class="logo">
                     <span class="logo-icon">₿</span>
-                    <span class="logo-text">Market Intelligence</span>
+                    <span class="logo-text">BTC Markt-Dashboard</span>
                 </div>
             </div>
             <div class="header-right">
@@ -287,11 +287,11 @@
 
         <section class="decision-panel">
             <div class="card-header">
-                <h2><span class="card-icon">⛳</span> Execution Filter</h2>
+                <h2><span class="card-icon">⛳</span> Handelsfilter</h2>
                 <div class="decision-header-tools">
                     <span class="card-badge">Nur Entscheidungslogik</span>
                     <label class="event-override-control">
-                        <span>Event Override</span>
+                        <span>Event-Override</span>
                         <select id="eventOverrideSelect">
                             <option value="auto">Auto</option>
                             <option value="green">Gruen</option>
@@ -332,7 +332,7 @@
 
                 <div class="execution-ladder" id="executionLadder">
                     <div class="execution-step neutral" id="biasStageCard">
-                        <span class="execution-step-label">Bias</span>
+                        <span class="execution-step-label">Marktrichtung</span>
                         <span class="execution-step-value" id="biasStageValue">--</span>
                         <span class="execution-step-note" id="biasStageNote">--</span>
                     </div>
@@ -342,12 +342,12 @@
                         <span class="execution-step-note" id="setupStageNote">--</span>
                     </div>
                     <div class="execution-step neutral" id="triggerStageCard">
-                        <span class="execution-step-label">Trigger</span>
+                        <span class="execution-step-label">Einstiegssignal</span>
                         <span class="execution-step-value" id="triggerStageValue">--</span>
                         <span class="execution-step-note" id="triggerStageNote">--</span>
                     </div>
                     <div class="execution-step neutral" id="executionStageCard">
-                        <span class="execution-step-label">Execution</span>
+                        <span class="execution-step-label">Freigabe</span>
                         <span class="execution-step-value" id="executionStageValue">--</span>
                         <span class="execution-step-note" id="executionStageNote">--</span>
                     </div>
@@ -356,17 +356,17 @@
                 <div class="integrity-card" id="liveIntegrityCard">
                     <div class="integrity-header">
                         <div>
-                            <div class="decision-subtitle">Live Integrity Gate</div>
+                            <div class="decision-subtitle">Live-Datenprüfung</div>
                             <div class="integrity-status" id="liveIntegrityStatus">--</div>
                         </div>
                         <div class="integrity-confidence-wrap">
-                            <span class="integrity-confidence-label">Live Confidence</span>
+                            <span class="integrity-confidence-label">Live-Konfidenz</span>
                             <span class="integrity-confidence-value" id="liveConfidenceValue">--</span>
                         </div>
                     </div>
                     <div class="integrity-grid">
                         <div class="integrity-item">
-                            <span class="decision-label">Freshness</span>
+                            <span class="decision-label">Aktualität</span>
                             <span class="decision-value" id="liveFreshnessValue">--</span>
                         </div>
                         <div class="integrity-item">
@@ -380,190 +380,197 @@
                     </div>
                 </div>
 
-                <div class="decision-grid">
-                    <div class="decision-item">
-                        <span class="decision-label">Bevorzugte Richtung</span>
-                        <span class="decision-value" id="preferredDirectionValue">--</span>
-                    </div>
-                    <div class="decision-item setup-grade-card" id="setupGradeCard">
-                        <span class="decision-label">Setup-Qualitaet</span>
-                        <span class="decision-value" id="setupGradeValue">--</span>
-                        <span class="decision-note" id="setupGradeReason">--</span>
-                    </div>
-                    <div class="decision-item">
-                        <span class="decision-label">Marktphase</span>
-                        <span class="decision-value" id="marketPhaseValue">--</span>
-                    </div>
-                    <div class="decision-item">
-                        <span class="decision-label">Gueltigkeit</span>
-                        <span class="decision-value" id="validityWindowValue">--</span>
-                    </div>
-                    <div class="decision-item">
-                        <span class="decision-label">Beste Strategie heute</span>
-                        <span class="decision-value" id="bestStrategyValue">--</span>
-                    </div>
-                    <div class="decision-item">
-                        <span class="decision-label">Event-Risiko</span>
-                        <span class="decision-value" id="eventRiskValue">--</span>
-                    </div>
-                    <div class="decision-item">
-                        <span class="decision-label">Hebel erlaubt</span>
-                        <span class="decision-value" id="leveragePermissionValue">--</span>
-                    </div>
-                    <div class="decision-item">
-                        <span class="decision-label">Spot erlaubt</span>
-                        <span class="decision-value" id="spotPermissionValue">--</span>
-                    </div>
-                    <div class="decision-item decision-item-wide">
-                        <span class="decision-label">Persoenlicher Modus</span>
-                        <span class="decision-value" id="styleFitValue">--</span>
-                    </div>
-                </div>
+                <details class="advanced-decision-panel">
+                    <summary class="advanced-decision-toggle">
+                        Erweiterte Details und Profileinstellungen
+                    </summary>
+                    <div class="advanced-decision-content">
+                        <div class="decision-grid">
+                            <div class="decision-item">
+                                <span class="decision-label">Bevorzugte Richtung</span>
+                                <span class="decision-value" id="preferredDirectionValue">--</span>
+                            </div>
+                            <div class="decision-item setup-grade-card" id="setupGradeCard">
+                                <span class="decision-label">Setup-Qualität</span>
+                                <span class="decision-value" id="setupGradeValue">--</span>
+                                <span class="decision-note" id="setupGradeReason">--</span>
+                            </div>
+                            <div class="decision-item">
+                                <span class="decision-label">Marktphase</span>
+                                <span class="decision-value" id="marketPhaseValue">--</span>
+                            </div>
+                            <div class="decision-item">
+                                <span class="decision-label">Gültigkeit</span>
+                                <span class="decision-value" id="validityWindowValue">--</span>
+                            </div>
+                            <div class="decision-item">
+                                <span class="decision-label">Beste Strategie heute</span>
+                                <span class="decision-value" id="bestStrategyValue">--</span>
+                            </div>
+                            <div class="decision-item">
+                                <span class="decision-label">Event-Risiko</span>
+                                <span class="decision-value" id="eventRiskValue">--</span>
+                            </div>
+                            <div class="decision-item">
+                                <span class="decision-label">Hebel erlaubt</span>
+                                <span class="decision-value" id="leveragePermissionValue">--</span>
+                            </div>
+                            <div class="decision-item">
+                                <span class="decision-label">Spot erlaubt</span>
+                                <span class="decision-value" id="spotPermissionValue">--</span>
+                            </div>
+                            <div class="decision-item decision-item-wide">
+                                <span class="decision-label">Persoenlicher Modus</span>
+                                <span class="decision-value" id="styleFitValue">--</span>
+                            </div>
+                        </div>
 
-                <div class="profile-card">
-                    <div class="decision-subtitle">Trader Profile</div>
-                    <div class="profile-grid">
-                        <label class="profile-field">
-                            <span>Stil</span>
-                            <select id="profileStyleSelect">
-                                <option value="Konservativ">Konservativ</option>
-                                <option value="Ausgewogen">Ausgewogen</option>
-                                <option value="Aggressiv">Aggressiv</option>
-                            </select>
-                        </label>
-                        <label class="profile-field">
-                            <span>Execution</span>
-                            <select id="profileExecutionSelect">
-                                <option value="Breakout oder Pullback">Breakout oder Pullback</option>
-                                <option value="Nur Breakout">Nur Breakout</option>
-                                <option value="Nur Pullback">Nur Pullback</option>
-                            </select>
-                        </label>
-                        <label class="profile-field">
-                            <span>Max Hebel</span>
-                            <select id="profileMaxLeverage">
-                                <option value="1">1x</option>
-                                <option value="2">2x</option>
-                                <option value="3">3x</option>
-                                <option value="4">4x</option>
-                            </select>
-                        </label>
-                        <label class="profile-field">
-                            <span>Min RR</span>
-                            <select id="profileMinRR">
-                                <option value="1.5">1.5</option>
-                                <option value="2">2.0</option>
-                                <option value="2.5">2.5</option>
-                                <option value="3">3.0</option>
-                            </select>
-                        </label>
-                        <label class="profile-field">
-                            <span>Max offene Trades</span>
-                            <select id="profileMaxOpenTrades">
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                            </select>
-                        </label>
-                        <label class="profile-toggle">
-                            <input type="checkbox" id="profileAvoidWeekends">
-                            <span>Wochenenden meiden</span>
-                        </label>
-                        <label class="profile-toggle">
-                            <input type="checkbox" id="profileAvoidMacroRisk">
-                            <span>Makro rot blocken</span>
-                        </label>
-                        <label class="profile-toggle">
-                            <input type="checkbox" id="profilePreferSpot">
-                            <span>Risk Days lieber Spot</span>
-                        </label>
-                    </div>
-                </div>
+                        <div class="profile-card">
+                            <div class="decision-subtitle">Trader-Profil</div>
+                            <div class="profile-grid">
+                                <label class="profile-field">
+                                    <span>Stil</span>
+                                    <select id="profileStyleSelect">
+                                        <option value="Konservativ">Konservativ</option>
+                                        <option value="Ausgewogen">Ausgewogen</option>
+                                        <option value="Aggressiv">Aggressiv</option>
+                                    </select>
+                                </label>
+                                <label class="profile-field">
+                                    <span>Einstiegsart</span>
+                                    <select id="profileExecutionSelect">
+                                        <option value="Breakout oder Pullback">Ausbruch oder Rücklauf</option>
+                                        <option value="Nur Breakout">Nur Ausbruch</option>
+                                        <option value="Nur Pullback">Nur Rücklauf</option>
+                                    </select>
+                                </label>
+                                <label class="profile-field">
+                                    <span>Max Hebel</span>
+                                    <select id="profileMaxLeverage">
+                                        <option value="1">1x</option>
+                                        <option value="2">2x</option>
+                                        <option value="3">3x</option>
+                                        <option value="4">4x</option>
+                                    </select>
+                                </label>
+                                <label class="profile-field">
+                                    <span>Min RR</span>
+                                    <select id="profileMinRR">
+                                        <option value="1.5">1.5</option>
+                                        <option value="2">2.0</option>
+                                        <option value="2.5">2.5</option>
+                                        <option value="3">3.0</option>
+                                    </select>
+                                </label>
+                                <label class="profile-field">
+                                    <span>Max offene Trades</span>
+                                    <select id="profileMaxOpenTrades">
+                                        <option value="1">1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                    </select>
+                                </label>
+                                <label class="profile-toggle">
+                                    <input type="checkbox" id="profileAvoidWeekends">
+                                    <span>Wochenenden meiden</span>
+                                </label>
+                                <label class="profile-toggle">
+                                    <input type="checkbox" id="profileAvoidMacroRisk">
+                                    <span>Makro rot blocken</span>
+                                </label>
+                                <label class="profile-toggle">
+                                    <input type="checkbox" id="profilePreferSpot">
+                                    <span>Risk Days lieber Spot</span>
+                                </label>
+                            </div>
+                        </div>
 
-                <div class="horizon-grid">
-                    <div class="horizon-card">
-                        <span class="horizon-label">Tagesurteil</span>
-                        <span class="horizon-value" id="todayVerdict">--</span>
-                    </div>
-                    <div class="horizon-card">
-                        <span class="horizon-label">Intraday</span>
-                        <span class="horizon-value" id="intradayVerdict">--</span>
-                    </div>
-                    <div class="horizon-card">
-                        <span class="horizon-label">Swing</span>
-                        <span class="horizon-value" id="swingVerdict">--</span>
-                    </div>
-                    <div class="horizon-card">
-                        <span class="horizon-label">Spot</span>
-                        <span class="horizon-value" id="spotVerdict">--</span>
-                    </div>
-                </div>
+                        <div class="horizon-grid">
+                            <div class="horizon-card">
+                                <span class="horizon-label">Tagesurteil</span>
+                                <span class="horizon-value" id="todayVerdict">--</span>
+                            </div>
+                            <div class="horizon-card">
+                                <span class="horizon-label">Intraday</span>
+                                <span class="horizon-value" id="intradayVerdict">--</span>
+                            </div>
+                            <div class="horizon-card">
+                                <span class="horizon-label">Swing</span>
+                                <span class="horizon-value" id="swingVerdict">--</span>
+                            </div>
+                            <div class="horizon-card">
+                                <span class="horizon-label">Spot</span>
+                                <span class="horizon-value" id="spotVerdict">--</span>
+                            </div>
+                        </div>
 
-                <div class="hard-trigger-card" id="hardTriggerCard">
-                    <div class="decision-subtitle">Hard Trigger Card</div>
-                    <div class="hard-trigger-grid">
-                        <div class="hard-trigger-item">
-                            <span class="decision-label">Aktiver Move</span>
-                            <span class="decision-value" id="hardTriggerDirection">--</span>
+                        <div class="hard-trigger-card" id="hardTriggerCard">
+                            <div class="decision-subtitle">Konkreter Auslöser</div>
+                            <div class="hard-trigger-grid">
+                                <div class="hard-trigger-item">
+                                    <span class="decision-label">Aktiver Move</span>
+                                    <span class="decision-value" id="hardTriggerDirection">--</span>
+                                </div>
+                                <div class="hard-trigger-item">
+                                    <span class="decision-label">Trigger</span>
+                                    <span class="decision-value" id="hardTriggerValue">--</span>
+                                </div>
+                                <div class="hard-trigger-item">
+                                    <span class="decision-label">Invalidierung</span>
+                                    <span class="decision-value" id="hardTriggerInvalidation">--</span>
+                                </div>
+                                <div class="hard-trigger-item">
+                                    <span class="decision-label">RR</span>
+                                    <span class="decision-value" id="hardTriggerRR">--</span>
+                                </div>
+                                <div class="hard-trigger-item">
+                                    <span class="decision-label">Gueltig bis</span>
+                                    <span class="decision-value" id="hardTriggerValidity">--</span>
+                                </div>
+                                <div class="hard-trigger-item hard-trigger-item-wide">
+                                    <span class="decision-label">Nicht handeln, wenn</span>
+                                    <span class="decision-value" id="hardTriggerBlock">--</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="hard-trigger-item">
-                            <span class="decision-label">Trigger</span>
-                            <span class="decision-value" id="hardTriggerValue">--</span>
-                        </div>
-                        <div class="hard-trigger-item">
-                            <span class="decision-label">Invalidierung</span>
-                            <span class="decision-value" id="hardTriggerInvalidation">--</span>
-                        </div>
-                        <div class="hard-trigger-item">
-                            <span class="decision-label">RR</span>
-                            <span class="decision-value" id="hardTriggerRR">--</span>
-                        </div>
-                        <div class="hard-trigger-item">
-                            <span class="decision-label">Gueltig bis</span>
-                            <span class="decision-value" id="hardTriggerValidity">--</span>
-                        </div>
-                        <div class="hard-trigger-item hard-trigger-item-wide">
-                            <span class="decision-label">Nicht handeln, wenn</span>
-                            <span class="decision-value" id="hardTriggerBlock">--</span>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="trigger-grid">
-                    <div class="trigger-card long">
-                        <div class="trigger-title">Long-Trigger</div>
-                        <div class="trigger-main" id="longTriggerLabel">--</div>
-                        <div class="trigger-meta"><strong>Entry:</strong> <span id="longTriggerEntry">--</span></div>
-                        <div class="trigger-meta"><strong>Invalidierung:</strong> <span id="longTriggerInvalidation">--</span></div>
-                        <div class="trigger-meta"><strong>Gueltig bis:</strong> <span id="longTriggerValidity">--</span></div>
-                    </div>
-                    <div class="trigger-card short">
-                        <div class="trigger-title">Short-Trigger</div>
-                        <div class="trigger-main" id="shortTriggerLabel">--</div>
-                        <div class="trigger-meta"><strong>Entry:</strong> <span id="shortTriggerEntry">--</span></div>
-                        <div class="trigger-meta"><strong>Invalidierung:</strong> <span id="shortTriggerInvalidation">--</span></div>
-                        <div class="trigger-meta"><strong>Gueltig bis:</strong> <span id="shortTriggerValidity">--</span></div>
-                    </div>
-                </div>
+                        <div class="trigger-grid">
+                            <div class="trigger-card long">
+                                <div class="trigger-title">Long-Auslöser</div>
+                                <div class="trigger-main" id="longTriggerLabel">--</div>
+                                <div class="trigger-meta"><strong>Einstieg:</strong> <span id="longTriggerEntry">--</span></div>
+                                <div class="trigger-meta"><strong>Invalidierung:</strong> <span id="longTriggerInvalidation">--</span></div>
+                                <div class="trigger-meta"><strong>Gültig bis:</strong> <span id="longTriggerValidity">--</span></div>
+                            </div>
+                            <div class="trigger-card short">
+                                <div class="trigger-title">Short-Auslöser</div>
+                                <div class="trigger-main" id="shortTriggerLabel">--</div>
+                                <div class="trigger-meta"><strong>Einstieg:</strong> <span id="shortTriggerEntry">--</span></div>
+                                <div class="trigger-meta"><strong>Invalidierung:</strong> <span id="shortTriggerInvalidation">--</span></div>
+                                <div class="trigger-meta"><strong>Gültig bis:</strong> <span id="shortTriggerValidity">--</span></div>
+                            </div>
+                        </div>
 
-                <div class="decision-lower-grid">
-                    <div class="strategy-brief">
-                        <div class="decision-subtitle">Strategie-Status</div>
-                        <div class="strategy-brief-grid">
-                            <div><strong>Status:</strong> <span id="strategyStatusValue">--</span></div>
-                            <div><strong>Trigger:</strong> <span id="strategyTriggerValue">--</span></div>
-                            <div><strong>Invalidierung:</strong> <span id="strategyInvalidationValue">--</span></div>
-                            <div><strong>Bevorzugter Entry:</strong> <span id="strategyEntryValue">--</span></div>
-                            <div><strong>Marktumfeld:</strong> <span id="strategyEnvironmentValue">--</span></div>
+                        <div class="decision-lower-grid">
+                            <div class="strategy-brief">
+                                <div class="decision-subtitle">Strategie-Status</div>
+                                <div class="strategy-brief-grid">
+                                    <div><strong>Status:</strong> <span id="strategyStatusValue">--</span></div>
+                                    <div><strong>Trigger:</strong> <span id="strategyTriggerValue">--</span></div>
+                                    <div><strong>Invalidierung:</strong> <span id="strategyInvalidationValue">--</span></div>
+                                    <div><strong>Bevorzugter Entry:</strong> <span id="strategyEntryValue">--</span></div>
+                                    <div><strong>Marktumfeld:</strong> <span id="strategyEnvironmentValue">--</span></div>
+                                </div>
+                            </div>
+                            <div class="why-no-trade">
+                                <div class="decision-subtitle">Warum heute kein guter Trade ist</div>
+                                <ul id="whyNoTradeList">
+                                    <li>Warte auf Daten...</li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
-                    <div class="why-no-trade">
-                        <div class="decision-subtitle">Warum heute kein guter Trade ist</div>
-                        <ul id="whyNoTradeList">
-                            <li>Warte auf Daten...</li>
-                        </ul>
-                    </div>
-                </div>
+                </details>
             </div>
         </section>
 
@@ -571,7 +578,7 @@
         <section class="signal-banner" id="signalBanner">
             <div class="signal-content">
                 <div class="signal-primary">
-                    <span class="signal-label">PRIMÄRES SIGNAL</span>
+                    <span class="signal-label">HAUPTSIGNAL</span>
                     <span class="signal-value" id="primarySignal">DATEN WERDEN GELADEN</span>
                 </div>
                 <div class="signal-confidence"
@@ -607,7 +614,7 @@
         </section>
         <section class="signal-audit-section" id="signalAuditSection">
             <div class="card-header">
-                <h2><span class="card-icon">📋</span> Signal Audit</h2>
+                <h2><span class="card-icon">📋</span> Signalprotokoll</h2>
                 <div class="signal-audit-tools">
                     <span class="card-badge">Letzte 20</span>
                     <label class="signal-audit-filter-wrap" for="signalAuditFilter">
@@ -615,12 +622,12 @@
                         <select id="signalAuditFilter" class="signal-audit-filter">
                             <option value="all">Alles</option>
                             <option value="calls">Nur Calls</option>
-                            <option value="watchlist">Nur Watchlist</option>
-                            <option value="blocked">Nur Blocks</option>
+                            <option value="watchlist">Nur Beobachten</option>
+                            <option value="blocked">Nur Blocker</option>
                         </select>
                     </label>
-                    <button id="resetSignalAudit" class="signal-audit-toggle secondary" type="button">Audit reset</button>
-                    <button id="toggleSignalAudit" class="signal-audit-toggle" type="button" aria-expanded="false">Signal Audit oeffnen</button>
+                    <button id="resetSignalAudit" class="signal-audit-toggle secondary" type="button">Protokoll leeren</button>
+                    <button id="toggleSignalAudit" class="signal-audit-toggle" type="button" aria-expanded="false">Signalprotokoll öffnen</button>
                 </div>
             </div>
             <div class="card-body">
@@ -672,11 +679,11 @@
         <div class="strategy-tabs-container">
             <div class="strategy-tabs">
                 <button id="tab-btn-smart-money" class="strategy-tab active" onclick="switchStrategy('smart-money')">🎯
-                    Smart Money</button>
+                    Liquiditäts-Setup</button>
                 <button id="tab-btn-trend-guard" class="strategy-tab" onclick="switchStrategy('trend-guard')">🛡️
-                    TrendGuard Dynamic</button>
+                    Trendwächter</button>
                 <button id="tab-btn-spot" class="strategy-tab" onclick="switchStrategy('spot')">🏦
-                    Smart Accumulator</button>
+                    Akkumulator</button>
             </div>
         </div>
 
@@ -686,13 +693,13 @@
                 <div class="sm-signal-header">
                     <div class="sm-title">
                         <span class="sm-icon">🎯</span>
-                        <h2>Smart Money Strategy</h2>
+                        <h2>Liquiditäts-Setup</h2>
                         <span class="sm-badge">LIVE</span>
                     </div>
                     <div class="sm-update-info">
-                        <span class="sm-timeframe">1H Timeframe</span>
+                        <span class="sm-timeframe">1H-Zeitrahmen</span>
                         <span class="sm-separator">•</span>
-                        <span class="sm-update-label">Update:</span>
+                        <span class="sm-update-label">Stand:</span>
                         <span id="smartMoneyUpdate" class="sm-update-time">--:--</span>
                     </div>
                 </div>
@@ -826,13 +833,13 @@
                 <div class="sm-signal-header">
                     <div class="sm-title">
                         <span class="sm-icon">🛡️</span>
-                        <h2>TrendGuard Dynamic</h2>
+                        <h2>Trendwächter</h2>
                         <span class="sm-badge">LIVE</span>
                     </div>
                     <div class="sm-update-info">
-                        <span class="sm-timeframe">1H Timeframe</span>
+                        <span class="sm-timeframe">1H-Zeitrahmen</span>
                         <span class="sm-separator">•</span>
-                        <span class="sm-update-label">Update:</span>
+                        <span class="sm-update-label">Stand:</span>
                         <span id="trendUpdate" class="sm-update-time">--:--</span>
                     </div>
                 </div>
@@ -864,7 +871,7 @@
 
                     <!-- Conditions -->
                     <div class="sm-conditions">
-                        <h3>📋 Strategy Conditions</h3>
+                        <h3>📋 Strategie-Bedingungen</h3>
 
                         <!-- Trend Filter -->
                         <div class="condition-item" id="metric-trend">
@@ -905,7 +912,7 @@
 
                     <!-- Trade Levels -->
                     <div class="sm-trade-levels">
-                        <h3>📊 Trade Management</h3>
+                        <h3>📊 Trade-Management</h3>
                         <div class="sm-levels-grid">
                             <div class="sm-level-item">
                                 <span class="sm-level-label">Stop Loss (4x ATR)</span>
@@ -921,18 +928,18 @@
 
                 <!-- Performance Summary -->
                 <div class="sm-performance">
-                    <h3>📈 Performance (2022-2026)</h3>
+                    <h3>📈 Entwicklung (2022-2026)</h3>
                     <div class="sm-perf-grid">
                         <div class="sm-perf-item">
-                            <div class="sm-perf-label">Total Return</div>
+                            <div class="sm-perf-label">Gesamtrendite</div>
                             <div class="sm-perf-value text-bullish">+76.15%</div>
                         </div>
                         <div class="sm-perf-item">
-                            <div class="sm-perf-label">Win Rate</div>
+                            <div class="sm-perf-label">Trefferquote</div>
                             <div class="sm-perf-value">38.4%</div>
                         </div>
                         <div class="sm-perf-item">
-                            <div class="sm-perf-label">Profit Factor</div>
+                            <div class="sm-perf-label">Profit-Faktor</div>
                             <div class="sm-perf-value">1.32</div>
                         </div>
                         <div class="sm-perf-item">
@@ -953,13 +960,13 @@
                 <div class="sm-signal-header">
                     <div class="sm-title">
                         <span class="sm-icon">🏦</span>
-                        <h2>Smart Accumulator</h2>
+                        <h2>Akkumulator</h2>
                         <span class="sm-badge">SPOT · LONG TERM</span>
                     </div>
                     <div class="sm-update-info">
-                        <span class="sm-timeframe">Daily Timeframe</span>
+                        <span class="sm-timeframe">Tages-Zeitrahmen</span>
                         <span class="sm-separator">•</span>
-                        <span class="sm-update-label">Update:</span>
+                        <span class="sm-update-label">Stand:</span>
                         <span id="spotUpdate" class="sm-update-time">--:--</span>
                     </div>
                 </div>
@@ -1216,11 +1223,11 @@
             <!-- Fear & Greed Card -->
             <section class="card fear-greed-card">
                 <div class="card-header">
-                    <h2><span class="card-icon">😱</span> Fear & Greed Index</h2>
+                    <h2><span class="card-icon">😱</span> Angst- und Gier-Index</h2>
                     <div class="fg-source-control">
                         <label for="fgSourceMode" class="fg-source-label">Quelle</label>
                         <select id="fgSourceMode" class="fg-source-select" title="Wähle die Datenquelle für den Fear & Greed Index">
-                            <option value="cmc">CoinMarketCap (mit API-Key)</option>
+                            <option value="cmc">CoinMarketCap (mit API-Schlüssel)</option>
                             <option value="alt">Alternative.me</option>
                             <option value="avg">Durchschnitt</option>
                         </select>
@@ -1241,7 +1248,7 @@
                             <div class="gauge-fill" id="gaugeFill"></div>
                             <div class="gauge-center">
                                 <span class="gauge-value" id="fearGreedValue">--</span>
-                                <span class="gauge-label" id="fearGreedLabel">Loading</span>
+                                <span class="gauge-label" id="fearGreedLabel">Lädt</span>
                             </div>
                         </div>
                         <div class="gauge-scale">
@@ -1352,7 +1359,7 @@
                     <div class="indicator" id="volumeIndicator">
                         <div class="indicator-header">
                             <span class="indicator-name"
-                                title="On-Balance Volume (Trend) und Relative Volume (Intensität)">Volume Flow</span>
+                                title="On-Balance-Volume (Trend) und Relative Volume (Intensität)">Volumenfluss</span>
                             <span class="indicator-value" id="volumeDashValue">--</span>
                         </div>
                         <div class="indicator-explanation">
@@ -1369,7 +1376,7 @@
             <!-- Derivatives Card -->
             <section class="card derivatives-card">
                 <div class="card-header">
-                    <h2><span class="card-icon">📈</span> Derivatives</h2>
+                    <h2><span class="card-icon">📈</span> Derivate</h2>
                     <span class="card-badge" id="derivativesBadge">--/10</span>
                     <span class="info-badge"
                         title="Daten aus dem Futures-Markt. Zeigt wie Trader mit Hebel positioniert sind.">?</span>
@@ -1492,15 +1499,15 @@
             <!-- Trade Setup Card -->
             <section class="card trade-card">
                 <div class="card-header">
-                    <h2><span class="card-icon">🎯</span> Trade Setup</h2>
+                    <h2><span class="card-icon">🎯</span> Handels-Setup</h2>
                     <span class="info-badge"
                         title="Konkrete Handelsempfehlung basierend auf der Analyse. NUR wenn ein Signal vorhanden ist!">?</span>
                 </div>
                 <div class="card-body">
                     <div class="explanation-box">
-                        <strong>Entry Zone:</strong> Empfohlener Einstiegspreis<br>
-                        <strong>Stop Loss:</strong> Preis wo du aussteigen solltest wenn es falsch läuft<br>
-                        <strong>Take Profit:</strong> Preise wo du Gewinne mitnehmen solltest<br>
+                        <strong>Einstiegszone:</strong> Empfohlener Einstiegspreis<br>
+                        <strong>Stop-Loss:</strong> Preis wo du aussteigen solltest wenn es falsch läuft<br>
+                        <strong>Gewinnziele:</strong> Preise wo du Gewinne mitnehmen solltest<br>
                         <strong>R:R:</strong> Risk-Reward-Verhältnis (1:2 = doppelter Gewinn im Vergleich zum Risiko)
                     </div>
                     <div class="trade-direction" id="tradeDirection">
@@ -1509,12 +1516,12 @@
                     </div>
                     <div class="trade-levels">
                         <div class="level entry" title="Der Preisbereich in dem du einsteigen solltest">
-                            <span class="level-label">Entry Zone</span>
+                            <span class="level-label">Einstiegszone</span>
                             <span class="level-value" id="entryZone">$-- - $--</span>
                         </div>
                         <div class="level stoploss"
                             title="WICHTIG: Hier aussteigen wenn der Trade gegen dich läuft. Begrenzt deinen Verlust!">
-                            <span class="level-label">Stop Loss</span>
+                            <span class="level-label">Stop-Loss</span>
                             <span class="level-value" id="stopLoss">$--</span>
                             <span class="level-percent" id="slPercent">(--%)</span>
                         </div>
@@ -1537,7 +1544,7 @@
                     </div>
                     <div class="trade-recommendations">
                         <div class="rec-item" title="Wie viel Prozent deines Kapitals du maximal riskieren solltest">
-                            <span class="rec-label">Position Size</span>
+                            <span class="rec-label">Positionsgröße</span>
                             <span class="rec-value" id="positionSize">--%</span>
                         </div>
                         <div class="rec-item" title="Maximaler empfohlener Hebel. HÖHERER HEBEL = HÖHERES RISIKO!">
@@ -1551,7 +1558,7 @@
             <!-- Key Levels Card -->
             <section class="card levels-card">
                 <div class="card-header">
-                    <h2><span class="card-icon">📍</span> Key Levels</h2>
+                    <h2><span class="card-icon">📍</span> Wichtige Kursmarken</h2>
                     <span class="info-badge"
                         title="Wichtige Preisniveaus. Widerstände stoppen Aufwärtsbewegungen, Unterstützungen stoppen Abwärtsbewegungen.">?</span>
                 </div>
@@ -1580,7 +1587,7 @@
             <!-- Risk Factors Card -->
             <section class="card risk-card">
                 <div class="card-header">
-                    <h2><span class="card-icon">⚠️</span> Risiko-Faktoren</h2>
+                    <h2><span class="card-icon">⚠️</span> Risikofaktoren</h2>
                     <span class="info-badge"
                         title="Wichtige Warnsignale und Events die deine Position beeinflussen könnten.">?</span>
                 </div>
@@ -1597,7 +1604,7 @@
                         </ul>
                     </div>
                     <div class="risk-section">
-                        <h3>📅 Upcoming Events</h3>
+                        <h3>📅 Kommende Termine</h3>
                         <ul id="eventsList">
                             <li>--</li>
                         </ul>
@@ -1610,7 +1617,7 @@
             <!-- Score Breakdown Card -->
             <section class="card score-card">
                 <div class="card-header">
-                    <h2><span class="card-icon">📋</span> Score Breakdown</h2>
+                    <h2><span class="card-icon">📋</span> Score-Aufteilung</h2>
                     <span class="info-badge"
                         title="So wird das Signal berechnet: Technisch 35%, On-Chain 25%, Sentiment 20%, Makro 20%">?</span>
                 </div>
