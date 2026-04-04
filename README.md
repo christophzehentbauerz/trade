@@ -19,9 +19,18 @@ Features:
 Start lokal:
 - `index.html` im Browser öffnen
 
-### CoinMarketCap Fear & Greed Proxy
+### CoinMarketCap Fear & Greed auf Vercel
 
-Wenn der Fear & Greed Index exakt mit CoinMarketCap uebereinstimmen soll, nutze den lokalen Proxy.
+Wenn der Fear & Greed Index exakt mit CoinMarketCap uebereinstimmen soll, setze in Vercel die Umgebungsvariable:
+
+- `CMC_API_KEY=DEIN_API_KEY`
+
+Danach nutzt die Seite automatisch den Vercel-Endpoint:
+- `/api/cmc/fear-and-greed/historical`
+
+### CoinMarketCap lokal
+
+Fuer lokale Tests kannst du weiterhin den Python-Proxy nutzen.
 
 1. CoinMarketCap API-Key als Umgebungsvariable setzen
 ```bash
@@ -36,9 +45,6 @@ python cmc_proxy.py
 3. `cmc-config.example.js` nach `cmc-config.js` kopieren
 
 4. Dashboard neu laden
-
-Der Proxy stellt dann diesen lokalen Endpoint bereit:
-- `http://127.0.0.1:8788/api/cmc/fear-and-greed/historical`
 
 ## Python Backtester
 

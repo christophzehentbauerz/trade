@@ -726,9 +726,13 @@ function getCoinMarketCapConfig() {
         storedConfig = {};
     }
 
+    const hostedDefaultProxy = typeof window !== 'undefined' && /^https?:$/i.test(window.location.protocol)
+        ? '/api/cmc/fear-and-greed/historical'
+        : '';
+
     return {
         apiKey: fileConfig.apiKey || storedConfig.apiKey || '',
-        proxyUrl: fileConfig.proxyUrl || storedConfig.proxyUrl || '',
+        proxyUrl: fileConfig.proxyUrl || storedConfig.proxyUrl || hostedDefaultProxy,
         allowBrowserKey: Boolean(fileConfig.allowBrowserKey || storedConfig.allowBrowserKey)
     };
 }
