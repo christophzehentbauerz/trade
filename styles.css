@@ -719,6 +719,13 @@ body::after {
     align-items: center;
 }
 
+.ticker-sources {
+    width: 100%;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
 .ticker-item {
     display: flex;
     flex-direction: column;
@@ -960,6 +967,65 @@ body::after {
     font-size: 2rem;
     font-weight: 800;
     letter-spacing: -0.02em;
+}
+
+.execution-ladder {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.execution-step {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.025);
+    min-height: 106px;
+}
+
+.execution-step.bullish {
+    border-color: rgba(34, 197, 94, 0.24);
+    background: rgba(34, 197, 94, 0.08);
+}
+
+.execution-step.bearish,
+.execution-step.blocked {
+    border-color: rgba(239, 68, 68, 0.24);
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.execution-step.warning {
+    border-color: rgba(245, 158, 11, 0.24);
+    background: rgba(245, 158, 11, 0.08);
+}
+
+.execution-step.neutral {
+    border-color: rgba(148, 163, 184, 0.18);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.execution-step-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+    font-weight: 700;
+}
+
+.execution-step-value {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.execution-step-note {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    line-height: 1.45;
 }
 
 .decision-grid,
@@ -1721,6 +1787,13 @@ body::after {
     padding: 12px;
     background: var(--bg-secondary);
     border-radius: var(--radius-md);
+}
+
+.data-source-note {
+    margin-bottom: 14px;
+    font-size: 0.74rem;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
 }
 
 /* =====================================================
@@ -2903,6 +2976,24 @@ body::after {
     gap: 10px;
 }
 
+.signal-audit-filter-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.76rem;
+    color: var(--text-secondary);
+}
+
+.signal-audit-filter {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-primary);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
 .signal-audit-toggle {
     border: 1px solid rgba(245, 158, 11, 0.28);
     background: rgba(245, 158, 11, 0.08);
@@ -2920,6 +3011,16 @@ body::after {
     border-color: rgba(245, 158, 11, 0.45);
 }
 
+.signal-audit-toggle.secondary {
+    border-color: rgba(148, 163, 184, 0.2);
+    background: rgba(148, 163, 184, 0.08);
+}
+
+.signal-audit-toggle.secondary:hover {
+    background: rgba(148, 163, 184, 0.14);
+    border-color: rgba(148, 163, 184, 0.34);
+}
+
 .signal-audit-section.collapsed .card-body {
     display: none;
 }
@@ -2932,7 +3033,7 @@ body::after {
 
 .audit-item {
     display: grid;
-    grid-template-columns: 120px 100px 1fr;
+    grid-template-columns: 120px 128px 1fr;
     gap: 12px;
     align-items: start;
     padding: 12px 14px;
@@ -2966,6 +3067,38 @@ body::after {
     background: rgba(255, 255, 255, 0.02);
 }
 
+.audit-signal-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.audit-event {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-radius: 999px;
+    padding: 3px 9px;
+    border: 1px solid currentColor;
+}
+
+.audit-event.trade-call {
+    color: var(--bullish);
+    background: rgba(34, 197, 94, 0.08);
+}
+
+.audit-event.watchlist {
+    color: var(--accent-yellow);
+    background: rgba(245, 158, 11, 0.08);
+}
+
+.audit-event.blocked {
+    color: var(--bearish);
+    background: rgba(239, 68, 68, 0.08);
+}
+
 .audit-signal.long {
     color: var(--bullish);
     background: rgba(34, 197, 94, 0.08);
@@ -2997,9 +3130,14 @@ body::after {
 }
 
 @media (max-width: 768px) {
+    .execution-ladder {
+        grid-template-columns: 1fr 1fr;
+    }
+
     .signal-audit-tools {
         width: 100%;
         justify-content: space-between;
+        flex-wrap: wrap;
     }
 
     .signal-audit-toggle {

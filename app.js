@@ -37,8 +37,8 @@ let state = {
     ath: null,
     athChange: null,
     fearGreedIndex: null,
-    fearGreedSource: 'Alternative.me',
-    fearGreedMode: 'avg',
+    fearGreedSource: 'CoinMarketCap',
+    fearGreedMode: 'cmc',
     fearGreedHistory: [],
     fundingRate: null,
     openInterest: null,
@@ -88,6 +88,8 @@ let TRADER_PROFILE = { ...DEFAULT_TRADER_PROFILE };
 const EVENT_OVERRIDE_KEY = 'btc-event-risk-override';
 const TRADER_PROFILE_KEY = 'btc-trader-profile';
 const SIGNAL_AUDIT_COLLAPSED_KEY = 'btc-signal-audit-collapsed';
+const SIGNAL_AUDIT_STATE_KEY = 'btc-signal-audit-state';
+const SIGNAL_AUDIT_FILTER_KEY = 'btc-signal-audit-filter';
 
 const OFFICIAL_EVENT_SCHEDULE = [
     { id: 'fomc-2026-03', title: 'FOMC Zinsentscheid', startsAt: '2026-03-18T14:00:00-04:00', category: 'macro', source: 'Fed', url: 'https://www.federalreserve.gov/newsevents/2026-march.htm' },
@@ -110,18 +112,164 @@ let countdownInterval = null;
 let remainingSeconds = 300;
 let previousSignal = 'NEUTRAL'; // Track signal changes for notifications
 
-function logSignalSnapshot(source, payload) {
+function calculateNeutralConfidence(weightedScore) {
+    const distanceToThreshold = Math.min(
+        Math.abs(weightedScore - 3.5),
+        Math.abs(weightedScore - 6.5)
+    );
+    return Math.round(Math.max(42, Math.min(58, 42 + (distanceToThreshold * 10))));
+}
+
+function normalizeReasonCode(text) {
+    return String(text || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 48) || 'unspecified';
+}
+
+function classifyAuditEvent(payload) {
+    const signal = payload?.signal || 'NO_TRADE';
+    const permission = payload?.permission || 'n/a';
+
+    if ((signal === 'LONG' || signal === 'SHORT') && permission === 'TRADE ERLAUBT') {
+        return 'trade-call';
+    }
+    if (permission === 'WAIT FOR CONFIRMATION' || permission === 'NUR BEI TRIGGER') {
+        return 'watchlist';
+    }
+    return 'blocked';
+}
+
+function buildAuditChangeSummary(previousPayload, payload) {
+    if (!previousPayload) {
+        return 'Erster erfasster Zustand';
+    }
+
+    const changes = [];
+    if (previousPayload.signal !== payload.signal) {
+        changes.push(`Signal ${previousPayload.signal || 'n/a'} -> ${payload.signal}`);
+    }
+    if (previousPayload.permission !== payload.permission) {
+        changes.push(`Freigabe ${previousPayload.permission || 'n/a'} -> ${payload.permission}`);
+    }
+    if ((previousPayload.stages?.trigger?.value || '') !== (payload.stages?.trigger?.value || '')) {
+        changes.push(`Trigger ${previousPayload.stages?.trigger?.value || 'n/a'} -> ${payload.stages?.trigger?.value || 'n/a'}`);
+    }
+    if ((previousPayload.stages?.execution?.value || '') !== (payload.stages?.execution?.value || '')) {
+        changes.push(`Execution ${previousPayload.stages?.execution?.value || 'n/a'} -> ${payload.stages?.execution?.value || 'n/a'}`);
+    }
+
+    return changes.length ? changes.join(' | ') : 'Kein struktureller Zustandswechsel, nur Detailupdate';
+}
+
+function getAuditSignature(payload) {
+    return JSON.stringify({
+        signal: payload?.signal || 'NEUTRAL',
+        permission: payload?.permission || 'n/a',
+        blockedReasons: payload?.blockedReasons || [],
+        qualityMode: payload?.quality?.mode || 'unknown'
+    });
+}
+
+function normalizeStoredAuditLog() {
     try {
         const key = 'btc_signal_audit_log';
+        const rawEntries = JSON.parse(localStorage.getItem(key) || '[]');
+        if (!Array.isArray(rawEntries) || !rawEntries.length) {
+            return;
+        }
+
+        const chronological = rawEntries
+            .filter(entry => entry && entry.payload)
+            .slice()
+            .reverse();
+
+        const normalized = [];
+        let previousPayload = null;
+        let previousSignature = null;
+
+        chronological.forEach(entry => {
+            const payload = entry.payload || {};
+            const normalizedPayload = {
+                signal: payload.signal || 'NO_TRADE',
+                confidence: Number.isFinite(payload.confidence) ? payload.confidence : 0,
+                permission: payload.permission || 'n/a',
+                quality: payload.quality || { summary: 'n/a', mode: 'unknown' },
+                blockedReasons: Array.isArray(payload.blockedReasons) ? payload.blockedReasons.filter(Boolean) : [],
+                stages: payload.stages || null,
+                reasonCodes: Array.isArray(payload.reasonCodes) && payload.reasonCodes.length
+                    ? payload.reasonCodes
+                    : (Array.isArray(payload.blockedReasons) ? payload.blockedReasons.map(normalizeReasonCode).filter(Boolean) : [])
+            };
+
+            const signature = getAuditSignature(normalizedPayload);
+            if (signature === previousSignature) {
+                return;
+            }
+
+            normalizedPayload.eventType = classifyAuditEvent(normalizedPayload);
+            normalizedPayload.changeSummary = buildAuditChangeSummary(previousPayload, normalizedPayload);
+
+            normalized.push({
+                ts: entry.ts || new Date().toISOString(),
+                source: entry.source || 'dashboard',
+                payload: normalizedPayload
+            });
+
+            previousPayload = normalizedPayload;
+            previousSignature = signature;
+        });
+
+        const latestFirst = normalized.reverse().slice(0, 100);
+        localStorage.setItem(key, JSON.stringify(latestFirst));
+        if (latestFirst.length) {
+            localStorage.setItem(SIGNAL_AUDIT_STATE_KEY, getAuditSignature(latestFirst[0].payload));
+        } else {
+            localStorage.removeItem(SIGNAL_AUDIT_STATE_KEY);
+        }
+    } catch (_) {
+        // Ignore storage normalization failures
+    }
+}
+
+function clearSignalAuditLog() {
+    try {
+        localStorage.removeItem('btc_signal_audit_log');
+        localStorage.removeItem(SIGNAL_AUDIT_STATE_KEY);
+    } catch (_) {
+        // Ignore storage cleanup failures
+    }
+}
+
+function logSignalSnapshot(source, payload) {
+    try {
+        const stateKey = SIGNAL_AUDIT_STATE_KEY;
+        const signature = getAuditSignature(payload);
+        const previousSignature = localStorage.getItem(stateKey);
+        if (previousSignature === signature) {
+            return false;
+        }
+
+        const key = 'btc_signal_audit_log';
         const existing = JSON.parse(localStorage.getItem(key) || '[]');
+        const previousPayload = existing[0]?.payload || null;
+        const enrichedPayload = {
+            ...payload,
+            eventType: classifyAuditEvent(payload),
+            changeSummary: buildAuditChangeSummary(previousPayload, payload)
+        };
         existing.unshift({
             ts: new Date().toISOString(),
             source,
-            payload
+            payload: enrichedPayload
         });
         localStorage.setItem(key, JSON.stringify(existing.slice(0, 100)));
+        localStorage.setItem(stateKey, signature);
+        return true;
     } catch (_) {
         // Ignore logging failures
+        return false;
     }
 }
 
@@ -154,6 +302,55 @@ function renderSignalAuditLog() {
     }
 }
 
+function renderSignalAuditLogV2() {
+    const el = document.getElementById('signalAuditList');
+    if (!el) return;
+
+    try {
+        const filterValue = document.getElementById('signalAuditFilter')?.value || localStorage.getItem(SIGNAL_AUDIT_FILTER_KEY) || 'all';
+        const entries = JSON.parse(localStorage.getItem('btc_signal_audit_log') || '[]')
+            .filter(entry => {
+                const eventType = entry?.payload?.eventType || 'blocked';
+                if (filterValue === 'calls') return eventType === 'trade-call';
+                if (filterValue === 'watchlist') return eventType === 'watchlist';
+                if (filterValue === 'blocked') return eventType === 'blocked';
+                return true;
+            })
+            .slice(0, 20);
+
+        if (!entries.length) {
+            el.innerHTML = '<div class="audit-empty">Keine Audit-Eintraege fuer diesen Filter vorhanden.</div>';
+            return;
+        }
+
+        el.innerHTML = entries.map(entry => {
+            const signal = String(entry?.payload?.signal || 'NEUTRAL');
+            const signalClass = signal.toLowerCase();
+            const permission = entry?.payload?.permission || 'n/a';
+            const quality = entry?.payload?.quality?.summary || 'n/a';
+            const blocked = (entry?.payload?.blockedReasons || []).slice(0, 2).join(' | ') || 'keine';
+            const time = entry?.ts ? new Date(entry.ts).toLocaleString('de-DE') : 'n/a';
+            const eventType = entry?.payload?.eventType || 'blocked';
+            const eventLabel = eventType === 'trade-call' ? 'Trade Call' : eventType === 'watchlist' ? 'Watchlist' : 'Block';
+            const changeSummary = entry?.payload?.changeSummary || 'Kein Delta';
+            const reasonCodes = (entry?.payload?.reasonCodes || []).slice(0, 3);
+            const triggerState = entry?.payload?.stages?.trigger?.value || 'n/a';
+            const executionState = entry?.payload?.stages?.execution?.value || permission;
+
+            return `<div class="audit-item">
+                <div class="audit-time">${time}</div>
+                <div class="audit-signal-wrap">
+                    <div class="audit-signal ${signalClass}">${signal.replace('_', ' ')}</div>
+                    <div class="audit-event ${eventType}">${eventLabel}</div>
+                </div>
+                <div class="audit-meta"><strong>Freigabe:</strong> ${permission}<br><strong>Trigger/Execution:</strong> ${triggerState} / ${executionState}<br><strong>Qualitaet:</strong> ${quality}<br><strong>Aenderung:</strong> ${changeSummary}<br><strong>Blocker:</strong> ${blocked}${reasonCodes.length ? `<br><strong>Codes:</strong> ${reasonCodes.join(', ')}` : ''}</div>
+            </div>`;
+        }).join('');
+    } catch (_) {
+        el.innerHTML = '<div class="audit-empty">Audit-Log konnte nicht geladen werden.</div>';
+    }
+}
+
 function setSignalAuditCollapsed(collapsed) {
     const section = document.getElementById('signalAuditSection');
     const toggleBtn = document.getElementById('toggleSignalAudit');
@@ -182,6 +379,28 @@ function initSignalAuditToggle() {
         const nextCollapsed = !document.getElementById('signalAuditSection')?.classList.contains('collapsed');
         localStorage.setItem(SIGNAL_AUDIT_COLLAPSED_KEY, String(nextCollapsed));
         setSignalAuditCollapsed(nextCollapsed);
+    });
+}
+
+function initSignalAuditFilter() {
+    const filterEl = document.getElementById('signalAuditFilter');
+    if (!filterEl) return;
+
+    const savedFilter = localStorage.getItem(SIGNAL_AUDIT_FILTER_KEY) || 'all';
+    filterEl.value = ['all', 'calls', 'watchlist', 'blocked'].includes(savedFilter) ? savedFilter : 'all';
+    filterEl.addEventListener('change', () => {
+        localStorage.setItem(SIGNAL_AUDIT_FILTER_KEY, filterEl.value);
+        renderSignalAuditLogV2();
+    });
+}
+
+function initSignalAuditReset() {
+    const resetBtn = document.getElementById('resetSignalAudit');
+    if (!resetBtn) return;
+
+    resetBtn.addEventListener('click', () => {
+        clearSignalAuditLog();
+        renderSignalAuditLogV2();
     });
 }
 
@@ -387,17 +606,19 @@ const NotificationSystem = {
     },
 
     // Check for signal change and notify
-    checkSignalChange(newSignal, confidence, price, source = 'Coach-Konfluenz') {
+    checkSignalChange(newSignal, confidence, price, source = 'Coach-Konfluenz', context = {}) {
         if (previousSignal === newSignal) return;
 
         const oldSignal = previousSignal;
         previousSignal = newSignal;
+        const permission = context.permission || 'n/a';
+        const tradeAllowed = permission === 'TRADE ERLAUBT';
 
         // Only notify on first load if it's not neutral
         if (oldSignal === 'NEUTRAL' && newSignal === 'NEUTRAL') return;
 
         // Notify on LONG or SHORT signal
-        if (newSignal === 'LONG') {
+        if (newSignal === 'LONG' && tradeAllowed) {
             const title = 'LONG Signal erkannt';
             const body = `BTC: $${price.toLocaleString()} | Konfidenz: ${Math.round(confidence)}% | Quelle: ${source}`;
 
@@ -405,7 +626,7 @@ const NotificationSystem = {
             this.sendNotification(title, body, 'long');
             this.showInPageAlert('long', confidence, price, source);
 
-        } else if (newSignal === 'SHORT') {
+        } else if (newSignal === 'SHORT' && tradeAllowed) {
             const title = 'SHORT Signal erkannt';
             const body = `BTC: $${price.toLocaleString()} | Konfidenz: ${Math.round(confidence)}% | Quelle: ${source}`;
 
@@ -413,10 +634,15 @@ const NotificationSystem = {
             this.sendNotification(title, body, 'short');
             this.showInPageAlert('short', confidence, price, source);
 
-        } else if (newSignal === 'NEUTRAL' && (oldSignal === 'LONG' || oldSignal === 'SHORT')) {
+        } else if (
+            (newSignal === 'NEUTRAL' || !tradeAllowed) &&
+            (oldSignal === 'LONG' || oldSignal === 'SHORT')
+        ) {
             // Signal changed from active to neutral
             const title = 'Signal zurueckgesetzt';
-            const body = 'Das aktive Signal ist wieder neutral geworden.';
+            const body = tradeAllowed
+                ? 'Das aktive Signal ist wieder neutral geworden.'
+                : `Signal ist nicht handelbar: ${permission}`;
 
             this.sendNotification(title, body, 'neutral');
         }
@@ -587,7 +813,7 @@ async function fetchFearGreedIndex() {
     };
 
     try {
-        const mode = state.fearGreedMode || 'avg';
+        const mode = state.fearGreedMode || 'cmc';
         let cmc = null;
         let alt = null;
 
@@ -908,7 +1134,7 @@ function calculateScores() {
         state.confidence = Math.min(85, 50 + (5 - weightedScore) * 7);
     } else {
         state.signal = 'NEUTRAL';
-        state.confidence = 40 + Math.random() * 20;
+        state.confidence = calculateNeutralConfidence(weightedScore);
     }
 
     return weightedScore;
@@ -949,6 +1175,17 @@ function updatePriceCard() {
     document.getElementById('volume24h').textContent = formatCurrency(state.volume24h);
     document.getElementById('ath').textContent = formatCurrency(state.ath);
     document.getElementById('athChange').textContent = `${formatNumber(state.athChange)}%`;
+
+    const tickerSources = document.getElementById('tickerSources');
+    if (tickerSources) {
+        tickerSources.textContent = `Preis, Marktkapitalisierung, Volumen und ATH: CoinGecko | Fear & Greed: ${state.fearGreedSource}`;
+    }
+
+    document.getElementById('marketCap').title = 'Quelle: CoinGecko';
+    document.getElementById('volume24h').title = 'Quelle: CoinGecko';
+    document.getElementById('ath').title = 'Quelle: CoinGecko';
+    document.getElementById('athChange').title = 'Quelle: CoinGecko';
+    document.getElementById('tickerFearGreed').title = `Quelle: ${state.fearGreedSource}`;
 }
 
 function updateFearGreedCard() {
@@ -959,11 +1196,11 @@ function updateFearGreedCard() {
     let label = 'Neutral';
     let color = 'var(--neutral)';
 
-    if (value <= 20) { label = 'Extreme Fear'; color = 'var(--bearish)'; }
-    else if (value <= 40) { label = 'Fear'; color = '#f97316'; }
+    if (value <= 20) { label = 'Extreme Angst'; color = 'var(--bearish)'; }
+    else if (value <= 40) { label = 'Angst'; color = '#f97316'; }
     else if (value <= 60) { label = 'Neutral'; color = 'var(--neutral)'; }
-    else if (value <= 80) { label = 'Greed'; color = '#84cc16'; }
-    else { label = 'Extreme Greed'; color = 'var(--bullish)'; }
+    else if (value <= 80) { label = 'Gier'; color = '#84cc16'; }
+    else { label = 'Extreme Gier'; color = 'var(--bullish)'; }
 
     document.getElementById('fearGreedLabel').textContent = label;
 
@@ -1007,7 +1244,23 @@ function updateFearGreedCard() {
     } else {
         interpretation = '⚠️ Extreme Gier = Historisch oft Verkaufssignal (Kontraindikator)';
     }
+    if (value <= 20) {
+        interpretation = 'Extreme Angst ist historisch oft eine Kaufzone';
+    } else if (value <= 35) {
+        interpretation = 'Angst im Markt spricht eher fuer vorsichtige Akkumulation';
+    } else if (value <= 65) {
+        interpretation = 'Neutrales Sentiment liefert aktuell kein klares Signal';
+    } else if (value <= 80) {
+        interpretation = 'Gier im Markt erhoeht das Risiko fuer FOMO-Einstiege';
+    } else {
+        interpretation = 'Extreme Gier ist historisch oft ein Warnsignal';
+    }
     document.getElementById('fearGreedInterpretation').textContent = `${interpretation} | Quelle: ${state.fearGreedSource}`;
+
+    const sourceNoteEl = document.getElementById('fearGreedSourceNote');
+    if (sourceNoteEl) {
+        sourceNoteEl.textContent = `Aktive Quelle: ${state.fearGreedSource}`;
+    }
 }
 
 function updateTechnicalCard() {
@@ -1108,6 +1361,10 @@ function updateDerivativesCard() {
 
     // Open Interest
     document.getElementById('openInterest').textContent = formatCurrency(state.openInterest);
+    document.getElementById('fundingRate').title = 'Quelle: Binance Futures';
+    document.getElementById('openInterest').title = 'Quelle: Binance Futures';
+    document.getElementById('longPercent').title = 'Quelle: Binance Futures';
+    document.getElementById('shortPercent').title = 'Quelle: Binance Futures';
 
     // Long/Short Ratio
     document.getElementById('lsLong').style.width = `${state.longShortRatio.long}%`;
@@ -1126,6 +1383,11 @@ function updateDerivativesCard() {
     const fundingBaseScore = !Number.isFinite(state.fundingRate) ? 5 : state.fundingRate < 0 ? 6 : 4;
     const derivScore = fundingBaseScore + (state.longShortRatio.short > 50 ? 1 : -1);
     badge.textContent = `${formatNumber(derivScore, 1)}/10`;
+
+    const derivativesSourceNote = document.getElementById('derivativesSourceNote');
+    if (derivativesSourceNote) {
+        derivativesSourceNote.textContent = 'Quelle: Binance Futures';
+    }
 }
 
 function updateSentimentCard() {
@@ -1567,6 +1829,45 @@ function getBestStrategyForPhase(phase, bias) {
     };
 }
 
+function deriveDecisionStages(model) {
+    const permission = model?.permission || 'NO TRADE';
+    const signal = model?.unified?.signal || 'NEUTRAL';
+    const setupGrade = model?.setupGrade || 'NO TRADE';
+    const hasSetup = signal !== 'NEUTRAL' && ['A+', 'A', 'B'].includes(setupGrade);
+    const blocked = permission === 'HIGH RISK DAY' || permission === 'NO TRADE';
+
+    return {
+        bias: {
+            value: model?.bias || 'NO TRADE',
+            tone: signal === 'LONG' ? 'bullish' : signal === 'SHORT' ? 'bearish' : 'neutral',
+            note: model?.phase || 'Marktphase unklar'
+        },
+        setup: {
+            value: hasSetup ? `SETUP ${setupGrade}` : blocked ? 'INVALID' : 'BUILDING',
+            tone: hasSetup ? 'bullish' : blocked ? 'blocked' : 'neutral',
+            note: hasSetup ? (model?.gradeReasons?.join(' | ') || 'Setup erkannt') : (model?.doNotTrade || 'Noch kein sauberes Setup')
+        },
+        trigger: {
+            value: permission === 'TRADE ERLAUBT' ? 'LIVE' : permission === 'NUR BEI TRIGGER' ? 'ARMED' : permission === 'WAIT FOR CONFIRMATION' ? 'WAIT' : 'BLOCKED',
+            tone: permission === 'TRADE ERLAUBT' ? 'bullish' : permission === 'NUR BEI TRIGGER' ? 'warning' : blocked ? 'blocked' : 'neutral',
+            note: model?.validOnlyIf || model?.hardTrigger?.trigger || 'Trigger noch nicht aktiv'
+        },
+        execution: {
+            value: permission === 'TRADE ERLAUBT' ? model?.actionNow || 'EXECUTE' : permission,
+            tone: permission === 'TRADE ERLAUBT' ? 'bullish' : blocked ? 'blocked' : 'warning',
+            note: permission === 'TRADE ERLAUBT' ? `RR ${model?.hardTrigger?.rr || '--'} | ${model?.topLeverage || 'ohne Hebel'}` : (model?.doNotTrade || 'Nicht operativ freigegeben')
+        }
+    };
+}
+
+function extractReasonCodes(model, unified) {
+    const reasons = [
+        ...(model?.noTradeReasons || []),
+        ...(unified?.blockedReasons || [])
+    ];
+    return [...new Set(reasons.map(normalizeReasonCode).filter(Boolean))];
+}
+
 function buildDecisionModel() {
     const unified = getUnifiedTradeRecommendation();
     if (!unified) return null;
@@ -1604,7 +1905,12 @@ function buildDecisionModel() {
     const bias = unified.signal === 'LONG' ? 'LONG BIAS' : unified.signal === 'SHORT' ? 'SHORT BIAS' : phase === 'Squeeze vor Ausbruch' ? 'WAIT FOR BREAKOUT' : 'NO TRADE';
 
     let permission = 'NO TRADE';
-    if (liveIntegrity.blocked || state.dataQuality?.mode === 'degraded' || (TRADER_PROFILE.avoidMacroRisk && eventRisk.level === 'red')) {
+    if (
+        liveIntegrity.blocked ||
+        state.dataQuality?.mode === 'degraded' ||
+        (TRADER_PROFILE.avoidMacroRisk && eventRisk.level === 'red') ||
+        (TRADER_PROFILE.avoidWeekends && [0, 6].includes(new Date().getDay()))
+    ) {
         permission = 'HIGH RISK DAY';
     } else if (unified.signal !== 'NEUTRAL' && !inMiddleOfRange && weightedRR >= TRADER_PROFILE.minRR && !macroSentimentConflict) {
         permission = 'TRADE ERLAUBT';
@@ -1747,6 +2053,8 @@ function buildDecisionModel() {
             validity: 'naechster 4h Close',
             block: doNotTrade
         },
+        stages: null,
+        reasonCodes: [],
         styleFit: leverageAllowed || (spotAllowed && permission !== 'HIGH RISK DAY')
             ? 'passt zu deinem Stil'
             : 'passt heute nicht zu deinem Stil'
@@ -1756,6 +2064,8 @@ function buildDecisionModel() {
 function updateDecisionPanel() {
     const model = buildDecisionModel();
     if (!model) return;
+    model.stages = deriveDecisionStages(model);
+    model.reasonCodes = extractReasonCodes(model, model.unified);
 
     const actionNowEl = document.getElementById('actionNowValue');
     const validOnlyIfEl = document.getElementById('validOnlyIfValue');
@@ -1782,6 +2092,14 @@ function updateDecisionPanel() {
     const spotEl = document.getElementById('spotPermissionValue');
     const styleEl = document.getElementById('styleFitValue');
     const overrideSelect = document.getElementById('eventOverrideSelect');
+    const biasStageValue = document.getElementById('biasStageValue');
+    const biasStageNote = document.getElementById('biasStageNote');
+    const setupStageValue = document.getElementById('setupStageValue');
+    const setupStageNote = document.getElementById('setupStageNote');
+    const triggerStageValue = document.getElementById('triggerStageValue');
+    const triggerStageNote = document.getElementById('triggerStageNote');
+    const executionStageValue = document.getElementById('executionStageValue');
+    const executionStageNote = document.getElementById('executionStageNote');
 
     if (overrideSelect && overrideSelect.value !== (state.eventFilter?.override || 'auto')) {
         overrideSelect.value = state.eventFilter?.override || 'auto';
@@ -1814,6 +2132,24 @@ function updateDecisionPanel() {
     leverageEl.textContent = model.leverageAllowed ? `Ja, max ${Math.min(TRADER_PROFILE.maxLeverage, parseInt(model.unified.maxLeverage, 10) || TRADER_PROFILE.maxLeverage)}x` : 'Nein';
     spotEl.textContent = model.spotAllowed ? 'Ja' : 'Nein';
     styleEl.textContent = `${model.styleFit} / ${TRADER_PROFILE.style} / ${TRADER_PROFILE.execution}`;
+    if (biasStageValue) biasStageValue.textContent = model.stages.bias.value;
+    if (biasStageNote) biasStageNote.textContent = model.stages.bias.note;
+    if (setupStageValue) setupStageValue.textContent = model.stages.setup.value;
+    if (setupStageNote) setupStageNote.textContent = model.stages.setup.note;
+    if (triggerStageValue) triggerStageValue.textContent = model.stages.trigger.value;
+    if (triggerStageNote) triggerStageNote.textContent = model.stages.trigger.note;
+    if (executionStageValue) executionStageValue.textContent = model.stages.execution.value;
+    if (executionStageNote) executionStageNote.textContent = model.stages.execution.note;
+
+    [
+        ['biasStageCard', model.stages.bias],
+        ['setupStageCard', model.stages.setup],
+        ['triggerStageCard', model.stages.trigger],
+        ['executionStageCard', model.stages.execution]
+    ].forEach(([id, payload]) => {
+        const el = document.getElementById(id);
+        if (el) el.className = `execution-step ${payload.tone}`;
+    });
 
     document.getElementById('todayVerdict').textContent = model.horizons.day;
     document.getElementById('intradayVerdict').textContent = model.horizons.intraday;
@@ -1866,6 +2202,14 @@ function applyDecisionFallbackState(message) {
         ['liveFreshnessValue', 'kein gueltiges Update'],
         ['liveSourcesValue', 'Kernbereiche unvollstaendig'],
         ['liveBlockerValue', message],
+        ['biasStageValue', 'NO TRADE'],
+        ['biasStageNote', 'Ohne Daten kein Bias'],
+        ['setupStageValue', 'INVALID'],
+        ['setupStageNote', 'Setup nicht belastbar'],
+        ['triggerStageValue', 'BLOCKED'],
+        ['triggerStageNote', 'Kein Trigger ohne Daten'],
+        ['executionStageValue', 'HIGH RISK DAY'],
+        ['executionStageNote', message],
         ['preferredDirectionValue', 'NO TRADE'],
         ['setupGradeValue', 'NO TRADE'],
         ['setupGradeReason', 'Ohne frische Kerndaten keine Freigabe'],
@@ -1892,6 +2236,10 @@ function applyDecisionFallbackState(message) {
     if (permissionCard) permissionCard.className = 'decision-permission high-risk-day';
     const liveIntegrityCard = document.getElementById('liveIntegrityCard');
     if (liveIntegrityCard) liveIntegrityCard.className = 'integrity-card blocked';
+    ['biasStageCard', 'setupStageCard', 'triggerStageCard', 'executionStageCard'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.className = 'execution-step blocked';
+    });
 
     const whyList = document.getElementById('whyNoTradeList');
     if (whyList) whyList.innerHTML = `<li>${message}</li>`;
@@ -2114,9 +2462,20 @@ function updateScoreCard() {
 function updateSignalBanner() {
     const unified = getUnifiedTradeRecommendation();
     const decisionModel = buildDecisionModel();
+    if (decisionModel) {
+        decisionModel.stages = deriveDecisionStages(decisionModel);
+        decisionModel.reasonCodes = extractReasonCodes(decisionModel, unified);
+    }
     const activeSignal = unified?.signal || state.signal;
     const activeConfidence = unified?.confidence ?? state.confidence;
     const qualityBlocked = state.dataQuality?.mode === 'degraded';
+    const operationalSignal = qualityBlocked || decisionModel?.permission !== 'TRADE ERLAUBT'
+        ? 'NO_TRADE'
+        : activeSignal;
+    const auditBlockedReasons = [
+        ...(unified?.blockedReasons || []),
+        ...(decisionModel?.noTradeReasons || [])
+    ];
 
     const banner = document.getElementById('signalBanner');
     const signalValue = document.getElementById('primarySignal');
@@ -2125,9 +2484,9 @@ function updateSignalBanner() {
     const summary = document.getElementById('signalSummary');
     const explanation = document.getElementById('signalExplanationContent');
 
-    const bannerMode = qualityBlocked ? 'no-trade' : activeSignal.toLowerCase();
+    const bannerMode = operationalSignal === 'NO_TRADE' ? 'no-trade' : operationalSignal.toLowerCase();
     banner.className = `signal-banner ${bannerMode}`;
-    signalValue.textContent = qualityBlocked ? 'NO TRADE' : activeSignal;
+    signalValue.textContent = operationalSignal === 'NO_TRADE' ? 'NO TRADE' : operationalSignal;
     signalValue.dataset.state = bannerMode;
     confidenceFill.style.width = `${activeConfidence}%`;
     confidenceValue.textContent = `${Math.round(activeConfidence)}%`;
@@ -2141,13 +2500,13 @@ function updateSignalBanner() {
             <br><br><strong>Datenstatus:</strong> ${state.dataQuality.summary}
             <br><strong>Probleme:</strong> ${state.dataQuality.issues.join(' | ') || 'n/a'}
             ${state.dataQuality.warnings?.length ? `<br><strong>Warnungen:</strong> ${state.dataQuality.warnings.join(' | ')}` : ''}`;
-    } else if (activeSignal === 'LONG') {
+    } else if (operationalSignal === 'LONG') {
         summaryText = 'Coach-Konfluenz zeigt ein bullisches Setup.';
         explanationText = `<strong>LONG bedeutet:</strong> Die Daten deuten auf steigende Preise hin.
             <br><br><strong>Konfidenz:</strong> ${Math.round(activeConfidence)}%
             <br><strong>Confluence Score:</strong> ${formatNumber(unified?.confluence?.total ?? calculateWeightedScore(), 1)}/10
             <br><strong>Gewichtetes Ziel-R:R:</strong> 1:${formatNumber(unified?.weightedRR ?? 0, 2)}`;
-    } else if (activeSignal === 'SHORT') {
+    } else if (operationalSignal === 'SHORT') {
         summaryText = 'Coach-Konfluenz zeigt ein bearishes Setup mit klarem Risiko-Management.';
         explanationText = `<strong>SHORT bedeutet:</strong> Die Daten deuten auf fallende Preise hin.
             <br><br><strong>Konfidenz:</strong> ${Math.round(activeConfidence)}%
@@ -2158,23 +2517,34 @@ function updateSignalBanner() {
         explanationText = `<strong>NEUTRAL bedeutet:</strong> Kein Trade empfohlen.
             <br><br><strong>Konfidenz:</strong> ${Math.round(activeConfidence)}%
             <br><strong>Confluence Score:</strong> ${formatNumber(unified?.confluence?.total ?? calculateWeightedScore(), 1)}/10
-            ${unified?.blockedReasons?.length ? `<br><strong>Filter:</strong> ${unified.blockedReasons.join(' | ')}` : ''}`;
+            <br><strong>Bias / Setup / Trigger / Execution:</strong> ${decisionModel?.stages?.bias?.value || 'n/a'} / ${decisionModel?.stages?.setup?.value || 'n/a'} / ${decisionModel?.stages?.trigger?.value || 'n/a'} / ${decisionModel?.stages?.execution?.value || 'n/a'}
+            ${auditBlockedReasons.length ? `<br><strong>Filter:</strong> ${[...new Set(auditBlockedReasons)].join(' | ')}` : ''}`;
     }
 
     summary.textContent = summaryText;
     explanation.innerHTML = explanationText;
-    logSignalSnapshot('dashboard', {
-        signal: qualityBlocked ? 'NO_TRADE' : activeSignal,
+    const didLog = logSignalSnapshot('dashboard', {
+        signal: operationalSignal,
         confidence: Math.round(activeConfidence),
         permission: decisionModel?.permission || 'n/a',
         quality: state.dataQuality,
-        blockedReasons: unified?.blockedReasons || []
+        blockedReasons: [...new Set(auditBlockedReasons)],
+        stages: decisionModel?.stages || null,
+        reasonCodes: decisionModel?.reasonCodes || []
     });
-    renderSignalAuditLog();
+    if (didLog) {
+        renderSignalAuditLogV2();
+    }
 
     updateNoTradeWarning();
     updateScoreInterpretation();
-    NotificationSystem.checkSignalChange(activeSignal, activeConfidence, state.price, getActiveSignalSource(activeSignal));
+    NotificationSystem.checkSignalChange(
+        operationalSignal === 'NO_TRADE' ? 'NEUTRAL' : operationalSignal,
+        activeConfidence,
+        state.price,
+        getActiveSignalSource(activeSignal),
+        { permission: decisionModel?.permission || 'n/a' }
+    );
 }
 
 function getActiveSignalSource(activeSignal) {
@@ -2556,8 +2926,11 @@ function displayBacktestResults(results) {
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize notification system
     NotificationSystem.init();
-    renderSignalAuditLog();
+    normalizeStoredAuditLog();
     initSignalAuditToggle();
+    initSignalAuditFilter();
+    initSignalAuditReset();
+    renderSignalAuditLogV2();
     loadTraderProfile();
     updateTraderProfileUI();
 
@@ -2608,7 +2981,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Fear & Greed source mode
     const savedFgMode = localStorage.getItem('btc-fg-source-mode');
-    if (savedFgMode === 'cmc' || savedFgMode === 'alt' || savedFgMode === 'avg') {
+    if (savedFgMode === 'avg') {
+        state.fearGreedMode = 'cmc';
+        localStorage.setItem('btc-fg-source-mode', 'cmc');
+    } else if (savedFgMode === 'cmc' || savedFgMode === 'alt') {
         state.fearGreedMode = savedFgMode;
     }
     const fgSourceSelect = document.getElementById('fgSourceMode');
@@ -2616,7 +2992,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fgSourceSelect.value = state.fearGreedMode;
         fgSourceSelect.addEventListener('change', async (e) => {
             const mode = e.target.value;
-            state.fearGreedMode = mode === 'cmc' || mode === 'alt' || mode === 'avg' ? mode : 'avg';
+            state.fearGreedMode = mode === 'cmc' || mode === 'alt' || mode === 'avg' ? mode : 'cmc';
             localStorage.setItem('btc-fg-source-mode', state.fearGreedMode);
             await updateDashboard();
         });

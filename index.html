@@ -330,6 +330,29 @@
                     <span class="decision-permission-value" id="tradePermissionValue">Wird geladen</span>
                 </div>
 
+                <div class="execution-ladder" id="executionLadder">
+                    <div class="execution-step neutral" id="biasStageCard">
+                        <span class="execution-step-label">Bias</span>
+                        <span class="execution-step-value" id="biasStageValue">--</span>
+                        <span class="execution-step-note" id="biasStageNote">--</span>
+                    </div>
+                    <div class="execution-step neutral" id="setupStageCard">
+                        <span class="execution-step-label">Setup</span>
+                        <span class="execution-step-value" id="setupStageValue">--</span>
+                        <span class="execution-step-note" id="setupStageNote">--</span>
+                    </div>
+                    <div class="execution-step neutral" id="triggerStageCard">
+                        <span class="execution-step-label">Trigger</span>
+                        <span class="execution-step-value" id="triggerStageValue">--</span>
+                        <span class="execution-step-note" id="triggerStageNote">--</span>
+                    </div>
+                    <div class="execution-step neutral" id="executionStageCard">
+                        <span class="execution-step-label">Execution</span>
+                        <span class="execution-step-value" id="executionStageValue">--</span>
+                        <span class="execution-step-note" id="executionStageNote">--</span>
+                    </div>
+                </div>
+
                 <div class="integrity-card" id="liveIntegrityCard">
                     <div class="integrity-header">
                         <div>
@@ -587,6 +610,16 @@
                 <h2><span class="card-icon">📋</span> Signal Audit</h2>
                 <div class="signal-audit-tools">
                     <span class="card-badge">Letzte 20</span>
+                    <label class="signal-audit-filter-wrap" for="signalAuditFilter">
+                        <span>Ansicht</span>
+                        <select id="signalAuditFilter" class="signal-audit-filter">
+                            <option value="all">Alles</option>
+                            <option value="calls">Nur Calls</option>
+                            <option value="watchlist">Nur Watchlist</option>
+                            <option value="blocked">Nur Blocks</option>
+                        </select>
+                    </label>
+                    <button id="resetSignalAudit" class="signal-audit-toggle secondary" type="button">Audit reset</button>
                     <button id="toggleSignalAudit" class="signal-audit-toggle" type="button" aria-expanded="false">Signal Audit oeffnen</button>
                 </div>
             </div>
@@ -628,6 +661,9 @@
                     <span class="ticker-label">F&G</span>
                     <span class="ticker-data" id="tickerFearGreed">--</span>
                 </div>
+            </div>
+            <div class="ticker-sources" id="tickerSources">
+                Preis, Marktkapitalisierung, Volumen und ATH: CoinGecko | Fear & Greed: CoinMarketCap
             </div>
         </section>
 
@@ -1184,8 +1220,8 @@
                     <div class="fg-source-control">
                         <label for="fgSourceMode" class="fg-source-label">Quelle</label>
                         <select id="fgSourceMode" class="fg-source-select" title="Wähle die Datenquelle für den Fear & Greed Index">
-                            <option value="avg">Durchschnitt</option>
                             <option value="cmc">CoinMarketCap</option>
+                            <option value="avg">Durchschnitt</option>
                             <option value="alt">Alternative.me</option>
                         </select>
                     </div>
@@ -1199,6 +1235,7 @@
                         • <span class="text-bearish">0-25 = Extreme Angst</span> → Oft guter Kaufzeitpunkt<br>
                         • <span class="text-bullish">75-100 = Extreme Gier</span> → Oft guter Verkaufszeitpunkt
                     </div>
+                    <div class="data-source-note" id="fearGreedSourceNote">Aktive Quelle: CoinMarketCap</div>
                     <div class="gauge-container">
                         <div class="gauge">
                             <div class="gauge-fill" id="gaugeFill"></div>
@@ -1342,6 +1379,7 @@
                         Derivatives zeigen, wie professionelle Trader mit Hebel wetten.
                         Diese Daten sind oft ein Frühindikator für Preisbewegungen.
                     </div>
+                    <div class="data-source-note" id="derivativesSourceNote">Quelle: Binance Futures</div>
                     <div class="derivatives-grid">
                         <div class="derivative-item">
                             <span class="derivative-label"
