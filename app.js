@@ -835,6 +835,11 @@ async function fetchFearGreedIndex() {
 
         if (mode === 'cmc' && cmc) {
             normalized = cmc;
+        } else if (mode === 'cmc' && !cmc && alt) {
+            normalized = {
+                ...alt,
+                source: 'Alternative.me (CMC nicht verfuegbar)'
+            };
         } else if (mode === 'alt' && alt) {
             normalized = alt;
         } else if (mode === 'avg' && cmc && alt) {
