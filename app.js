@@ -37,8 +37,8 @@ let state = {
     ath: null,
     athChange: null,
     fearGreedIndex: null,
-    fearGreedSource: 'CoinMarketCap',
-    fearGreedMode: 'cmc',
+    fearGreedSource: 'Alternative.me',
+    fearGreedMode: 'alt',
     fearGreedHistory: [],
     fundingRate: null,
     openInterest: null,
@@ -839,7 +839,7 @@ async function fetchFearGreedIndex() {
     };
 
     try {
-        const mode = state.fearGreedMode || 'cmc';
+        const mode = state.fearGreedMode || 'alt';
         let cmc = null;
         let alt = null;
 
@@ -1306,7 +1306,7 @@ function updateFearGreedCard() {
         const cmcConfig = getCoinMarketCapConfig();
         const cmcReady = Boolean(cmcConfig.proxyUrl || (cmcConfig.apiKey && cmcConfig.allowBrowserKey));
         sourceNoteEl.textContent = state.fearGreedMode === 'cmc' && !cmcReady
-            ? 'CoinMarketCap Pro ist noch nicht verbunden. Aktuell wird ein Fallback genutzt.'
+            ? 'CoinMarketCap ist nur mit API-Key verfuegbar. Aktuell nutzt die Seite Alternative.me.'
             : `Aktive Quelle: ${state.fearGreedSource}`;
     }
 }
@@ -3030,8 +3030,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Fear & Greed source mode
     const savedFgMode = localStorage.getItem('btc-fg-source-mode');
     if (savedFgMode === 'avg') {
-        state.fearGreedMode = 'cmc';
-        localStorage.setItem('btc-fg-source-mode', 'cmc');
+        state.fearGreedMode = 'alt';
+        localStorage.setItem('btc-fg-source-mode', 'alt');
     } else if (savedFgMode === 'cmc' || savedFgMode === 'alt') {
         state.fearGreedMode = savedFgMode;
     }
@@ -3040,7 +3040,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fgSourceSelect.value = state.fearGreedMode;
         fgSourceSelect.addEventListener('change', async (e) => {
             const mode = e.target.value;
-            state.fearGreedMode = mode === 'cmc' || mode === 'alt' || mode === 'avg' ? mode : 'cmc';
+            state.fearGreedMode = mode === 'cmc' || mode === 'alt' || mode === 'avg' ? mode : 'alt';
             localStorage.setItem('btc-fg-source-mode', state.fearGreedMode);
             await updateDashboard();
         });
