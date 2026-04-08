@@ -11,10 +11,12 @@ const CONFIG = {
     refreshInterval: 300000, // 5 minutes in ms
     apis: {
         coinGecko: 'https://api.coingecko.com/api/v3',
+        marketOverview: '/api/market/overview',
         fearGreed: 'https://api.alternative.me/fng/',
         fearGreedCmc: 'https://pro-api.coinmarketcap.com/v3/fear-and-greed/historical',
         binance: 'https://api.binance.com/api/v3',
         binanceFutures: 'https://fapi.binance.com/fapi/v1',
+        binanceDerivatives: '/api/binance/derivatives',
         cryptoCompareNews: 'https://min-api.cryptocompare.com/data/v2/news/'
     },
     weights: {
@@ -138,6 +140,10 @@ let remainingSeconds = 300;
 let previousSignal = 'NEUTRAL'; // Track signal changes for notifications
 let dashboardUpdatePromise = null;
 let queuedDashboardRefresh = false;
+let updateRequestCache = {
+    marketOverviewPromise: null,
+    derivativesPromise: null
+};
 
 function calculateNeutralConfidence(weightedScore) {
     const distanceToThreshold = Math.min(
@@ -196,6 +202,27 @@ function formatLiveTimestamp(value) {
         hour: '2-digit',
         minute: '2-digit'
     }) + ' UTC';
+}
+
+function resetUpdateRequestCache() {
+    updateRequestCache = {
+        marketOverviewPromise: null,
+        derivativesPromise: null
+    };
+}
+
+function getMarketOverviewPayload() {
+    if (!updateRequestCache.marketOverviewPromise) {
+        updateRequestCache.marketOverviewPromise = fetchWithTimeout(CONFIG.apis.marketOverview, 12000);
+    }
+    return updateRequestCache.marketOverviewPromise;
+}
+
+function getDerivativesPayload() {
+    if (!updateRequestCache.derivativesPromise) {
+        updateRequestCache.derivativesPromise = fetchWithTimeout(CONFIG.apis.binanceDerivatives, 12000);
+    }
+    return updateRequestCache.derivativesPromise;
 }
 
 function classifyAuditEvent(payload) {
@@ -1154,18 +1181,14 @@ async function fetchWithTimeout(url, timeout = 10000, options = {}) {
 
 async function fetchPriceData() {
     try {
-        const data = await fetchWithTimeout(
-            `${CONFIG.apis.coinGecko}/coins/bitcoin?localization=false&tickers=false&community_data=false&developer_data=false`
-        );
-
-        const marketData = data?.market_data;
-        state.price = requireFiniteNumber(Number(marketData?.current_price?.usd), 'CoinGecko price', { positive: true });
-        state.priceChange24h = requireFiniteNumber(Number(marketData?.price_change_percentage_24h), 'CoinGecko 24h change');
-        state.marketCap = requireFiniteNumber(Number(marketData?.market_cap?.usd), 'CoinGecko market cap', { positive: true });
-        state.volume24h = requireFiniteNumber(Number(marketData?.total_volume?.usd), 'CoinGecko volume', { positive: true });
-        state.ath = requireFiniteNumber(Number(marketData?.ath?.usd), 'CoinGecko ATH', { positive: true });
-        state.athChange = requireFiniteNumber(Number(marketData?.ath_change_percentage?.usd), 'CoinGecko ATH change');
-        state.priceTimestamp = data?.last_updated || marketData?.last_updated || new Date().toISOString();
+        const data = await getMarketOverviewPayload();
+        state.price = requireFiniteNumber(Number(data?.price), 'CoinGecko price', { positive: true });
+        state.priceChange24h = requireFiniteNumber(Number(data?.priceChange24h), 'CoinGecko 24h change');
+        state.marketCap = requireFiniteNumber(Number(data?.marketCap), 'CoinGecko market cap', { positive: true });
+        state.volume24h = requireFiniteNumber(Number(data?.volume24h), 'CoinGecko volume', { positive: true });
+        state.ath = requireFiniteNumber(Number(data?.ath), 'CoinGecko ATH', { positive: true });
+        state.athChange = requireFiniteNumber(Number(data?.athChange), 'CoinGecko ATH change');
+        state.priceTimestamp = data?.priceTimestamp || new Date().toISOString();
 
         return true;
     } catch (error) {
@@ -1183,26 +1206,21 @@ async function fetchPriceData() {
 
 async function fetchPriceHistory() {
     try {
-        const data = await fetchWithTimeout(
-            `${CONFIG.apis.coinGecko}/coins/bitcoin/market_chart?vs_currency=usd&days=14&interval=daily`
-        );
-
-        const prices = requireArray(data?.prices, 'CoinGecko history');
+        const data = await getMarketOverviewPayload();
+        const prices = requireArray(data?.priceHistory, 'CoinGecko history');
         if (prices.length < 10) throw new Error('CoinGecko history too short');
-
-        state.priceHistory = prices.map(point => requireFiniteNumber(Number(point?.[1]), 'CoinGecko history point', { positive: true }));
-        state.priceHistoryTimestamp = prices.length
-            ? new Date(prices[prices.length - 1][0]).toISOString()
-            : null;
-
-        // Store full historical data for advanced analysis (Volume, OBV, etc.)
-        window.historicalData = data;
-        if (Array.isArray(data?.total_volumes)) {
-            state.volumeHistory = data.total_volumes.map(point => {
-                const volume = Number(point?.[1]);
+        state.priceHistory = prices.map(point => requireFiniteNumber(Number(point), 'CoinGecko history point', { positive: true }));
+        state.priceHistoryTimestamp = data?.priceHistoryTimestamp || null;
+        state.volumeHistory = Array.isArray(data?.volumeHistory)
+            ? data.volumeHistory.map(point => {
+                const volume = Number(point);
                 return Number.isFinite(volume) ? volume : 0;
-            });
-        }
+            })
+            : [];
+        window.historicalData = {
+            prices: prices.map((value, index) => [index, value]),
+            total_volumes: state.volumeHistory.map((value, index) => [index, value])
+        };
 
         return true;
     } catch (error) {
@@ -1343,14 +1361,9 @@ async function fetchFearGreedIndex() {
 
 async function fetchFundingRate() {
     try {
-        const data = await fetchWithTimeout(
-            `${CONFIG.apis.binanceFutures}/fundingRate?symbol=BTCUSDT&limit=1`
-        );
-
-        const rows = requireArray(data, 'Funding rate');
-        const latest = rows[0];
-        state.fundingRate = requireFiniteNumber(Number(latest?.fundingRate), 'Funding rate') * 100;
-        state.fundingTimestamp = latest?.fundingTime || null;
+        const data = await getDerivativesPayload();
+        state.fundingRate = requireFiniteNumber(Number(data?.fundingRate), 'Funding rate') * 100;
+        state.fundingTimestamp = data?.fundingTimestamp || null;
         return true;
     } catch (error) {
         console.error('Error fetching funding rate:', error);
@@ -1362,16 +1375,13 @@ async function fetchFundingRate() {
 
 async function fetchOpenInterest() {
     try {
-        const data = await fetchWithTimeout(
-            `${CONFIG.apis.binanceFutures}/openInterest?symbol=BTCUSDT`
-        );
-
-        const openInterestContracts = requireFiniteNumber(Number(data?.openInterest), 'Open interest', { positive: true });
-        if (!isPositiveFiniteNumber(state.price)) {
-            throw new Error('Open interest requires live BTC price');
-        }
-        state.openInterest = openInterestContracts * state.price;
-        state.openInterestTimestamp = data?.time || null;
+        const data = await getDerivativesPayload();
+        const openInterestContracts = requireFiniteNumber(Number(data?.openInterestContracts), 'Open interest', { positive: true });
+        const livePrice = isPositiveFiniteNumber(state.price)
+            ? state.price
+            : requireFiniteNumber(Number((await getMarketOverviewPayload())?.price), 'Open interest BTC price', { positive: true });
+        state.openInterest = openInterestContracts * livePrice;
+        state.openInterestTimestamp = data?.openInterestTimestamp || null;
         return true;
     } catch (error) {
         console.error('Error fetching open interest:', error);
@@ -1383,13 +1393,8 @@ async function fetchOpenInterest() {
 
 async function fetchLongShortRatio() {
     try {
-        const data = await fetchWithTimeout(
-            `${CONFIG.apis.binanceFutures.replace('/fapi/v1', '/futures/data')}/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1`
-        );
-
-        const rows = requireArray(data, 'Long/Short ratio');
-        const latest = rows[0];
-        const ratio = requireFiniteNumber(Number(latest?.longShortRatio), 'Long/Short ratio', { positive: true });
+        const data = await getDerivativesPayload();
+        const ratio = requireFiniteNumber(Number(data?.longShortRatio), 'Long/Short ratio', { positive: true });
         const longPercent = (ratio / (1 + ratio)) * 100;
         const shortPercent = 100 - longPercent;
         requireFiniteNumber(longPercent, 'Long percentage');
@@ -1400,7 +1405,7 @@ async function fetchLongShortRatio() {
             short: shortPercent,
             available: true
         };
-        state.longShortTimestamp = latest?.timestamp || null;
+        state.longShortTimestamp = data?.longShortTimestamp || null;
         return true;
     } catch (error) {
         console.error('Error fetching L/S ratio:', error);
@@ -3711,6 +3716,7 @@ async function updateDashboard() {
     dashboardUpdatePromise = (async () => {
         const refreshBtn = document.getElementById('refreshBtn');
         refreshBtn.classList.add('loading');
+        resetUpdateRequestCache();
 
         try {
             const fetchResults = await Promise.all([
@@ -3761,6 +3767,7 @@ async function updateDashboard() {
             renderDataQualityDebug();
             console.error('Error updating dashboard:', error);
         } finally {
+            resetUpdateRequestCache();
             refreshBtn.classList.remove('loading');
             resetCountdown();
         }
