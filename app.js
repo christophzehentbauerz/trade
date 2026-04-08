@@ -1638,19 +1638,23 @@ function formatCurrency(num) {
 function updatePriceCard() {
     const changeEl = document.getElementById('priceChange');
     const changeValue = changeEl.querySelector('.change-value');
-    document.getElementById('btcPrice').textContent = formatNumber(state.price, 0);
+    const fearGreedTickerEl = document.getElementById('tickerFearGreed');
+    document.getElementById('btcPrice').textContent = Number.isFinite(state.price) ? formatNumber(state.price, 0) : 'Nicht verfuegbar';
     if (Number.isFinite(state.priceChange24h)) {
         changeValue.textContent = `${state.priceChange24h >= 0 ? '+' : ''}${formatNumber(state.priceChange24h)}%`;
         changeEl.className = `price-change ${state.priceChange24h >= 0 ? 'positive' : 'negative'}`;
     } else {
-        changeValue.textContent = '--';
+        changeValue.textContent = 'Kein Live-Wert';
         changeEl.className = 'price-change';
     }
 
-    document.getElementById('marketCap').textContent = formatCurrency(state.marketCap);
-    document.getElementById('volume24h').textContent = formatCurrency(state.volume24h);
-    document.getElementById('ath').textContent = formatCurrency(state.ath);
-    document.getElementById('athChange').textContent = `${formatNumber(state.athChange)}%`;
+    document.getElementById('marketCap').textContent = Number.isFinite(state.marketCap) ? formatCurrency(state.marketCap) : 'Nicht verfuegbar';
+    document.getElementById('volume24h').textContent = Number.isFinite(state.volume24h) ? formatCurrency(state.volume24h) : 'Nicht verfuegbar';
+    document.getElementById('ath').textContent = Number.isFinite(state.ath) ? formatCurrency(state.ath) : 'Nicht verfuegbar';
+    document.getElementById('athChange').textContent = Number.isFinite(state.athChange) ? `${formatNumber(state.athChange)}%` : 'Kein Live-Wert';
+    if (fearGreedTickerEl) {
+        fearGreedTickerEl.textContent = Number.isFinite(state.fearGreedIndex) ? String(state.fearGreedIndex) : 'Nicht verfuegbar';
+    }
 
     const tickerSources = document.getElementById('tickerSources');
     if (tickerSources) {
@@ -1672,7 +1676,7 @@ function updateFearGreedCard() {
     const historyContainer = document.getElementById('fearGreedHistory');
     const interpretationEl = document.getElementById('fearGreedInterpretation');
     const gaugeFill = document.getElementById('gaugeFill');
-    valueEl.textContent = Number.isFinite(value) ? value : '--';
+    valueEl.textContent = Number.isFinite(value) ? value : 'Nicht verfuegbar';
 
     if (!Number.isFinite(value)) {
         labelEl.textContent = 'Keine aktuellen Daten';
@@ -1680,7 +1684,7 @@ function updateFearGreedCard() {
         valueEl.style.textShadow = 'none';
         valueEl.title = `Quelle: ${state.fearGreedSource}`;
         gaugeFill.style.transform = 'rotate(0deg)';
-        historyContainer.innerHTML = '<div class="history-item"><div class="history-day">Heute</div><div class="history-value">--</div></div>';
+        historyContainer.innerHTML = '<div class="history-item"><div class="history-day">Heute</div><div class="history-value">Kein Live-Wert</div></div>';
         interpretationEl.textContent = `Fear & Greed aktuell nicht verfuegbar | Quelle: ${state.fearGreedSource}`;
         const sourceNoteEl = document.getElementById('fearGreedSourceNote');
         if (sourceNoteEl) {
@@ -1777,6 +1781,26 @@ function updateFearGreedCard() {
 }
 
 function updateTechnicalCard() {
+    const hasHistory = Array.isArray(state.priceHistory) && state.priceHistory.length >= 10;
+    if (!hasHistory) {
+        document.getElementById('rsiValue').textContent = 'Nicht verfuegbar';
+        document.getElementById('rsiValue').className = 'indicator-value';
+        document.getElementById('rsiMarker').style.left = '50%';
+        document.getElementById('trendValue').textContent = 'Nicht verfuegbar';
+        document.getElementById('trendValue').className = 'indicator-value text-neutral';
+        const trendArrow = document.querySelector('.trend-arrow');
+        if (trendArrow) trendArrow.className = 'trend-arrow sideways';
+        document.getElementById('emaPosition').textContent = 'Kein Live-Wert';
+        document.getElementById('emaPosition').className = 'ema-position';
+        document.getElementById('emaValue').textContent = 'Nicht verfuegbar';
+        document.getElementById('volatilityValue').textContent = 'Nicht verfuegbar';
+        document.getElementById('volatilityBar').style.width = '0%';
+        document.getElementById('volumeDashValue').textContent = 'Nicht verfuegbar';
+        document.getElementById('technicalBadge').textContent = 'Daten fehlen';
+        document.getElementById('technicalBadge').className = 'card-badge';
+        return;
+    }
+
     const rsi = calculateRSI(state.priceHistory);
     const trend = determineTrend(state.priceHistory);
     const volatility = calculateVolatility(state.priceHistory);
@@ -1816,6 +1840,8 @@ function updateTechnicalCard() {
     // Volume Flow (New)
     const volValueEl = document.getElementById('volumeDashValue');
     const volVisualEl = document.getElementById('volumeDashVisual');
+    volValueEl.textContent = 'Nicht verfuegbar';
+    volValueEl.className = 'indicator-value text-neutral';
 
     if (window.historicalData && window.historicalData.total_volumes) {
         // Ensure we have volumes
@@ -1857,7 +1883,7 @@ function updateDerivativesCard() {
     if (Number.isFinite(state.fundingRate)) {
         fundingEl.textContent = `${state.fundingRate >= 0 ? '+' : ''}${formatNumber(state.fundingRate, 4)}%`;
     } else {
-        fundingEl.textContent = '--';
+        fundingEl.textContent = 'Nicht verfuegbar';
     }
     fundingEl.className = `derivative-value ${Number.isFinite(state.fundingRate) && state.fundingRate < 0 ? 'positive' : Number.isFinite(state.fundingRate) && state.fundingRate > 0.02 ? 'negative' : ''}`;
 
@@ -1873,7 +1899,11 @@ function updateDerivativesCard() {
     }
 
     // Open Interest
-    document.getElementById('openInterest').textContent = formatCurrency(state.openInterest);
+    document.getElementById('openInterest').textContent = Number.isFinite(state.openInterest) ? formatCurrency(state.openInterest) : 'Nicht verfuegbar';
+    const oiChangeEl = document.getElementById('oiChange');
+    if (oiChangeEl) {
+        oiChangeEl.textContent = Number.isFinite(state.openInterest) ? 'Live-Wert' : 'Kein Live-Wert';
+    }
     document.getElementById('fundingRate').title = 'Quelle: Binance Futures';
     document.getElementById('openInterest').title = 'Quelle: Binance Futures';
     document.getElementById('longPercent').title = 'Quelle: Binance Futures';
@@ -1884,14 +1914,14 @@ function updateDerivativesCard() {
     const shortRatioValue = state.longShortRatio.available ? state.longShortRatio.short : 0;
     document.getElementById('lsLong').style.width = `${longRatioValue}%`;
     document.getElementById('lsShort').style.width = `${shortRatioValue}%`;
-    document.getElementById('longPercent').textContent = state.longShortRatio.available ? `${formatNumber(state.longShortRatio.long, 1)}%` : '--';
-    document.getElementById('shortPercent').textContent = state.longShortRatio.available ? `${formatNumber(state.longShortRatio.short, 1)}%` : '--';
+    document.getElementById('longPercent').textContent = state.longShortRatio.available ? `${formatNumber(state.longShortRatio.long, 1)}%` : 'Nicht verfuegbar';
+    document.getElementById('shortPercent').textContent = state.longShortRatio.available ? `${formatNumber(state.longShortRatio.short, 1)}%` : 'Nicht verfuegbar';
 
     // Liquidation zones (estimated based on current price)
-    const liqLongs = state.price * 0.95;
-    const liqShorts = state.price * 1.05;
-    document.getElementById('liqLongs').textContent = formatCurrency(liqLongs);
-    document.getElementById('liqShorts').textContent = formatCurrency(liqShorts);
+    const liqLongs = Number.isFinite(state.price) ? state.price * 0.95 : null;
+    const liqShorts = Number.isFinite(state.price) ? state.price * 1.05 : null;
+    document.getElementById('liqLongs').textContent = Number.isFinite(liqLongs) ? formatCurrency(liqLongs) : 'Nicht verfuegbar';
+    document.getElementById('liqShorts').textContent = Number.isFinite(liqShorts) ? formatCurrency(liqShorts) : 'Nicht verfuegbar';
 
     // Badge
     const badge = document.getElementById('derivativesBadge');
@@ -3017,8 +3047,8 @@ function applyDecisionFallbackState(message) {
         ['spotVerdict', 'Spot heute aussetzen'],
         ['hardTriggerDirection', 'WAIT MODE'],
         ['hardTriggerValue', 'Kein Trigger ohne Daten'],
-        ['hardTriggerInvalidation', '--'],
-        ['hardTriggerRR', '--'],
+        ['hardTriggerInvalidation', 'kein Live-Wert'],
+        ['hardTriggerRR', 'kein Live-Wert'],
         ['hardTriggerValidity', 'neu pruefen nach Datenupdate'],
         ['hardTriggerBlock', message]
     ].forEach(([id, value]) => setTextIfExists(id, value));
@@ -3038,18 +3068,18 @@ function applyDecisionFallbackState(message) {
     [
         ['smartMoneyEnvironment', 'keine Freigabe'],
         ['smartMoneyTrigger', 'auf frische Daten warten'],
-        ['smartMoneyInvalidation', '--'],
-        ['smartMoneyEntryPref', '--'],
+        ['smartMoneyInvalidation', 'kein Live-Wert'],
+        ['smartMoneyEntryPref', 'kein Live-Wert'],
         ['smartMoneyRisk', message],
         ['trendStrategyEnvironment', 'keine Freigabe'],
         ['trendStrategyTrigger', 'auf frische Daten warten'],
-        ['trendStrategyInvalidation', '--'],
-        ['trendStrategyEntry', '--'],
+        ['trendStrategyInvalidation', 'kein Live-Wert'],
+        ['trendStrategyEntry', 'kein Live-Wert'],
         ['trendStrategyRisk', message],
         ['spotStrategyEnvironment', 'keine Freigabe'],
         ['spotStrategyTrigger', 'auf frische Daten warten'],
-        ['spotStrategyInvalidation', '--'],
-        ['spotStrategyEntry', '--'],
+        ['spotStrategyInvalidation', 'kein Live-Wert'],
+        ['spotStrategyEntry', 'kein Live-Wert'],
         ['spotStrategyRisk', message]
     ].forEach(([id, value]) => setTextIfExists(id, value));
 
@@ -3185,13 +3215,13 @@ function updateTradeSetup() {
     } else {
         const blocked = unified?.blockedReasons?.[0];
         document.getElementById('entryZone').textContent = blocked ? `Kein Trade (${blocked})` : 'Kein Trade empfohlen';
-        document.getElementById('stopLoss').textContent = '--';
+        document.getElementById('stopLoss').textContent = 'Kein Live-Wert';
         document.getElementById('slPercent').textContent = '';
-        document.getElementById('tp1').textContent = '--';
+        document.getElementById('tp1').textContent = 'Kein Live-Wert';
         document.getElementById('tp1rr').textContent = '';
-        document.getElementById('tp2').textContent = '--';
+        document.getElementById('tp2').textContent = 'Kein Live-Wert';
         document.getElementById('tp2rr').textContent = '';
-        document.getElementById('tp3').textContent = '--';
+        document.getElementById('tp3').textContent = 'Kein Live-Wert';
         document.getElementById('tp3rr').textContent = '';
     }
 
