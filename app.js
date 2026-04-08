@@ -136,6 +136,8 @@ const OFFICIAL_EVENT_SCHEDULE = [
 let countdownInterval = null;
 let remainingSeconds = 300;
 let previousSignal = 'NEUTRAL'; // Track signal changes for notifications
+let dashboardUpdatePromise = null;
+let queuedDashboardRefresh = false;
 
 function calculateNeutralConfidence(weightedScore) {
     const distanceToThreshold = Math.min(
@@ -151,6 +153,36 @@ function normalizeReasonCode(text) {
         .replace(/[^a-z0-9]+/g, '_')
         .replace(/^_+|_+$/g, '')
         .slice(0, 48) || 'unspecified';
+}
+
+function isFiniteNumber(value) {
+    return Number.isFinite(value);
+}
+
+function isPositiveFiniteNumber(value) {
+    return Number.isFinite(value) && value > 0;
+}
+
+function requireArray(value, label) {
+    if (!Array.isArray(value) || value.length === 0) {
+        throw new Error(`${label} payload missing`);
+    }
+    return value;
+}
+
+function requireFiniteNumber(value, label, { positive = false } = {}) {
+    if (!Number.isFinite(value) || (positive && value <= 0)) {
+        throw new Error(`${label} invalid`);
+    }
+    return value;
+}
+
+function getSourceModeLabel(source) {
+    if (!source) return 'Unbekannt';
+    if (source.fallbackUsed) return 'Fallback';
+    if (source.status === 'stale') return 'Veraltet';
+    if (source.id === 'eventRisk') return 'Berechnet';
+    return 'Live';
 }
 
 function classifyAuditEvent(payload) {
@@ -1111,17 +1143,24 @@ async function fetchPriceData() {
             `${CONFIG.apis.coinGecko}/coins/bitcoin?localization=false&tickers=false&community_data=false&developer_data=false`
         );
 
-        state.price = data.market_data.current_price.usd;
-        state.priceChange24h = data.market_data.price_change_percentage_24h;
-        state.marketCap = data.market_data.market_cap.usd;
-        state.volume24h = data.market_data.total_volume.usd;
-        state.ath = data.market_data.ath.usd;
-        state.athChange = data.market_data.ath_change_percentage.usd;
-        state.priceTimestamp = data.last_updated || data.market_data?.last_updated || new Date().toISOString();
+        const marketData = data?.market_data;
+        state.price = requireFiniteNumber(Number(marketData?.current_price?.usd), 'CoinGecko price', { positive: true });
+        state.priceChange24h = requireFiniteNumber(Number(marketData?.price_change_percentage_24h), 'CoinGecko 24h change');
+        state.marketCap = requireFiniteNumber(Number(marketData?.market_cap?.usd), 'CoinGecko market cap', { positive: true });
+        state.volume24h = requireFiniteNumber(Number(marketData?.total_volume?.usd), 'CoinGecko volume', { positive: true });
+        state.ath = requireFiniteNumber(Number(marketData?.ath?.usd), 'CoinGecko ATH', { positive: true });
+        state.athChange = requireFiniteNumber(Number(marketData?.ath_change_percentage?.usd), 'CoinGecko ATH change');
+        state.priceTimestamp = data?.last_updated || marketData?.last_updated || new Date().toISOString();
 
         return true;
     } catch (error) {
         console.error('Error fetching price data:', error);
+        state.price = null;
+        state.priceChange24h = null;
+        state.marketCap = null;
+        state.volume24h = null;
+        state.ath = null;
+        state.athChange = null;
         state.priceTimestamp = null;
         return false;
     }
@@ -1133,20 +1172,28 @@ async function fetchPriceHistory() {
             `${CONFIG.apis.coinGecko}/coins/bitcoin/market_chart?vs_currency=usd&days=14&interval=daily`
         );
 
-        state.priceHistory = data.prices.map(p => p[1]);
-        state.priceHistoryTimestamp = Array.isArray(data.prices) && data.prices.length
-            ? new Date(data.prices[data.prices.length - 1][0]).toISOString()
+        const prices = requireArray(data?.prices, 'CoinGecko history');
+        if (prices.length < 10) throw new Error('CoinGecko history too short');
+
+        state.priceHistory = prices.map(point => requireFiniteNumber(Number(point?.[1]), 'CoinGecko history point', { positive: true }));
+        state.priceHistoryTimestamp = prices.length
+            ? new Date(prices[prices.length - 1][0]).toISOString()
             : null;
 
         // Store full historical data for advanced analysis (Volume, OBV, etc.)
         window.historicalData = data;
-        if (data.total_volumes) {
-            state.volumeHistory = data.total_volumes.map(v => v[1]);
+        if (Array.isArray(data?.total_volumes)) {
+            state.volumeHistory = data.total_volumes.map(point => {
+                const volume = Number(point?.[1]);
+                return Number.isFinite(volume) ? volume : 0;
+            });
         }
 
         return true;
     } catch (error) {
         console.error('Error fetching price history:', error);
+        state.priceHistory = [];
+        state.volumeHistory = [];
         state.priceHistoryTimestamp = null;
         return false;
     }
@@ -1263,6 +1310,9 @@ async function fetchFearGreedIndex() {
         return true;
     } catch (error) {
         console.error('Error fetching Fear & Greed:', error);
+        state.fearGreedIndex = null;
+        state.fearGreedHistory = [];
+        state.fearGreedSource = 'Keine aktuelle Quelle';
         state.fearGreedTimestamp = null;
         state.fearGreedIsCurrent = false;
         return false;
@@ -1275,10 +1325,10 @@ async function fetchFundingRate() {
             `${CONFIG.apis.binanceFutures}/fundingRate?symbol=BTCUSDT&limit=1`
         );
 
-        if (data && data.length > 0) {
-            state.fundingRate = parseFloat(data[0].fundingRate) * 100;
-            state.fundingTimestamp = data[0].fundingTime || null;
-        }
+        const rows = requireArray(data, 'Funding rate');
+        const latest = rows[0];
+        state.fundingRate = requireFiniteNumber(Number(latest?.fundingRate), 'Funding rate') * 100;
+        state.fundingTimestamp = latest?.fundingTime || null;
         return true;
     } catch (error) {
         console.error('Error fetching funding rate:', error);
@@ -1294,13 +1344,16 @@ async function fetchOpenInterest() {
             `${CONFIG.apis.binanceFutures}/openInterest?symbol=BTCUSDT`
         );
 
-        if (data) {
-            state.openInterest = parseFloat(data.openInterest) * state.price;
-            state.openInterestTimestamp = data.time || null;
+        const openInterestContracts = requireFiniteNumber(Number(data?.openInterest), 'Open interest', { positive: true });
+        if (!isPositiveFiniteNumber(state.price)) {
+            throw new Error('Open interest requires live BTC price');
         }
+        state.openInterest = openInterestContracts * state.price;
+        state.openInterestTimestamp = data?.time || null;
         return true;
     } catch (error) {
         console.error('Error fetching open interest:', error);
+        state.openInterest = null;
         state.openInterestTimestamp = null;
         return false;
     }
@@ -1312,21 +1365,21 @@ async function fetchLongShortRatio() {
             `${CONFIG.apis.binanceFutures.replace('/fapi/v1', '/futures/data')}/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1`
         );
 
-        if (data && data.length > 0) {
-            const ratio = parseFloat(data[0].longShortRatio);
-            const longPercent = (ratio / (1 + ratio)) * 100;
-            state.longShortRatio = {
-                long: longPercent,
-                short: 100 - longPercent,
-                available: true
-            };
-            state.longShortTimestamp = data[0].timestamp || null;
-            return true;
-        }
+        const rows = requireArray(data, 'Long/Short ratio');
+        const latest = rows[0];
+        const ratio = requireFiniteNumber(Number(latest?.longShortRatio), 'Long/Short ratio', { positive: true });
+        const longPercent = (ratio / (1 + ratio)) * 100;
+        const shortPercent = 100 - longPercent;
+        requireFiniteNumber(longPercent, 'Long percentage');
+        requireFiniteNumber(shortPercent, 'Short percentage');
 
-        state.longShortRatio = { long: null, short: null, available: false };
-        state.longShortTimestamp = null;
-        return false;
+        state.longShortRatio = {
+            long: longPercent,
+            short: shortPercent,
+            available: true
+        };
+        state.longShortTimestamp = latest?.timestamp || null;
+        return true;
     } catch (error) {
         console.error('Error fetching L/S ratio:', error);
         state.longShortRatio = { long: null, short: null, available: false };
@@ -1342,14 +1395,14 @@ async function fetchCryptoNews() {
             10000
         );
 
-        state.newsItems = Array.isArray(data?.Data)
-            ? data.Data.slice(0, 12).map(item => ({
+        const newsRows = requireArray(data?.Data, 'CryptoCompare news');
+        state.newsItems = newsRows.slice(0, 12).map(item => ({
                 title: item?.title || 'Untitled',
                 source: item?.source_info?.name || item?.source || 'CryptoCompare',
                 url: item?.url || '',
                 publishedAt: item?.published_on ? new Date(item.published_on * 1000).toISOString() : null
             }))
-            : [];
+            .filter(item => item.title && item.publishedAt);
         state.newsTimestamp = state.newsItems[0]?.publishedAt || null;
 
         return state.newsItems.length > 0;
@@ -1574,12 +1627,16 @@ function formatCurrency(num) {
 }
 
 function updatePriceCard() {
-    document.getElementById('btcPrice').textContent = formatNumber(state.price, 0);
-
     const changeEl = document.getElementById('priceChange');
     const changeValue = changeEl.querySelector('.change-value');
-    changeValue.textContent = `${state.priceChange24h >= 0 ? '+' : ''}${formatNumber(state.priceChange24h)}%`;
-    changeEl.className = `price-change ${state.priceChange24h >= 0 ? 'positive' : 'negative'}`;
+    document.getElementById('btcPrice').textContent = formatNumber(state.price, 0);
+    if (Number.isFinite(state.priceChange24h)) {
+        changeValue.textContent = `${state.priceChange24h >= 0 ? '+' : ''}${formatNumber(state.priceChange24h)}%`;
+        changeEl.className = `price-change ${state.priceChange24h >= 0 ? 'positive' : 'negative'}`;
+    } else {
+        changeValue.textContent = '--';
+        changeEl.className = 'price-change';
+    }
 
     document.getElementById('marketCap').textContent = formatCurrency(state.marketCap);
     document.getElementById('volume24h').textContent = formatCurrency(state.volume24h);
@@ -1588,7 +1645,8 @@ function updatePriceCard() {
 
     const tickerSources = document.getElementById('tickerSources');
     if (tickerSources) {
-        tickerSources.textContent = `Preis, Marktkapitalisierung, Volumen und ATH: CoinGecko | Fear & Greed: ${state.fearGreedSource}`;
+        const fearGreedSource = state.sourceQuality?.sources?.fearGreed;
+        tickerSources.textContent = `Preis, Marktkapitalisierung, Volumen und ATH: CoinGecko (Live) | Fear & Greed: ${state.fearGreedSource} (${getSourceModeLabel(fearGreedSource)})`;
     }
 
     document.getElementById('marketCap').title = 'Quelle: CoinGecko';
@@ -1600,7 +1658,27 @@ function updatePriceCard() {
 
 function updateFearGreedCard() {
     const value = state.fearGreedIndex;
-    document.getElementById('fearGreedValue').textContent = value;
+    const valueEl = document.getElementById('fearGreedValue');
+    const labelEl = document.getElementById('fearGreedLabel');
+    const historyContainer = document.getElementById('fearGreedHistory');
+    const interpretationEl = document.getElementById('fearGreedInterpretation');
+    const gaugeFill = document.getElementById('gaugeFill');
+    valueEl.textContent = Number.isFinite(value) ? value : '--';
+
+    if (!Number.isFinite(value)) {
+        labelEl.textContent = 'Keine aktuellen Daten';
+        valueEl.style.color = 'var(--text-secondary)';
+        valueEl.style.textShadow = 'none';
+        valueEl.title = `Quelle: ${state.fearGreedSource}`;
+        gaugeFill.style.transform = 'rotate(0deg)';
+        historyContainer.innerHTML = '<div class="history-item"><div class="history-day">Heute</div><div class="history-value">--</div></div>';
+        interpretationEl.textContent = `Fear & Greed aktuell nicht verfuegbar | Quelle: ${state.fearGreedSource}`;
+        const sourceNoteEl = document.getElementById('fearGreedSourceNote');
+        if (sourceNoteEl) {
+            sourceNoteEl.textContent = `Aktive Quelle: ${state.fearGreedSource} | Status: ${getSourceModeLabel(state.sourceQuality?.sources?.fearGreed)}`;
+        }
+        return;
+    }
 
     // Determine label
     let label = 'Neutral';
@@ -1612,19 +1690,17 @@ function updateFearGreedCard() {
     else if (value <= 80) { label = 'Gier'; color = '#84cc16'; }
     else { label = 'Extreme Gier'; color = 'var(--bullish)'; }
 
-    document.getElementById('fearGreedLabel').textContent = label;
+    labelEl.textContent = label;
 
-    const valueEl = document.getElementById('fearGreedValue');
     valueEl.style.color = color;
     valueEl.style.textShadow = '0 0 15px rgba(0, 0, 0, 0.9), 0 0 30px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.6), 0 0 3px rgba(255, 255, 255, 0.3)';
     valueEl.title = `Quelle: ${state.fearGreedSource}`;
 
     // Update gauge
     const rotation = (value / 100) * 180;
-    document.getElementById('gaugeFill').style.transform = `rotate(${rotation}deg)`;
+    gaugeFill.style.transform = `rotate(${rotation}deg)`;
 
     // Update history
-    const historyContainer = document.getElementById('fearGreedHistory');
     historyContainer.innerHTML = state.fearGreedHistory.slice(1, 6).map((item, i) => {
         const days = ['Gestern', 'Vor 2T', 'Vor 3T', 'Vor 4T', 'Vor 5T'];
         let itemColor = 'var(--text-secondary)';
@@ -1665,7 +1741,7 @@ function updateFearGreedCard() {
     } else {
         interpretation = 'Extreme Gier ist historisch oft ein Warnsignal';
     }
-    document.getElementById('fearGreedInterpretation').textContent = `${interpretation} | Quelle: ${state.fearGreedSource}`;
+    interpretationEl.textContent = `${interpretation} | Quelle: ${state.fearGreedSource}`;
 
     const sourceNoteEl = document.getElementById('fearGreedSourceNote');
     if (sourceNoteEl) {
@@ -1678,9 +1754,9 @@ function updateFearGreedCard() {
             const dateLabel = timestampMs
                 ? new Date(timestampMs).toLocaleDateString('de-DE', { timeZone: 'UTC' })
                 : 'unbekannt';
-            sourceNoteEl.textContent = `Aktive Quelle: ${state.fearGreedSource} | Stand: ${dateLabel} UTC`;
+            sourceNoteEl.textContent = `Aktive Quelle: ${state.fearGreedSource} | Status: ${getSourceModeLabel(state.sourceQuality?.sources?.fearGreed)} | Stand: ${dateLabel} UTC`;
         } else {
-            sourceNoteEl.textContent = `Aktive Quelle: ${state.fearGreedSource}`;
+            sourceNoteEl.textContent = `Aktive Quelle: ${state.fearGreedSource} | Status: ${getSourceModeLabel(state.sourceQuality?.sources?.fearGreed)}`;
         }
     }
 }
@@ -1810,7 +1886,10 @@ function updateDerivativesCard() {
 
     const derivativesSourceNote = document.getElementById('derivativesSourceNote');
     if (derivativesSourceNote) {
-        derivativesSourceNote.textContent = 'Quelle: Binance Futures';
+        const source = state.sourceQuality?.sources?.longShortRatio;
+        derivativesSourceNote.textContent = source?.usedInScoring
+            ? `Quelle: Binance Futures (${getSourceModeLabel(source)})`
+            : 'Quelle: Binance Futures (deaktiviert)';
     }
 }
 
@@ -3248,7 +3327,7 @@ function updateSignalBanner() {
     } else if (qualityRestricted) {
         summaryText = 'Das Urteil ist heute nur eingeschraenkt belastbar.';
         explanationText = `<strong>Vorsichtiges Urteil:</strong> Es gibt einen Bias, aber die Datengrundlage ist nicht vollstaendig robust.
-            <br><br><strong>Confidence:</strong> ${Math.round(activeConfidence)}%
+            <br><br><strong>Konfidenz:</strong> ${Math.round(activeConfidence)}%
             <br><strong>Qualitaetsgruende:</strong> ${(decisionModel?.sourceQuality?.reducedBy || []).slice(0, 3).join(' | ') || 'n/a'}`;
     } else if (operationalSignal === 'LONG') {
         summaryText = 'Coach-Konfluenz zeigt ein bullisches Setup.';
@@ -3458,7 +3537,7 @@ function buildStructuredDashboardDataQuality(fetchResults) {
 
     return {
         mode,
-        summary: `${sourceQuality.freshnessLabel} | Confidence ${sourceQuality.confidence}/100`,
+        summary: `${sourceQuality.freshnessLabel} | Konfidenz ${sourceQuality.confidence}/100`,
         issues,
         warnings
     };
@@ -3481,7 +3560,7 @@ function updateQualitySummaryCard() {
         freshnessEl.className = `card-badge quality-badge status-${quality.status}`;
     }
     if (confidenceEl) {
-        confidenceEl.textContent = `Confidence ${quality.confidence}/100`;
+        confidenceEl.textContent = `Konfidenz ${quality.confidence}/100`;
         confidenceEl.className = `card-badge quality-badge confidence-${quality.confidence >= 85 ? 'high' : quality.confidence >= 65 ? 'mid' : quality.confidence >= 40 ? 'low' : 'very-low'}`;
     }
     if (verdictEl) {
@@ -3522,12 +3601,12 @@ function renderDataQualityDebug() {
     tbody.innerHTML = Object.values(quality.sources).map(source => `
         <tr>
             <td>${source.label}</td>
-            <td>${source.source}</td>
+            <td>${source.source} (${getSourceModeLabel(source)})</td>
             <td>${source.rawTimestamp ?? '--'}</td>
             <td>${source.normalizedTimestamp ?? '--'}</td>
             <td class="debug-status status-${source.status}">${source.status}</td>
-            <td>${source.usedInScoring ? 'yes' : 'no'}</td>
-            <td>${source.fallbackUsed ? 'yes' : 'no'}</td>
+            <td>${source.usedInScoring ? 'ja' : 'nein'}</td>
+            <td>${source.fallbackUsed ? 'ja' : 'nein'}</td>
             <td>-${source.confidenceImpact}</td>
         </tr>
     `).join('');
@@ -3550,63 +3629,77 @@ function updateDataQualityStatus() {
 // =====================================================
 
 async function updateDashboard() {
-    const refreshBtn = document.getElementById('refreshBtn');
-    refreshBtn.classList.add('loading');
+    if (dashboardUpdatePromise) {
+        queuedDashboardRefresh = true;
+        return dashboardUpdatePromise;
+    }
+
+    dashboardUpdatePromise = (async () => {
+        const refreshBtn = document.getElementById('refreshBtn');
+        refreshBtn.classList.add('loading');
+
+        try {
+            const fetchResults = await Promise.all([
+                fetchPriceData(),
+                fetchPriceHistory(),
+                fetchFearGreedIndex(),
+                fetchFundingRate(),
+                fetchOpenInterest(),
+                fetchLongShortRatio(),
+                fetchCryptoNews()
+            ]);
+            state.eventFilter = buildEventFilter();
+            state.dataQuality = buildStructuredDashboardDataQuality(fetchResults);
+
+            calculateScores();
+
+            updatePriceCard();
+            updateFearGreedCard();
+            updateTechnicalCard();
+            updateDerivativesCard();
+            updateSentimentCard();
+            updateLastUpdate();
+            updateTradeSetup();
+            updateKeyLevels();
+            updateRiskFactors();
+            updateScoreCard();
+            updateDecisionPanel();
+            updateStrategyDecisionCards();
+            updateSignalBanner();
+            updateDataQualityStatus();
+            updateQualitySummaryCard();
+            renderDataQualityDebug();
+
+            console.log('Dashboard updated successfully');
+        } catch (error) {
+            state.dataQuality = {
+                mode: 'degraded',
+                summary: 'Update fehlgeschlagen',
+                issues: ['Dashboard-Update fehlgeschlagen'],
+                warnings: []
+            };
+            state.eventFilter = buildEventFilter();
+            state.sourceQuality = buildSourceQualityModel([false, false, false, false, false, false, false]);
+            updateLastUpdate();
+            applyDecisionFallbackState('Dashboard-Update fehlgeschlagen. Keine operative Freigabe.');
+            updateDataQualityStatus();
+            updateQualitySummaryCard();
+            renderDataQualityDebug();
+            console.error('Error updating dashboard:', error);
+        } finally {
+            refreshBtn.classList.remove('loading');
+            resetCountdown();
+        }
+    })();
 
     try {
-        // Fetch all data in parallel
-        const fetchResults = await Promise.all([
-            fetchPriceData(),
-            fetchPriceHistory(),
-            fetchFearGreedIndex(),
-            fetchFundingRate(),
-            fetchOpenInterest(),
-            fetchLongShortRatio(),
-            fetchCryptoNews()
-        ]);
-        state.eventFilter = buildEventFilter();
-        state.dataQuality = buildStructuredDashboardDataQuality(fetchResults);
-
-        // Calculate scores
-        calculateScores();
-
-        // Update all UI components
-        updatePriceCard();
-        updateFearGreedCard();
-        updateTechnicalCard();
-        updateDerivativesCard();
-        updateSentimentCard();
-        updateLastUpdate();
-        updateTradeSetup();
-        updateKeyLevels();
-        updateRiskFactors();
-        updateScoreCard();
-        updateDecisionPanel();
-        updateStrategyDecisionCards();
-        updateSignalBanner();
-        updateDataQualityStatus();
-        updateQualitySummaryCard();
-        renderDataQualityDebug();
-
-        console.log('Dashboard updated successfully');
-    } catch (error) {
-        state.dataQuality = {
-            mode: 'degraded',
-            summary: 'Update fehlgeschlagen',
-            issues: ['Dashboard-Update fehlgeschlagen'],
-            warnings: []
-        };
-        state.eventFilter = buildEventFilter();
-        state.sourceQuality = buildSourceQualityModel([false, false, false, false, false, false, false]);
-        updateLastUpdate();
-        applyDecisionFallbackState('Dashboard-Update fehlgeschlagen. Keine operative Freigabe.');
-        updateDataQualityStatus();
-        updateQualitySummaryCard();
-        renderDataQualityDebug();
-        console.error('Error updating dashboard:', error);
+        return await dashboardUpdatePromise;
     } finally {
-        refreshBtn.classList.remove('loading');
-        resetCountdown();
+        dashboardUpdatePromise = null;
+        if (queuedDashboardRefresh) {
+            queuedDashboardRefresh = false;
+            updateDashboard();
+        }
     }
 }
 
