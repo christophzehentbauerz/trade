@@ -940,6 +940,8 @@ function buildSourceQualityModel(fetchResults = []) {
     const longShortTimestampMs = parseFearGreedTimestamp(state.longShortTimestamp);
     const newsTimestampMs = parseFearGreedTimestamp(state.newsTimestamp);
     const calendarFutureCount = OFFICIAL_EVENT_SCHEDULE.filter(event => new Date(event.startsAt).getTime() >= Date.now()).length;
+    const fearGreedUsesFallback = state.fearGreedSource.includes('Fallback')
+        || (state.fearGreedMode === 'cmc' && state.fearGreedSource.includes('Alternative.me'));
 
     const sources = {
         btcPrice: buildSourceEntry({
@@ -994,10 +996,10 @@ function buildSourceQualityModel(fetchResults = []) {
                 : (!Number.isFinite(state.fearGreedIndex) || state.fearGreedIndex < 0 || state.fearGreedIndex > 100
                     ? 'invalid'
                     : (state.fearGreedIsCurrent
-                        ? (state.fearGreedSource.includes('Fallback') || state.fearGreedSource.includes('CMC nicht') ? 'degraded' : 'fresh')
+                        ? (fearGreedUsesFallback || state.fearGreedSource.includes('CMC nicht') ? 'degraded' : 'fresh')
                         : 'stale')),
             usedInScoring: fgOk && Number.isFinite(state.fearGreedIndex) && state.fearGreedIsCurrent,
-            fallbackUsed: state.fearGreedSource.includes('Fallback') || state.fearGreedSource.includes('Alternative'),
+            fallbackUsed: fearGreedUsesFallback,
             critical: true,
             notes: state.fearGreedIsCurrent ? [] : ['nicht vom aktuellen UTC-Tag']
         }),
@@ -1260,14 +1262,21 @@ async function fetchFearGreedIndex() {
 
         if (mode === 'cmc' && cmc?.isCurrent) {
             normalized = cmc;
-        } else if (mode === 'cmc' && alt?.isCurrent) {
+        } else if (mode === 'cmc' && cmc) {
             normalized = {
-                ...alt,
-                source: cmc
-                    ? 'Alternative.me (CMC nicht aktuell fuer heute)'
-                    : (cmcConfig.proxyUrl || cmcConfig.apiKey
-                        ? 'Alternative.me (CMC nicht verfuegbar)'
-                        : 'Alternative.me (CMC API-Key oder Proxy fehlt)')
+                ...cmc,
+                source: 'CoinMarketCap (nicht aktuell fuer heute)',
+                isCurrent: false
+            };
+        } else if (mode === 'cmc') {
+            normalized = {
+                source: cmcConfig.proxyUrl || cmcConfig.apiKey
+                    ? 'CoinMarketCap (nicht verfuegbar)'
+                    : 'CoinMarketCap (API-Key oder Proxy fehlt)',
+                current: null,
+                currentTimestamp: null,
+                isCurrent: false,
+                history: []
             };
         } else if (mode === 'alt' && alt) {
             normalized = alt;
@@ -1748,7 +1757,13 @@ function updateFearGreedCard() {
         const cmcConfig = getCoinMarketCapConfig();
         const cmcReady = Boolean(cmcConfig.proxyUrl || (cmcConfig.apiKey && cmcConfig.allowBrowserKey));
         if (state.fearGreedMode === 'cmc' && !cmcReady) {
-            sourceNoteEl.textContent = 'CoinMarketCap ist nur mit API-Key verfuegbar. Aktuell nutzt die Seite Alternative.me.';
+            sourceNoteEl.textContent = 'CoinMarketCap ist nur mit API-Key oder Proxy verfuegbar. Ohne CMC bleibt der Wert deaktiviert.';
+        } else if (state.fearGreedMode === 'cmc' && !state.fearGreedIsCurrent) {
+            const timestampMs = parseFearGreedTimestamp(state.fearGreedTimestamp);
+            const dateLabel = timestampMs
+                ? new Date(timestampMs).toLocaleDateString('de-DE', { timeZone: 'UTC' })
+                : 'unbekannt';
+            sourceNoteEl.textContent = `CMC-Modus aktiv: CoinMarketCap ist heute nicht aktuell${timestampMs ? ` | letzter Stand: ${dateLabel} UTC` : ''}`;
         } else if (!state.fearGreedIsCurrent && state.fearGreedTimestamp) {
             const timestampMs = parseFearGreedTimestamp(state.fearGreedTimestamp);
             const dateLabel = timestampMs
