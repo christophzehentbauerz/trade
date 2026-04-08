@@ -185,6 +185,19 @@ function getSourceModeLabel(source) {
     return 'Live';
 }
 
+function formatLiveTimestamp(value) {
+    const timestampMs = parseFearGreedTimestamp(value);
+    if (!timestampMs) return 'kein Zeitstempel';
+    return new Date(timestampMs).toLocaleString('de-DE', {
+        timeZone: 'UTC',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    }) + ' UTC';
+}
+
 function classifyAuditEvent(payload) {
     const signal = payload?.signal || 'NO_TRADE';
     const permission = payload?.permission || 'n/a';
@@ -1639,6 +1652,8 @@ function updatePriceCard() {
     const changeEl = document.getElementById('priceChange');
     const changeValue = changeEl.querySelector('.change-value');
     const fearGreedTickerEl = document.getElementById('tickerFearGreed');
+    const coinGeckoTimestampEl = document.getElementById('coinGeckoTimestampText');
+    const fearGreedTimestampEl = document.getElementById('fearGreedTickerTimestampText');
     document.getElementById('btcPrice').textContent = Number.isFinite(state.price) ? formatNumber(state.price, 0) : 'Nicht verfuegbar';
     if (Number.isFinite(state.priceChange24h)) {
         changeValue.textContent = `${state.priceChange24h >= 0 ? '+' : ''}${formatNumber(state.priceChange24h)}%`;
@@ -1660,6 +1675,12 @@ function updatePriceCard() {
     if (tickerSources) {
         const fearGreedSource = state.sourceQuality?.sources?.fearGreed;
         tickerSources.textContent = `Preis, Marktkapitalisierung, Volumen und ATH: CoinGecko (Live) | Fear & Greed: ${state.fearGreedSource} (${getSourceModeLabel(fearGreedSource)})`;
+    }
+    if (coinGeckoTimestampEl) {
+        coinGeckoTimestampEl.textContent = `CoinGecko Stand: ${formatLiveTimestamp(state.priceTimestamp)}`;
+    }
+    if (fearGreedTimestampEl) {
+        fearGreedTimestampEl.textContent = `Fear & Greed Stand: ${formatLiveTimestamp(state.fearGreedTimestamp)}`;
     }
 
     document.getElementById('marketCap').title = 'Quelle: CoinGecko';
@@ -1878,6 +1899,8 @@ function updateTechnicalCard() {
 }
 
 function updateDerivativesCard() {
+    const fundingTimestampEl = document.getElementById('fundingTimestampText');
+    const openInterestTimestampEl = document.getElementById('openInterestTimestampText');
     // Funding Rate
     const fundingEl = document.getElementById('fundingRate');
     if (Number.isFinite(state.fundingRate)) {
@@ -1897,12 +1920,18 @@ function updateDerivativesCard() {
     } else {
         fundingStatus.textContent = 'Neutral';
     }
+    if (fundingTimestampEl) {
+        fundingTimestampEl.textContent = `Stand: ${formatLiveTimestamp(state.fundingTimestamp)}`;
+    }
 
     // Open Interest
     document.getElementById('openInterest').textContent = Number.isFinite(state.openInterest) ? formatCurrency(state.openInterest) : 'Nicht verfuegbar';
     const oiChangeEl = document.getElementById('oiChange');
     if (oiChangeEl) {
         oiChangeEl.textContent = Number.isFinite(state.openInterest) ? 'Live-Wert' : 'Kein Live-Wert';
+    }
+    if (openInterestTimestampEl) {
+        openInterestTimestampEl.textContent = `Stand: ${formatLiveTimestamp(state.openInterestTimestamp)}`;
     }
     document.getElementById('fundingRate').title = 'Quelle: Binance Futures';
     document.getElementById('openInterest').title = 'Quelle: Binance Futures';

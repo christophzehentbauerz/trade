@@ -734,6 +734,10 @@
             <div class="ticker-sources" id="tickerSources">
                 Preis, Marktkapitalisierung, Volumen und ATH: CoinGecko | Fear & Greed: CoinMarketCap
             </div>
+            <div class="live-timestamp-row">
+                <span class="live-timestamp" id="coinGeckoTimestampText">CoinGecko Stand: --</span>
+                <span class="live-timestamp" id="fearGreedTickerTimestampText">Fear &amp; Greed Stand: --</span>
+            </div>
         </section>
 
         <!-- Smart Money Strategy - Live Signal Detection -->
@@ -1471,6 +1475,7 @@
                                 Rate</span>
                             <span class="derivative-value" id="fundingRate">--%</span>
                             <span class="derivative-status" id="fundingStatus">--</span>
+                            <span class="field-timestamp" id="fundingTimestampText">Stand: --</span>
                             <div class="item-explanation">
                                 Negativ = Shorts zahlen → Bullish<br>
                                 Stark positiv = Longs zahlen → Bearish
@@ -1482,6 +1487,7 @@
                                 Interest</span>
                             <span class="derivative-value" id="openInterest">$--</span>
                             <span class="derivative-status" id="oiChange">--</span>
+                            <span class="field-timestamp" id="openInterestTimestampText">Stand: --</span>
                             <div class="item-explanation">
                                 Zeigt wie viel Geld in Futures steckt.<br>
                                 Steigend = Mehr Interesse am Markt

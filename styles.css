@@ -6640,3 +6640,21 @@ body::before {
 .debug-status.status-invalid {
     color: var(--bearish);
 }
+.live-timestamp-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    margin-top: 6px;
+}
+
+.live-timestamp,
+.field-timestamp {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+.field-timestamp {
+    margin-top: 4px;
+}
