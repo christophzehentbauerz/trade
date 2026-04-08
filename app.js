@@ -42,7 +42,15 @@ let state = {
     fearGreedHistory: [],
     fundingRate: null,
     openInterest: null,
-    longShortRatio: { long: 50, short: 50 },
+    longShortRatio: { long: null, short: null, available: false },
+    priceTimestamp: null,
+    priceHistoryTimestamp: null,
+    fearGreedTimestamp: null,
+    fearGreedIsCurrent: false,
+    fundingTimestamp: null,
+    openInterestTimestamp: null,
+    longShortTimestamp: null,
+    newsTimestamp: null,
     priceHistory: [],
     volumeHistory: [],
     scores: {
@@ -59,6 +67,22 @@ let state = {
         summary: 'Lade...',
         issues: [],
         warnings: []
+    },
+    sourceQuality: {
+        status: 'loading',
+        freshnessLabel: 'Lade...',
+        confidence: 0,
+        confidenceLabel: 'Lade...',
+        reducedBy: [],
+        verdict: {
+            status: 'loading',
+            label: 'Lade...',
+            summary: 'Tagesurteil wird vorbereitet',
+            blocked: true,
+            restricted: true,
+            reasons: []
+        },
+        sources: {}
     },
     newsItems: [],
     eventFilter: {
@@ -737,6 +761,332 @@ function getCoinMarketCapConfig() {
     };
 }
 
+function parseFearGreedTimestamp(timestamp) {
+    if (timestamp === null || timestamp === undefined || timestamp === '') return null;
+
+    if (typeof timestamp === 'number' && Number.isFinite(timestamp)) {
+        return timestamp > 1e12 ? timestamp : timestamp * 1000;
+    }
+
+    if (typeof timestamp === 'string') {
+        const trimmed = timestamp.trim();
+        if (/^\d+$/.test(trimmed)) {
+            const numeric = Number.parseInt(trimmed, 10);
+            return numeric > 1e12 ? numeric : numeric * 1000;
+        }
+
+        const parsed = Date.parse(trimmed);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    return null;
+}
+
+function getUtcDateKey(input = Date.now()) {
+    const date = new Date(input);
+    return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+}
+
+function normalizeFearGreedHistoryItem(item) {
+    const timestampMs = parseFearGreedTimestamp(item?.timestamp);
+    return {
+        value: Number(item?.value),
+        classification: item?.classification || 'Unknown',
+        timestamp: item?.timestamp ?? null,
+        timestampMs,
+        utcDateKey: timestampMs ? getUtcDateKey(timestampMs) : null
+    };
+}
+
+function finalizeFearGreedPayload(source, history) {
+    const normalizedHistory = history
+        .map(normalizeFearGreedHistoryItem)
+        .filter(item => Number.isFinite(item.value) && item.value >= 0 && item.value <= 100)
+        .sort((a, b) => (b.timestampMs || 0) - (a.timestampMs || 0))
+        .slice(0, 7);
+
+    if (!normalizedHistory.length) return null;
+
+    const todayUtc = getUtcDateKey();
+    const currentItem = normalizedHistory.find(item => item.utcDateKey === todayUtc) || normalizedHistory[0];
+
+    return {
+        source,
+        current: Math.round(currentItem.value),
+        currentTimestamp: currentItem.timestamp,
+        isCurrent: currentItem.utcDateKey === todayUtc,
+        history: normalizedHistory.map(({ value, classification, timestamp }) => ({
+            value,
+            classification,
+            timestamp
+        }))
+    };
+}
+
+function getMinutesOld(timestampMs) {
+    if (!Number.isFinite(timestampMs)) return null;
+    return Math.max(0, (Date.now() - timestampMs) / 60000);
+}
+
+function classifyRecencyStatus(timestampMs, freshMinutes, staleMinutes) {
+    const ageMinutes = getMinutesOld(timestampMs);
+    if (ageMinutes === null) return 'missing';
+    if (ageMinutes <= freshMinutes) return 'fresh';
+    if (ageMinutes <= staleMinutes) return 'stale';
+    return 'missing';
+}
+
+function buildSourceEntry({
+    id,
+    label,
+    source,
+    rawTimestamp = null,
+    normalizedTimestamp = null,
+    status = 'missing',
+    usedInScoring = false,
+    fallbackUsed = false,
+    critical = false,
+    notes = [],
+    value = null
+}) {
+    return {
+        id,
+        label,
+        source: source || 'unbekannt',
+        rawTimestamp,
+        normalizedTimestamp,
+        status,
+        usedInScoring,
+        fallbackUsed,
+        critical,
+        notes: notes.filter(Boolean),
+        value,
+        confidenceImpact: 0
+    };
+}
+
+function deriveConfidenceImpact(source) {
+    const basePenalty = source.critical
+        ? { fresh: 0, degraded: 4, stale: 10, missing: 20, invalid: 26 }
+        : { fresh: 0, degraded: 3, stale: 6, missing: 10, invalid: 14 };
+
+    return basePenalty[source.status] ?? 12;
+}
+
+function getConfidenceLabel(score) {
+    if (score >= 85) return 'Hoch';
+    if (score >= 65) return 'Mittel';
+    if (score >= 40) return 'Niedrig';
+    return 'Sehr niedrig';
+}
+
+function getFreshnessLabel(status) {
+    if (status === 'fresh') return 'Frisch';
+    if (status === 'degraded') return 'Fallback';
+    if (status === 'stale') return 'Teilweise veraltet';
+    if (status === 'invalid') return 'Ungueltig';
+    if (status === 'missing') return 'Unvollstaendig';
+    return 'Lade...';
+}
+
+function describeSourceStatus(source) {
+    if (source.status === 'fresh') return `${source.label} ist aktuell`;
+    if (source.status === 'degraded') return `${source.label} nutzt Fallback-Daten`;
+    if (source.status === 'stale') return `${source.label} ist veraltet`;
+    if (source.status === 'invalid') return `${source.label} ist unplausibel`;
+    return `${source.label} fehlt`;
+}
+
+function buildSourceQualityModel(fetchResults = []) {
+    const [priceOk, historyOk, fgOk, fundingOk, oiOk, lsOk, newsOk] = fetchResults;
+    const nowIso = new Date().toISOString();
+    const priceTimestampMs = parseFearGreedTimestamp(state.priceTimestamp);
+    const historyTimestampMs = parseFearGreedTimestamp(state.priceHistoryTimestamp);
+    const fearGreedTimestampMs = parseFearGreedTimestamp(state.fearGreedTimestamp);
+    const fundingTimestampMs = parseFearGreedTimestamp(state.fundingTimestamp);
+    const openInterestTimestampMs = parseFearGreedTimestamp(state.openInterestTimestamp);
+    const longShortTimestampMs = parseFearGreedTimestamp(state.longShortTimestamp);
+    const newsTimestampMs = parseFearGreedTimestamp(state.newsTimestamp);
+    const calendarFutureCount = OFFICIAL_EVENT_SCHEDULE.filter(event => new Date(event.startsAt).getTime() >= Date.now()).length;
+
+    const sources = {
+        btcPrice: buildSourceEntry({
+            id: 'btcPrice',
+            label: 'Bitcoin-Preis',
+            source: 'CoinGecko',
+            rawTimestamp: state.priceTimestamp,
+            normalizedTimestamp: priceTimestampMs ? new Date(priceTimestampMs).toISOString() : null,
+            status: !priceOk ? 'missing' : (!Number.isFinite(state.price) || state.price <= 0 ? 'invalid' : classifyRecencyStatus(priceTimestampMs, 180, 720)),
+            usedInScoring: priceOk && Number.isFinite(state.price) && state.price > 0,
+            critical: true,
+            notes: !priceOk ? ['Fetch fehlgeschlagen'] : []
+        }),
+        priceChange24h: buildSourceEntry({
+            id: 'priceChange24h',
+            label: '24h-Veraenderung',
+            source: 'CoinGecko',
+            rawTimestamp: state.priceTimestamp,
+            normalizedTimestamp: priceTimestampMs ? new Date(priceTimestampMs).toISOString() : null,
+            status: !priceOk ? 'missing' : (!Number.isFinite(state.priceChange24h) ? 'invalid' : classifyRecencyStatus(priceTimestampMs, 180, 720)),
+            usedInScoring: priceOk && Number.isFinite(state.priceChange24h),
+            critical: true
+        }),
+        athDistance: buildSourceEntry({
+            id: 'athDistance',
+            label: 'ATH / ATH-Distanz',
+            source: 'CoinGecko',
+            rawTimestamp: state.priceTimestamp,
+            normalizedTimestamp: priceTimestampMs ? new Date(priceTimestampMs).toISOString() : null,
+            status: !priceOk ? 'missing' : (!Number.isFinite(state.ath) || !Number.isFinite(state.athChange) || state.ath <= 0 ? 'invalid' : classifyRecencyStatus(priceTimestampMs, 180, 720)),
+            usedInScoring: priceOk && Number.isFinite(state.ath) && Number.isFinite(state.athChange),
+            critical: true
+        }),
+        priceHistory: buildSourceEntry({
+            id: 'priceHistory',
+            label: 'Preis-Historie',
+            source: 'CoinGecko',
+            rawTimestamp: state.priceHistoryTimestamp,
+            normalizedTimestamp: historyTimestampMs ? new Date(historyTimestampMs).toISOString() : null,
+            status: !historyOk ? 'missing' : (!Array.isArray(state.priceHistory) || state.priceHistory.length < 10 ? 'invalid' : classifyRecencyStatus(historyTimestampMs, 1440, 2880)),
+            usedInScoring: historyOk && Array.isArray(state.priceHistory) && state.priceHistory.length >= 10,
+            critical: true
+        }),
+        fearGreed: buildSourceEntry({
+            id: 'fearGreed',
+            label: 'Fear & Greed',
+            source: state.fearGreedSource,
+            rawTimestamp: state.fearGreedTimestamp,
+            normalizedTimestamp: fearGreedTimestampMs ? new Date(fearGreedTimestampMs).toISOString() : null,
+            status: !fgOk
+                ? 'missing'
+                : (!Number.isFinite(state.fearGreedIndex) || state.fearGreedIndex < 0 || state.fearGreedIndex > 100
+                    ? 'invalid'
+                    : (state.fearGreedIsCurrent
+                        ? (state.fearGreedSource.includes('Fallback') || state.fearGreedSource.includes('CMC nicht') ? 'degraded' : 'fresh')
+                        : 'stale')),
+            usedInScoring: fgOk && Number.isFinite(state.fearGreedIndex) && state.fearGreedIsCurrent,
+            fallbackUsed: state.fearGreedSource.includes('Fallback') || state.fearGreedSource.includes('Alternative'),
+            critical: true,
+            notes: state.fearGreedIsCurrent ? [] : ['nicht vom aktuellen UTC-Tag']
+        }),
+        fundingRate: buildSourceEntry({
+            id: 'fundingRate',
+            label: 'Funding Rate',
+            source: 'Binance Futures',
+            rawTimestamp: state.fundingTimestamp,
+            normalizedTimestamp: fundingTimestampMs ? new Date(fundingTimestampMs).toISOString() : null,
+            status: !fundingOk ? 'missing' : (!Number.isFinite(state.fundingRate) ? 'invalid' : classifyRecencyStatus(fundingTimestampMs, 720, 1440)),
+            usedInScoring: fundingOk && Number.isFinite(state.fundingRate),
+            critical: false
+        }),
+        openInterest: buildSourceEntry({
+            id: 'openInterest',
+            label: 'Open Interest',
+            source: 'Binance Futures',
+            rawTimestamp: state.openInterestTimestamp,
+            normalizedTimestamp: openInterestTimestampMs ? new Date(openInterestTimestampMs).toISOString() : null,
+            status: !oiOk ? 'missing' : (!Number.isFinite(state.openInterest) || state.openInterest <= 0 ? 'invalid' : classifyRecencyStatus(openInterestTimestampMs, 60, 240)),
+            usedInScoring: oiOk && Number.isFinite(state.openInterest) && state.openInterest > 0,
+            critical: false
+        }),
+        longShortRatio: buildSourceEntry({
+            id: 'longShortRatio',
+            label: 'Long/Short-Ratio',
+            source: 'Binance Futures',
+            rawTimestamp: state.longShortTimestamp,
+            normalizedTimestamp: longShortTimestampMs ? new Date(longShortTimestampMs).toISOString() : null,
+            status: !lsOk ? 'missing' : (!state.longShortRatio.available || !Number.isFinite(state.longShortRatio.long) || !Number.isFinite(state.longShortRatio.short) ? 'invalid' : classifyRecencyStatus(longShortTimestampMs, 180, 480)),
+            usedInScoring: lsOk && state.longShortRatio.available,
+            critical: true,
+            notes: lsOk ? [] : ['kein Ersatzwert erlaubt']
+        }),
+        eventRisk: buildSourceEntry({
+            id: 'eventRisk',
+            label: 'Event-Risk',
+            source: 'Fed/BLS + CryptoCompare',
+            rawTimestamp: nowIso,
+            normalizedTimestamp: nowIso,
+            status: calendarFutureCount === 0 ? 'stale' : (!newsOk ? 'degraded' : 'fresh'),
+            usedInScoring: true,
+            fallbackUsed: !newsOk,
+            critical: false,
+            notes: !newsOk ? ['News-Feed fehlt, Kalender-only Modus'] : []
+        })
+    };
+
+    const reducedBy = [];
+    let confidence = 100;
+
+    Object.values(sources).forEach(source => {
+        const impact = deriveConfidenceImpact(source);
+        source.confidenceImpact = impact;
+        confidence -= impact;
+        if (impact > 0) {
+            reducedBy.push(`${describeSourceStatus(source)} (-${impact})`);
+        }
+    });
+
+    const criticalNotFresh = Object.values(sources).filter(source => source.critical && source.status !== 'fresh');
+    const criticalBroken = Object.values(sources).filter(source => source.critical && (source.status === 'missing' || source.status === 'invalid'));
+    if (criticalNotFresh.length >= 2) {
+        confidence -= 5;
+        reducedBy.push(`Mehrere kritische Quellen nicht frisch (-5)`);
+    }
+
+    confidence = Math.max(0, Math.min(100, Math.round(confidence)));
+
+    const blocked = sources.btcPrice.status === 'missing'
+        || sources.btcPrice.status === 'invalid'
+        || sources.priceHistory.status === 'missing'
+        || sources.priceHistory.status === 'invalid'
+        || criticalBroken.length >= 2
+        || confidence < 25;
+    const restricted = !blocked && (
+        confidence < 55
+        || ['stale', 'missing', 'invalid'].includes(sources.fearGreed.status)
+        || ['stale', 'missing', 'invalid'].includes(sources.longShortRatio.status)
+        || criticalNotFresh.length > 0
+    );
+
+    const verdictReasons = [];
+    if (!sources.fearGreed.usedInScoring) verdictReasons.push('Fear & Greed fliesst heute nicht voll in den Score ein');
+    if (!sources.longShortRatio.usedInScoring) verdictReasons.push('Long/Short-Ratio fehlt oder ist unplausibel');
+    if (sources.eventRisk.status === 'degraded') verdictReasons.push('Event-Risk laeuft ohne News-Feed nur im Kalender-Modus');
+    if (blocked && confidence < 35) verdictReasons.push('Die Datengrundlage ist fuer ein belastbares Tagesurteil zu schwach');
+
+    return {
+        status: blocked ? 'blocked' : restricted ? 'restricted' : 'robust',
+        freshnessLabel: getFreshnessLabel(blocked ? 'missing' : restricted ? 'stale' : 'fresh'),
+        confidence,
+        confidenceLabel: getConfidenceLabel(confidence),
+        reducedBy,
+        verdict: {
+            status: blocked ? 'blocked' : restricted ? 'restricted' : 'robust',
+            label: blocked ? 'Kein belastbares Urteil' : restricted ? 'Urteil eingeschraenkt' : 'Urteil belastbar',
+            summary: blocked
+                ? 'Kritische Signaldaten fehlen oder sind zu schwach.'
+                : restricted
+                    ? 'Das Tagesurteil ist nutzbar, aber nur mit Vorbehalt.'
+                    : 'Alle Kerndaten sind frisch und plausibel.',
+            blocked,
+            restricted,
+            reasons: verdictReasons
+        },
+        sources
+    };
+}
+
+function isSourceUsable(id) {
+    const source = state.sourceQuality?.sources?.[id];
+    return Boolean(source?.usedInScoring);
+}
+
+function getEffectiveFearGreedValue() {
+    return isSourceUsable('fearGreed') && Number.isFinite(state.fearGreedIndex)
+        ? state.fearGreedIndex
+        : null;
+}
+
 async function fetchWithTimeout(url, timeout = 10000, options = {}) {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
@@ -767,10 +1117,12 @@ async function fetchPriceData() {
         state.volume24h = data.market_data.total_volume.usd;
         state.ath = data.market_data.ath.usd;
         state.athChange = data.market_data.ath_change_percentage.usd;
+        state.priceTimestamp = data.last_updated || data.market_data?.last_updated || new Date().toISOString();
 
         return true;
     } catch (error) {
         console.error('Error fetching price data:', error);
+        state.priceTimestamp = null;
         return false;
     }
 }
@@ -782,6 +1134,9 @@ async function fetchPriceHistory() {
         );
 
         state.priceHistory = data.prices.map(p => p[1]);
+        state.priceHistoryTimestamp = Array.isArray(data.prices) && data.prices.length
+            ? new Date(data.prices[data.prices.length - 1][0]).toISOString()
+            : null;
 
         // Store full historical data for advanced analysis (Volume, OBV, etc.)
         window.historicalData = data;
@@ -792,6 +1147,7 @@ async function fetchPriceHistory() {
         return true;
     } catch (error) {
         console.error('Error fetching price history:', error);
+        state.priceHistoryTimestamp = null;
         return false;
     }
 }
@@ -800,15 +1156,11 @@ async function fetchFearGreedIndex() {
     const cmcConfig = getCoinMarketCapConfig();
     const mapAlternativeFearGreed = (payload) => {
         if (!payload?.data?.length) return null;
-        return {
-            source: 'Alternative.me',
-            current: parseInt(payload.data[0].value, 10),
-            history: payload.data.slice(0, 7).map(d => ({
+        return finalizeFearGreedPayload('Alternative.me', payload.data.slice(0, 7).map(d => ({
                 value: parseInt(d.value, 10),
                 classification: d.value_classification || 'Unknown',
                 timestamp: d.timestamp
-            }))
-        };
+            })));
     };
 
     const mapCmcFearGreed = (payload) => {
@@ -820,22 +1172,11 @@ async function fetchFearGreedIndex() {
 
         if (!Array.isArray(rows) || rows.length === 0) return null;
 
-        const mapped = rows
-            .map(row => ({
+        return finalizeFearGreedPayload('CoinMarketCap', rows.map(row => ({
                 value: Number(row.value ?? row.score ?? row.index),
                 classification: row.value_classification || row.label || row.name || 'Unknown',
                 timestamp: row.timestamp || row.time || row.date || row.createdAt || null
-            }))
-            .filter(r => Number.isFinite(r.value) && r.value >= 0 && r.value <= 100)
-            .slice(0, 7);
-
-        if (!mapped.length) return null;
-
-        return {
-            source: 'CoinMarketCap',
-            current: Math.round(mapped[0].value),
-            history: mapped
-        };
+            })));
     };
 
     try {
@@ -870,18 +1211,20 @@ async function fetchFearGreedIndex() {
 
         let normalized = null;
 
-        if (mode === 'cmc' && cmc) {
+        if (mode === 'cmc' && cmc?.isCurrent) {
             normalized = cmc;
-        } else if (mode === 'cmc' && !cmc && alt) {
+        } else if (mode === 'cmc' && alt?.isCurrent) {
             normalized = {
                 ...alt,
-                source: cmcConfig.proxyUrl || cmcConfig.apiKey
-                    ? 'Alternative.me (CMC nicht verfuegbar)'
-                    : 'Alternative.me (CMC API-Key oder Proxy fehlt)'
+                source: cmc
+                    ? 'Alternative.me (CMC nicht aktuell fuer heute)'
+                    : (cmcConfig.proxyUrl || cmcConfig.apiKey
+                        ? 'Alternative.me (CMC nicht verfuegbar)'
+                        : 'Alternative.me (CMC API-Key oder Proxy fehlt)')
             };
         } else if (mode === 'alt' && alt) {
             normalized = alt;
-        } else if (mode === 'avg' && cmc && alt) {
+        } else if (mode === 'avg' && cmc && alt && cmc.isCurrent && alt.isCurrent) {
             const combinedHistory = [];
             const maxLen = Math.min(cmc.history.length, alt.history.length);
             for (let i = 0; i < maxLen; i++) {
@@ -896,10 +1239,12 @@ async function fetchFearGreedIndex() {
             normalized = {
                 source: 'AVG (CMC + Alternative)',
                 current: combinedHistory[0]?.value ?? Math.round((cmc.current + alt.current) / 2),
+                currentTimestamp: combinedHistory[0]?.timestamp ?? cmc.currentTimestamp ?? alt.currentTimestamp ?? null,
+                isCurrent: true,
                 history: combinedHistory.length ? combinedHistory : [ { value: Math.round((cmc.current + alt.current) / 2), classification: 'AVG', timestamp: null } ]
             };
         } else {
-            normalized = cmc || alt;
+            normalized = (cmc?.isCurrent ? cmc : null) || (alt?.isCurrent ? alt : null) || cmc || alt;
             if (normalized) {
                 normalized = {
                     ...normalized,
@@ -913,9 +1258,13 @@ async function fetchFearGreedIndex() {
         state.fearGreedIndex = normalized.current;
         state.fearGreedHistory = normalized.history;
         state.fearGreedSource = normalized.source;
+        state.fearGreedTimestamp = normalized.currentTimestamp || null;
+        state.fearGreedIsCurrent = Boolean(normalized.isCurrent);
         return true;
     } catch (error) {
         console.error('Error fetching Fear & Greed:', error);
+        state.fearGreedTimestamp = null;
+        state.fearGreedIsCurrent = false;
         return false;
     }
 }
@@ -928,11 +1277,13 @@ async function fetchFundingRate() {
 
         if (data && data.length > 0) {
             state.fundingRate = parseFloat(data[0].fundingRate) * 100;
+            state.fundingTimestamp = data[0].fundingTime || null;
         }
         return true;
     } catch (error) {
         console.error('Error fetching funding rate:', error);
         state.fundingRate = null;
+        state.fundingTimestamp = null;
         return false;
     }
 }
@@ -945,10 +1296,12 @@ async function fetchOpenInterest() {
 
         if (data) {
             state.openInterest = parseFloat(data.openInterest) * state.price;
+            state.openInterestTimestamp = data.time || null;
         }
         return true;
     } catch (error) {
         console.error('Error fetching open interest:', error);
+        state.openInterestTimestamp = null;
         return false;
     }
 }
@@ -956,7 +1309,7 @@ async function fetchOpenInterest() {
 async function fetchLongShortRatio() {
     try {
         const data = await fetchWithTimeout(
-            `${CONFIG.apis.binanceFutures}/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1`
+            `${CONFIG.apis.binanceFutures.replace('/fapi/v1', '/futures/data')}/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1`
         );
 
         if (data && data.length > 0) {
@@ -964,13 +1317,20 @@ async function fetchLongShortRatio() {
             const longPercent = (ratio / (1 + ratio)) * 100;
             state.longShortRatio = {
                 long: longPercent,
-                short: 100 - longPercent
+                short: 100 - longPercent,
+                available: true
             };
+            state.longShortTimestamp = data[0].timestamp || null;
+            return true;
         }
-        return true;
+
+        state.longShortRatio = { long: null, short: null, available: false };
+        state.longShortTimestamp = null;
+        return false;
     } catch (error) {
         console.error('Error fetching L/S ratio:', error);
-        state.longShortRatio = { long: 50, short: 50 };
+        state.longShortRatio = { long: null, short: null, available: false };
+        state.longShortTimestamp = null;
         return false;
     }
 }
@@ -990,11 +1350,13 @@ async function fetchCryptoNews() {
                 publishedAt: item?.published_on ? new Date(item.published_on * 1000).toISOString() : null
             }))
             : [];
+        state.newsTimestamp = state.newsItems[0]?.publishedAt || null;
 
         return state.newsItems.length > 0;
     } catch (error) {
         console.error('Error fetching crypto news:', error);
         state.newsItems = [];
+        state.newsTimestamp = null;
         return false;
     }
 }
@@ -1072,6 +1434,8 @@ function determineTrend(prices) {
 // =====================================================
 
 function calculateScores() {
+    const effectiveFearGreed = getEffectiveFearGreedValue();
+
     // Technical Score
     const rsi = calculateRSI(state.priceHistory);
     let techScore = 5;
@@ -1097,10 +1461,12 @@ function calculateScores() {
     let sentimentScore = 5;
 
     // Fear & Greed as contrarian indicator
-    if (state.fearGreedIndex <= 20) sentimentScore += 3; // Extreme fear = buy
-    else if (state.fearGreedIndex <= 35) sentimentScore += 1.5;
-    else if (state.fearGreedIndex >= 80) sentimentScore -= 3; // Extreme greed = sell
-    else if (state.fearGreedIndex >= 65) sentimentScore -= 1.5;
+    if (Number.isFinite(effectiveFearGreed)) {
+        if (effectiveFearGreed <= 20) sentimentScore += 3; // Extreme fear = buy
+        else if (effectiveFearGreed <= 35) sentimentScore += 1.5;
+        else if (effectiveFearGreed >= 80) sentimentScore -= 3; // Extreme greed = sell
+        else if (effectiveFearGreed >= 65) sentimentScore -= 1.5;
+    }
 
     // Funding rate
     if (Number.isFinite(state.fundingRate)) {
@@ -1109,8 +1475,8 @@ function calculateScores() {
     }
 
     // Long/Short ratio (contrarian)
-    if (state.longShortRatio.short > 55) sentimentScore += 1; // More shorts = bullish
-    else if (state.longShortRatio.long > 55) sentimentScore -= 1; // More longs = bearish
+    if (state.longShortRatio.available && state.longShortRatio.short > 55) sentimentScore += 1; // More shorts = bullish
+    else if (state.longShortRatio.available && state.longShortRatio.long > 55) sentimentScore -= 1; // More longs = bearish
 
     state.scores.sentiment = Math.max(0, Math.min(10, sentimentScore));
 
@@ -1305,9 +1671,17 @@ function updateFearGreedCard() {
     if (sourceNoteEl) {
         const cmcConfig = getCoinMarketCapConfig();
         const cmcReady = Boolean(cmcConfig.proxyUrl || (cmcConfig.apiKey && cmcConfig.allowBrowserKey));
-        sourceNoteEl.textContent = state.fearGreedMode === 'cmc' && !cmcReady
-            ? 'CoinMarketCap ist nur mit API-Key verfuegbar. Aktuell nutzt die Seite Alternative.me.'
-            : `Aktive Quelle: ${state.fearGreedSource}`;
+        if (state.fearGreedMode === 'cmc' && !cmcReady) {
+            sourceNoteEl.textContent = 'CoinMarketCap ist nur mit API-Key verfuegbar. Aktuell nutzt die Seite Alternative.me.';
+        } else if (!state.fearGreedIsCurrent && state.fearGreedTimestamp) {
+            const timestampMs = parseFearGreedTimestamp(state.fearGreedTimestamp);
+            const dateLabel = timestampMs
+                ? new Date(timestampMs).toLocaleDateString('de-DE', { timeZone: 'UTC' })
+                : 'unbekannt';
+            sourceNoteEl.textContent = `Aktive Quelle: ${state.fearGreedSource} | Stand: ${dateLabel} UTC`;
+        } else {
+            sourceNoteEl.textContent = `Aktive Quelle: ${state.fearGreedSource}`;
+        }
     }
 }
 
@@ -1415,10 +1789,12 @@ function updateDerivativesCard() {
     document.getElementById('shortPercent').title = 'Quelle: Binance Futures';
 
     // Long/Short Ratio
-    document.getElementById('lsLong').style.width = `${state.longShortRatio.long}%`;
-    document.getElementById('lsShort').style.width = `${state.longShortRatio.short}%`;
-    document.getElementById('longPercent').textContent = `${formatNumber(state.longShortRatio.long, 1)}%`;
-    document.getElementById('shortPercent').textContent = `${formatNumber(state.longShortRatio.short, 1)}%`;
+    const longRatioValue = state.longShortRatio.available ? state.longShortRatio.long : 0;
+    const shortRatioValue = state.longShortRatio.available ? state.longShortRatio.short : 0;
+    document.getElementById('lsLong').style.width = `${longRatioValue}%`;
+    document.getElementById('lsShort').style.width = `${shortRatioValue}%`;
+    document.getElementById('longPercent').textContent = state.longShortRatio.available ? `${formatNumber(state.longShortRatio.long, 1)}%` : '--';
+    document.getElementById('shortPercent').textContent = state.longShortRatio.available ? `${formatNumber(state.longShortRatio.short, 1)}%` : '--';
 
     // Liquidation zones (estimated based on current price)
     const liqLongs = state.price * 0.95;
@@ -1429,7 +1805,7 @@ function updateDerivativesCard() {
     // Badge
     const badge = document.getElementById('derivativesBadge');
     const fundingBaseScore = !Number.isFinite(state.fundingRate) ? 5 : state.fundingRate < 0 ? 6 : 4;
-    const derivScore = fundingBaseScore + (state.longShortRatio.short > 50 ? 1 : -1);
+    const derivScore = fundingBaseScore + (!state.longShortRatio.available ? 0 : (state.longShortRatio.short > 50 ? 1 : -1));
     badge.textContent = `${formatNumber(derivScore, 1)}/10`;
 
     const derivativesSourceNote = document.getElementById('derivativesSourceNote');
@@ -1445,7 +1821,11 @@ function updateSentimentCard() {
 
     // Individual factors
     const fgSignal = document.getElementById('fgSignal');
-    if (state.fearGreedIndex <= 25) {
+    if (!isSourceUsable('fearGreed')) {
+        fgSignal.textContent = 'Eingeschr.';
+        fgSignal.className = 'factor-signal neutral';
+        document.getElementById('fgIcon').textContent = 'âš ';
+    } else if (state.fearGreedIndex <= 25) {
         fgSignal.textContent = 'Bullisch';
         fgSignal.className = 'factor-signal bullish';
         document.getElementById('fgIcon').textContent = '😱';
@@ -1475,7 +1855,10 @@ function updateSentimentCard() {
     }
 
     const lsSignal = document.getElementById('lsSignal');
-    if (state.longShortRatio.short > 55) {
+    if (!state.longShortRatio.available) {
+        lsSignal.textContent = 'N/A';
+        lsSignal.className = 'factor-signal neutral';
+    } else if (state.longShortRatio.short > 55) {
         lsSignal.textContent = 'Bullisch';
         lsSignal.className = 'factor-signal bullish';
     } else if (state.longShortRatio.long > 55) {
@@ -1498,6 +1881,7 @@ function getUnifiedTradeRecommendation() {
     }
 
     const price = state.price;
+    const effectiveFearGreed = getEffectiveFearGreedValue();
     const priceWindow = Array.isArray(state.priceHistory) ? state.priceHistory.slice(-30) : [];
     const rsi = priceWindow.length >= 2 ? calculateRSI(state.priceHistory) : 50;
     const trend = priceWindow.length >= 2 ? determineTrend(state.priceHistory) : 'sideways';
@@ -1518,7 +1902,7 @@ function getUnifiedTradeRecommendation() {
             price,
             rsi,
             trend,
-            state.fearGreedIndex ?? 50,
+            Number.isFinite(effectiveFearGreed) ? effectiveFearGreed : null,
             state.ath ?? price * 1.2,
             sr,
             volatility
@@ -1920,29 +2304,25 @@ window.closeTelegramPreview = closeTelegramPreview;
 
 function buildLiveIntegrityModel(unified) {
     const quality = state.dataQuality || { mode: 'loading', issues: [], warnings: [] };
+    const sourceQuality = state.sourceQuality || { confidence: 0, verdict: { blocked: true, restricted: true }, reducedBy: [] };
     const ageMinutes = state.lastUpdate ? (Date.now() - state.lastUpdate.getTime()) / 60000 : null;
     const warningThreshold = Math.max(7, CONFIG.refreshInterval / 60000 * 1.4);
     const staleThreshold = Math.max(12, CONFIG.refreshInterval / 60000 * 2.2);
 
-    let confidence = 100;
-    if (quality.mode === 'partial') confidence -= 20;
-    if (quality.mode === 'degraded') confidence -= 45;
-    confidence -= (quality.warnings?.length || 0) * 6;
-    confidence -= (quality.issues?.length || 0) * 14;
-    if (ageMinutes !== null && ageMinutes > warningThreshold) confidence -= 16;
-    if (ageMinutes !== null && ageMinutes > staleThreshold) confidence -= 24;
-    if (!state.price || !state.priceHistory?.length) confidence -= 25;
+    let confidence = sourceQuality.confidence ?? 0;
+    if (ageMinutes !== null && ageMinutes > warningThreshold) confidence -= 12;
+    if (ageMinutes !== null && ageMinutes > staleThreshold) confidence -= 18;
     if (unified?.filters?.isLowLiquidity) confidence -= 8;
     confidence = Math.max(0, Math.min(100, Math.round(confidence)));
 
     const blockers = [];
-    if (quality.mode === 'degraded') blockers.push(quality.issues?.[0] || 'Kritische Kernquelle fehlt');
+    if (sourceQuality.verdict?.blocked) blockers.push(sourceQuality.verdict?.summary || quality.issues?.[0] || 'Kritische Kernquelle fehlt');
     if (ageMinutes !== null && ageMinutes > staleThreshold) blockers.push(`Daten sind stale (${Math.round(ageMinutes)} min alt)`);
-    if ((quality.warnings?.length || 0) >= 3) blockers.push('Zu viele Teil-Fallbacks gleichzeitig');
-    if (!state.priceHistory?.length) blockers.push('Preis-Historie fehlt');
+    if ((quality.warnings?.length || 0) >= 3 || (sourceQuality.reducedBy?.length || 0) >= 4) blockers.push('Zu viele Teil-Fallbacks gleichzeitig');
+    if (!isSourceUsable('priceHistory')) blockers.push('Preis-Historie fehlt');
 
     const blocked = blockers.length > 0;
-    const caution = !blocked && (quality.mode === 'partial' || (quality.warnings?.length || 0) > 0 || (ageMinutes !== null && ageMinutes > warningThreshold));
+    const caution = !blocked && (sourceQuality.verdict?.restricted || quality.mode === 'partial' || (quality.warnings?.length || 0) > 0 || (ageMinutes !== null && ageMinutes > warningThreshold));
 
     return {
         confidence,
@@ -2048,10 +2428,11 @@ function buildEventFilter() {
 }
 
 function getMarketPhase(unified, trend, rsi, volatilityPercent) {
+    const effectiveFearGreed = getEffectiveFearGreedValue();
     if (state.dataQuality?.mode === 'degraded') return 'Risk-Off';
     if (unified?.filters?.isHighVolatility && Math.abs(state.priceChange24h || 0) >= 4) {
-        if ((state.fearGreedIndex ?? 50) >= 78) return 'Euphoria';
-        if ((state.fearGreedIndex ?? 50) <= 25) return 'Panic';
+        if (Number.isFinite(effectiveFearGreed) && effectiveFearGreed >= 78) return 'Euphoria';
+        if (Number.isFinite(effectiveFearGreed) && effectiveFearGreed <= 25) return 'Panic';
         return 'Volatile Chop';
     }
 
@@ -2168,6 +2549,7 @@ function buildDecisionModel() {
     const unified = getUnifiedTradeRecommendation();
     if (!unified) return null;
 
+    const sourceQuality = state.sourceQuality || { confidence: 0, verdict: { blocked: true, restricted: true, summary: 'Quelle unbekannt', reasons: [] } };
     const price = state.price;
     const rsi = calculateRSI(state.priceHistory);
     const trend = determineTrend(state.priceHistory);
@@ -2185,6 +2567,8 @@ function buildDecisionModel() {
     const noTradeReasons = [];
 
     if (state.dataQuality?.mode === 'degraded') noTradeReasons.push('Datenqualitaet ist nicht operativ belastbar');
+    if (sourceQuality.verdict?.blocked) noTradeReasons.push(sourceQuality.verdict.summary || 'Kein belastbares Tagesurteil');
+    else if (sourceQuality.verdict?.restricted) noTradeReasons.push(...(sourceQuality.verdict.reasons || []).slice(0, 2));
     if (liveIntegrity.blocked) noTradeReasons.push(`Live Gate blockiert: ${liveIntegrity.blocker}`);
     if (inMiddleOfRange) noTradeReasons.push('Preis handelt mitten in der Range');
     if (macroSentimentConflict) noTradeReasons.push('Makro und Sentiment laufen gegeneinander');
@@ -2195,7 +2579,7 @@ function buildDecisionModel() {
     else if (eventRisk.level === 'yellow') noTradeReasons.push(`Event-/News-Risiko gelb: ${eventRisk.summary}`);
     if (trend === 'sideways') noTradeReasons.push('Trend ist nicht eindeutig');
     if (TRADER_PROFILE.avoidWeekends && [0, 6].includes(new Date().getDay())) noTradeReasons.push('dein Profil blockt Wochenend-Trades');
-    if ((state.fundingRate ?? 0) > 0 && (state.longShortRatio.long ?? 50) > 55 && unified.signal === 'LONG') noTradeReasons.push('Funding und Positioning sprechen gegen aggressiven Long-Entry');
+    if ((state.fundingRate ?? 0) > 0 && state.longShortRatio.available && state.longShortRatio.long > 55 && unified.signal === 'LONG') noTradeReasons.push('Funding und Positioning sprechen gegen aggressiven Long-Entry');
     if (unified?.blockedReasons?.length) noTradeReasons.push(...unified.blockedReasons);
 
     const bias = unified.signal === 'LONG' ? 'LONG BIAS' : unified.signal === 'SHORT' ? 'SHORT BIAS' : phase === 'Squeeze vor Ausbruch' ? 'WAIT FOR BREAKOUT' : 'NO TRADE';
@@ -2204,10 +2588,13 @@ function buildDecisionModel() {
     if (
         liveIntegrity.blocked ||
         state.dataQuality?.mode === 'degraded' ||
+        sourceQuality.verdict?.blocked ||
         (TRADER_PROFILE.avoidMacroRisk && eventRisk.level === 'red') ||
         (TRADER_PROFILE.avoidWeekends && [0, 6].includes(new Date().getDay()))
     ) {
         permission = 'HIGH RISK DAY';
+    } else if (sourceQuality.verdict?.restricted && unified.signal !== 'NEUTRAL') {
+        permission = 'NUR BEI TRIGGER';
     } else if (unified.signal !== 'NEUTRAL' && !inMiddleOfRange && weightedRR >= TRADER_PROFILE.minRR && !macroSentimentConflict) {
         permission = 'TRADE ERLAUBT';
     } else if (phase === 'Squeeze vor Ausbruch' || unified.signal === 'NEUTRAL') {
@@ -2222,7 +2609,12 @@ function buildDecisionModel() {
         && !unified.filters.isLowLiquidity
         && unified.confidence >= 70
         && (!TRADER_PROFILE.avoidWeekends || ![0, 6].includes(new Date().getDay()));
-    const spotAllowed = !liveIntegrity.blocked && state.dataQuality?.mode !== 'degraded' && ((state.fearGreedIndex ?? 50) <= 75 || TRADER_PROFILE.preferSpotOnRiskDays);
+    const effectiveFearGreed = getEffectiveFearGreedValue();
+    const hasUsableFearGreed = Number.isFinite(effectiveFearGreed);
+    const spotAllowed = !liveIntegrity.blocked
+        && state.dataQuality?.mode !== 'degraded'
+        && !sourceQuality.verdict?.blocked
+        && ((hasUsableFearGreed && effectiveFearGreed <= 75) || TRADER_PROFILE.preferSpotOnRiskDays);
 
     const longTriggerPrice = Math.max(price, resistance);
     const shortTriggerPrice = Math.min(price, support);
@@ -2230,13 +2622,21 @@ function buildDecisionModel() {
     const shortTriggerText = `Short nur bei Rejection an ${formatDecisionPrice(resistance)} oder Breakdown unter ${formatDecisionPrice(shortTriggerPrice)}`;
 
     const horizons = {
-        day: permission === 'TRADE ERLAUBT' ? `${bias} fuer heute` : permission === 'HIGH RISK DAY' ? 'Heute kein Trade' : 'Heute nur Trigger handeln',
+        day: sourceQuality.verdict?.blocked
+            ? 'Kein belastbares Tagesurteil'
+            : sourceQuality.verdict?.restricted
+                ? (unified.signal === 'NEUTRAL' ? 'Heute nur eingeschraenktes Urteil' : `${bias} nur mit Vorbehalt`)
+                : permission === 'TRADE ERLAUBT'
+                    ? `${bias} fuer heute`
+                    : permission === 'HIGH RISK DAY'
+                        ? 'Heute kein Trade'
+                        : 'Heute nur Trigger handeln',
         intraday: permission === 'TRADE ERLAUBT' ? `${bias} intraday priorisiert` : phase === 'Range' ? 'Nur Scalps, kein Swing' : 'Warten auf Bestaetigung',
         swing: (trend === 'up' || trend === 'down') && permission !== 'HIGH RISK DAY' && !unified.filters.isLowLiquidity
             ? `${trend === 'up' && aboveEma ? 'Swing Longs' : trend === 'down' && !aboveEma ? 'Swing Shorts' : 'Swing nur mit Trendfilter'} nur bei Close-Bestaetigung`
             : 'Kein Swing-Follow-through',
         spot: spotAllowed
-            ? ((state.fearGreedIndex ?? 50) < 35 ? 'Spot-Akkumulation erlaubt' : 'Spot selektiv erlaubt')
+            ? ((hasUsableFearGreed && effectiveFearGreed < 35) ? 'Spot-Akkumulation erlaubt' : 'Spot selektiv erlaubt')
             : 'Spot heute aussetzen'
     };
 
@@ -2273,7 +2673,7 @@ function buildDecisionModel() {
         ? bias
         : permission === 'HIGH RISK DAY'
             ? 'NO TRADE'
-            : spotAllowed && (state.fearGreedIndex ?? 50) < 35
+            : spotAllowed && hasUsableFearGreed && effectiveFearGreed < 35
                 ? 'SPOT BUY'
                 : permission === 'NUR BEI TRIGGER' || permission === 'WAIT FOR CONFIRMATION'
                     ? 'WAIT FOR TRIGGER'
@@ -2311,6 +2711,7 @@ function buildDecisionModel() {
         bestStrategy,
         strategyStatus,
         liveIntegrity,
+        sourceQuality,
         actionNow,
         validOnlyIf: primaryTrigger,
         doNotTrade,
@@ -2653,14 +3054,15 @@ function updateStrategyDecisionCards() {
     setTextIfExists('trendStrategyEntry', model.bestStrategy.name === 'TrendGuard Dynamic' ? model.bestStrategy.entry : 'Breakout oder Retest von oben/unten');
     setTextIfExists('trendStrategyRisk', riskText);
 
+    const effectiveFearGreed = getEffectiveFearGreedValue();
     applyStrategyCardState('spotDecisionCard', 'spotStrategyStatus', 'spotStrategyPriority', {
-        state: model.spotAllowed ? ((state.fearGreedIndex ?? 50) < 35 ? 'BESTAETIGT' : 'BEOBACHTEN') : 'INAKTIV',
+        state: model.spotAllowed ? ((Number.isFinite(effectiveFearGreed) && effectiveFearGreed < 35) ? 'BESTAETIGT' : 'BEOBACHTEN') : 'INAKTIV',
         priority: model.bestStrategy.name === 'Smart Accumulator' || model.topStatus === 'SPOT BUY' ? 'hoch' : 'ergaenzend'
     });
     setTextIfExists('spotStrategyEnvironment', 'defensive Tage / Panic / Risk-Off');
     setTextIfExists('spotStrategyTrigger', model.topStatus === 'SPOT BUY' ? 'Spot in Schwaeche staffeln oder Reclaim kaufen' : 'Nur bei deutlicher Schwaeche oder sauberem Reclaim');
     setTextIfExists('spotStrategyInvalidation', model.liveIntegrity.blocked ? 'erst nach frischen Daten neu pruefen' : 'kein Spot, wenn Event-Risiko rot und Profil blockt');
-    setTextIfExists('spotStrategyEntry', state.fearGreedIndex < 35 ? 'gestaffelte Spot-Kaeufe' : 'nur kleine Spot-Tranche');
+    setTextIfExists('spotStrategyEntry', Number.isFinite(effectiveFearGreed) && effectiveFearGreed < 35 ? 'gestaffelte Spot-Kaeufe' : 'nur kleine Spot-Tranche');
     setTextIfExists('spotStrategyRisk', riskText);
     updateRainbowVisual();
 }
@@ -2809,8 +3211,9 @@ function updateSignalBanner() {
         decisionModel.reasonCodes = extractReasonCodes(decisionModel, unified);
     }
     const activeSignal = unified?.signal || state.signal;
-    const activeConfidence = unified?.confidence ?? state.confidence;
-    const qualityBlocked = state.dataQuality?.mode === 'degraded';
+    const activeConfidence = decisionModel?.sourceQuality?.confidence ?? unified?.confidence ?? state.confidence;
+    const qualityBlocked = state.dataQuality?.mode === 'degraded' || decisionModel?.sourceQuality?.verdict?.blocked;
+    const qualityRestricted = decisionModel?.sourceQuality?.verdict?.restricted;
     const operationalSignal = qualityBlocked || decisionModel?.permission !== 'TRADE ERLAUBT'
         ? 'NO_TRADE'
         : activeSignal;
@@ -2842,6 +3245,11 @@ function updateSignalBanner() {
             <br><br><strong>Datenstatus:</strong> ${state.dataQuality.summary}
             <br><strong>Probleme:</strong> ${state.dataQuality.issues.join(' | ') || 'n/a'}
             ${state.dataQuality.warnings?.length ? `<br><strong>Warnungen:</strong> ${state.dataQuality.warnings.join(' | ')}` : ''}`;
+    } else if (qualityRestricted) {
+        summaryText = 'Das Urteil ist heute nur eingeschraenkt belastbar.';
+        explanationText = `<strong>Vorsichtiges Urteil:</strong> Es gibt einen Bias, aber die Datengrundlage ist nicht vollstaendig robust.
+            <br><br><strong>Confidence:</strong> ${Math.round(activeConfidence)}%
+            <br><strong>Qualitaetsgruende:</strong> ${(decisionModel?.sourceQuality?.reducedBy || []).slice(0, 3).join(' | ') || 'n/a'}`;
     } else if (operationalSignal === 'LONG') {
         summaryText = 'Coach-Konfluenz zeigt ein bullisches Setup.';
         explanationText = `<strong>LONG bedeutet:</strong> Die Daten deuten auf steigende Preise hin.
@@ -2940,7 +3348,7 @@ function updateNoTradeWarning() {
             reasons.push('<strong>Trend ist seitwaerts</strong> - keine klare Richtung');
         }
 
-        if (state.longShortRatio.long >= 45 && state.longShortRatio.long <= 55) {
+        if (state.longShortRatio.available && state.longShortRatio.long >= 45 && state.longShortRatio.long <= 55) {
             reasons.push(`<strong>Long/Short Ratio ist ausgeglichen</strong> (${formatNumber(state.longShortRatio.long, 0)}/${formatNumber(state.longShortRatio.short, 0)})`);
         }
 
@@ -2962,11 +3370,22 @@ function updateNoTradeWarning() {
 function updateScoreInterpretation() {
     const interpretEl = document.getElementById('scoreInterpretation');
     const score = calculateWeightedScore();
+    const verdict = state.sourceQuality?.verdict;
 
     let html = '';
     let cssClass = '';
 
-    if (score >= 6.5) {
+    if (verdict?.blocked) {
+        cssClass = 'neutral';
+        html = `<strong>Kein belastbares Tagesurteil</strong><br>
+                Kritische Quellen fehlen oder sind nicht belastbar genug. 
+                Das Urteil wird deshalb absichtlich gebremst.`;
+    } else if (verdict?.restricted) {
+        cssClass = 'neutral';
+        html = `<strong>Urteil eingeschraenkt</strong><br>
+                Das Setup kann einen Bias haben, aber die Datenqualitaet verlangt Vorsicht. 
+                Nutze nur bestaetigte Trigger und reduziertes Vertrauen.`;
+    } else if (score >= 6.5) {
         cssClass = 'bullish';
         html = `<strong>Score ≥ 6.5 = LONG Signal</strong><br>
                 Alle Faktoren zusammen ergeben einen bullischen Bias. 
@@ -3000,6 +3419,7 @@ function buildDashboardDataQuality(fetchResults) {
 
     if (!priceOk || !historyOk) issues.push('Kursdaten unvollständig');
     if (!fgOk) warnings.push('Fear & Greed fehlt');
+    else if (!state.fearGreedIsCurrent) warnings.push('Fear & Greed nicht fuer heute aktuell');
     if (!fundingOk) warnings.push('Funding fehlt');
     if (!oiOk) warnings.push('Open Interest fehlt');
     if (!lsOk) warnings.push('L/S Ratio fehlt');
@@ -3015,11 +3435,112 @@ function buildDashboardDataQuality(fetchResults) {
     return { mode, summary, issues, warnings };
 }
 
+function buildStructuredDashboardDataQuality(fetchResults) {
+    const sourceQuality = buildSourceQualityModel(fetchResults);
+    const issues = [];
+    const warnings = [];
+
+    Object.values(sourceQuality.sources).forEach(source => {
+        if (source.status === 'missing' || source.status === 'invalid') {
+            (source.critical ? issues : warnings).push(describeSourceStatus(source));
+        } else if (source.status === 'stale' || source.status === 'degraded') {
+            warnings.push(describeSourceStatus(source));
+        }
+    });
+
+    const mode = sourceQuality.verdict.blocked
+        ? 'degraded'
+        : sourceQuality.verdict.restricted
+            ? 'partial'
+            : 'live';
+
+    state.sourceQuality = sourceQuality;
+
+    return {
+        mode,
+        summary: `${sourceQuality.freshnessLabel} | Confidence ${sourceQuality.confidence}/100`,
+        issues,
+        warnings
+    };
+}
+
+function updateQualitySummaryCard() {
+    const quality = state.sourceQuality;
+    if (!quality) return;
+
+    const freshnessEl = document.getElementById('qualityFreshnessBadge');
+    const confidenceEl = document.getElementById('qualityConfidenceBadge');
+    const summaryEl = document.getElementById('qualitySummaryText');
+    const reasonEl = document.getElementById('qualityConfidenceReason');
+    const timestampEl = document.getElementById('qualityTimestampText');
+    const listEl = document.getElementById('qualityWarningList');
+    const verdictEl = document.getElementById('qualityVerdictBadge');
+
+    if (freshnessEl) {
+        freshnessEl.textContent = `Datenqualitaet: ${quality.confidenceLabel}`;
+        freshnessEl.className = `card-badge quality-badge status-${quality.status}`;
+    }
+    if (confidenceEl) {
+        confidenceEl.textContent = `Confidence ${quality.confidence}/100`;
+        confidenceEl.className = `card-badge quality-badge confidence-${quality.confidence >= 85 ? 'high' : quality.confidence >= 65 ? 'mid' : quality.confidence >= 40 ? 'low' : 'very-low'}`;
+    }
+    if (verdictEl) {
+        verdictEl.textContent = quality.verdict.label;
+        verdictEl.className = `card-badge quality-badge verdict-${quality.verdict.status}`;
+    }
+    if (summaryEl) summaryEl.textContent = quality.verdict.summary;
+    if (reasonEl) {
+        reasonEl.textContent = quality.reducedBy.length
+            ? quality.reducedBy.slice(0, 3).join(' | ')
+            : 'Keine aktiven Qualitaetsabzuege.';
+    }
+    if (timestampEl) {
+        timestampEl.textContent = state.lastUpdate
+            ? `Letzter Datenabgleich: ${state.lastUpdate.toLocaleString('de-DE')}`
+            : 'Letzter Datenabgleich: --';
+    }
+    if (listEl) {
+        const items = [
+            ...quality.verdict.reasons,
+            ...state.dataQuality.warnings.slice(0, 3)
+        ].filter(Boolean);
+        listEl.innerHTML = (items.length ? items : ['Keine aktiven Warnhinweise.'])
+            .map(item => `<li>${item}</li>`)
+            .join('');
+    }
+}
+
+function renderDataQualityDebug() {
+    const tbody = document.getElementById('qualityDebugTableBody');
+    if (!tbody) return;
+    const quality = state.sourceQuality;
+    if (!quality?.sources) {
+        tbody.innerHTML = '<tr><td colspan="8">Noch keine Quelldaten vorhanden.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = Object.values(quality.sources).map(source => `
+        <tr>
+            <td>${source.label}</td>
+            <td>${source.source}</td>
+            <td>${source.rawTimestamp ?? '--'}</td>
+            <td>${source.normalizedTimestamp ?? '--'}</td>
+            <td class="debug-status status-${source.status}">${source.status}</td>
+            <td>${source.usedInScoring ? 'yes' : 'no'}</td>
+            <td>${source.fallbackUsed ? 'yes' : 'no'}</td>
+            <td>-${source.confidenceImpact}</td>
+        </tr>
+    `).join('');
+}
+
 function updateDataQualityStatus() {
     const el = document.getElementById('dataQualityStatus');
     if (!el) return;
     const q = state.dataQuality || { mode: 'loading', summary: 'Lade...', issues: [], warnings: [] };
-    el.textContent = q.summary;
+    const confidence = state.sourceQuality?.confidence;
+    el.textContent = Number.isFinite(confidence)
+        ? `${q.summary}`
+        : q.summary;
     el.title = [...q.issues, ...q.warnings].join(' | ') || q.summary;
     el.className = `update-time data-quality-${q.mode}`;
 }
@@ -3043,8 +3564,8 @@ async function updateDashboard() {
             fetchLongShortRatio(),
             fetchCryptoNews()
         ]);
-        state.dataQuality = buildDashboardDataQuality(fetchResults);
         state.eventFilter = buildEventFilter();
+        state.dataQuality = buildStructuredDashboardDataQuality(fetchResults);
 
         // Calculate scores
         calculateScores();
@@ -3064,6 +3585,8 @@ async function updateDashboard() {
         updateStrategyDecisionCards();
         updateSignalBanner();
         updateDataQualityStatus();
+        updateQualitySummaryCard();
+        renderDataQualityDebug();
 
         console.log('Dashboard updated successfully');
     } catch (error) {
@@ -3074,9 +3597,12 @@ async function updateDashboard() {
             warnings: []
         };
         state.eventFilter = buildEventFilter();
+        state.sourceQuality = buildSourceQualityModel([false, false, false, false, false, false, false]);
         updateLastUpdate();
         applyDecisionFallbackState('Dashboard-Update fehlgeschlagen. Keine operative Freigabe.');
         updateDataQualityStatus();
+        updateQualitySummaryCard();
+        renderDataQualityDebug();
         console.error('Error updating dashboard:', error);
     } finally {
         refreshBtn.classList.remove('loading');
@@ -3324,10 +3850,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Fear & Greed source mode
     const savedFgMode = localStorage.getItem('btc-fg-source-mode');
-    if (savedFgMode === 'avg' || savedFgMode === 'alt') {
-        state.fearGreedMode = 'cmc';
-        localStorage.setItem('btc-fg-source-mode', 'cmc');
-    } else if (savedFgMode === 'cmc') {
+    if (savedFgMode === 'avg' || savedFgMode === 'alt' || savedFgMode === 'cmc') {
         state.fearGreedMode = savedFgMode;
     }
     const fgSourceSelect = document.getElementById('fgSourceMode');

@@ -28,6 +28,39 @@ Wenn der Fear & Greed Index exakt mit CoinMarketCap uebereinstimmen soll, setze 
 Danach nutzt die Seite automatisch den Vercel-Endpoint:
 - `/api/cmc/fear-and-greed/historical`
 
+### Data Quality und Confidence
+
+Das Dashboard bewertet signalrelevante Quellen jetzt pro Quelle mit einem festen Status:
+
+- `fresh` = aktuell und plausibel
+- `stale` = vorhanden, aber veraltet
+- `missing` = keine Daten
+- `invalid` = unplausibel oder Parsing fehlgeschlagen
+- `degraded` = Fallback wurde verwendet
+
+Kritische Quellen sind vor allem:
+
+- Bitcoin-Preis
+- Preis-Historie
+- 24h-Veränderung
+- ATH / ATH-Distanz
+- Fear & Greed
+- Long/Short-Ratio
+
+Der Confidence-Score startet bei `100` und wird pro Quelle reduziert, wenn eine Quelle nicht `fresh` ist. Kritische Quellen senken den Score stärker als unterstützende Quellen.
+
+Das Tagesurteil wird nicht mehr blind aus dem Score angezeigt:
+
+- hohe Confidence + frische Kerndaten = normales Urteil
+- mittlere Confidence oder veraltete Kernquelle = `Urteil eingeschraenkt`
+- sehr schwache Confidence oder fehlende kritische Quellen = `Kein belastbares Tagesurteil`
+
+Wichtig:
+
+- Fear & Greed gilt fuer das Tagesurteil nur dann als aktuell, wenn der Datensatz fuer den aktuellen UTC-Tag vorliegt.
+- Fehlende Long/Short-Daten werden nicht mehr als `50/50` maskiert.
+- Fallback-Quellen werden sichtbar als `degraded` markiert und senken die Confidence.
+
 ### CoinMarketCap lokal
 
 Fuer lokale Tests kannst du weiterhin den Python-Proxy nutzen.

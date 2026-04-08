@@ -309,6 +309,7 @@ function calculateLiveConfluenceScore(price, rsi, trend, fearGreed, ath, sr, vol
         marketStructure: 0,
         macro: 0
     };
+    const hasFearGreed = Number.isFinite(fearGreed);
 
     // Determine direction first
     let direction = null;
@@ -316,13 +317,13 @@ function calculateLiveConfluenceScore(price, rsi, trend, fearGreed, ath, sr, vol
     // LONG conditions
     if ((rsi < 45 && sr.distanceToSupport < 10) ||
         (trend === 'up' && rsi > 40 && rsi < 65) ||
-        (fearGreed < 35)) {
+        (hasFearGreed && fearGreed < 35)) {
         direction = 'LONG';
     }
     // SHORT conditions
     else if ((rsi > 55 && sr.distanceToResistance < 10) ||
         (trend === 'down' && rsi > 35 && rsi < 60) ||
-        (fearGreed > 65)) {
+        (hasFearGreed && fearGreed > 65)) {
         direction = 'SHORT';
     }
 
@@ -350,10 +351,10 @@ function calculateLiveConfluenceScore(price, rsi, trend, fearGreed, ath, sr, vol
     else if (direction === 'SHORT' && sr.distanceToResistance < 8) scores.srPosition = 1;
 
     // 4. Market Structure (0-2)
-    if (direction === 'LONG' && fearGreed < 35) scores.marketStructure = 2;
-    else if (direction === 'LONG' && fearGreed < 50) scores.marketStructure = 1;
-    else if (direction === 'SHORT' && fearGreed > 65) scores.marketStructure = 2;
-    else if (direction === 'SHORT' && fearGreed > 50) scores.marketStructure = 1;
+    if (direction === 'LONG' && hasFearGreed && fearGreed < 35) scores.marketStructure = 2;
+    else if (direction === 'LONG' && hasFearGreed && fearGreed < 50) scores.marketStructure = 1;
+    else if (direction === 'SHORT' && hasFearGreed && fearGreed > 65) scores.marketStructure = 2;
+    else if (direction === 'SHORT' && hasFearGreed && fearGreed > 50) scores.marketStructure = 1;
 
     // 5. Volume & Macro (0-2)
     // Replaced pure volatility macro with Volume/OBV/RVOL which is more actionable

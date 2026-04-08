@@ -394,6 +394,54 @@
                     </div>
                 </div>
 
+                <div class="quality-summary-card">
+                    <div class="quality-summary-top">
+                        <div class="quality-summary-head">
+                            <div class="decision-subtitle">Data Quality &amp; Confidence</div>
+                            <div class="quality-summary-badges">
+                                <span class="card-badge quality-badge" id="qualityFreshnessBadge">Datenqualitaet: Lade...</span>
+                                <span class="card-badge quality-badge" id="qualityConfidenceBadge">Confidence --/100</span>
+                                <span class="card-badge quality-badge" id="qualityVerdictBadge">Urteil wird vorbereitet</span>
+                            </div>
+                        </div>
+                        <div class="quality-summary-copy">
+                            <div class="quality-summary-text" id="qualitySummaryText">Signalqualitaet wird geladen.</div>
+                            <div class="quality-summary-reason" id="qualityConfidenceReason">Noch keine aktiven Qualitaetsdaten.</div>
+                            <div class="quality-summary-time" id="qualityTimestampText">Letzter Datenabgleich: --</div>
+                        </div>
+                    </div>
+                    <div class="quality-warning-box">
+                        <div class="decision-label">Warum Confidence reduziert ist</div>
+                        <ul id="qualityWarningList">
+                            <li>Warte auf Daten...</li>
+                        </ul>
+                    </div>
+                    <details class="quality-debug-panel">
+                        <summary class="advanced-decision-toggle">Datenquellen-Debug</summary>
+                        <div class="quality-debug-table-wrap">
+                            <table class="quality-debug-table">
+                                <thead>
+                                    <tr>
+                                        <th>Quelle</th>
+                                        <th>Source</th>
+                                        <th>Raw TS</th>
+                                        <th>Normalisiert</th>
+                                        <th>Status</th>
+                                        <th>Scoring</th>
+                                        <th>Fallback</th>
+                                        <th>Impact</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="qualityDebugTableBody">
+                                    <tr>
+                                        <td colspan="8">Warte auf Quelldaten...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                </div>
+
                 <details class="advanced-decision-panel">
                     <summary class="advanced-decision-toggle">
                         Erweiterte Details und Profileinstellungen

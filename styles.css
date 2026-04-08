@@ -6516,3 +6516,127 @@ body::before {
         grid-template-columns: 1fr;
     }
 }
+.quality-summary-card {
+    margin-top: 18px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015));
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.quality-summary-head,
+.quality-summary-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.quality-summary-top,
+.quality-summary-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.quality-summary-text {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.quality-summary-reason,
+.quality-summary-time {
+    font-size: 0.84rem;
+    color: var(--text-secondary);
+    line-height: 1.45;
+}
+
+.quality-warning-box {
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-sm);
+    background: rgba(15, 23, 42, 0.45);
+    padding: 12px 14px;
+}
+
+.quality-warning-box ul {
+    margin: 8px 0 0;
+    padding-left: 18px;
+    color: var(--text-secondary);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.quality-badge.status-robust,
+.quality-badge.confidence-high,
+.quality-badge.verdict-robust {
+    background: var(--bullish-bg);
+    border-color: rgba(34, 197, 94, 0.25);
+    color: var(--bullish);
+}
+
+.quality-badge.status-restricted,
+.quality-badge.confidence-mid,
+.quality-badge.verdict-restricted {
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(245, 158, 11, 0.28);
+    color: #fbbf24;
+}
+
+.quality-badge.status-blocked,
+.quality-badge.confidence-low,
+.quality-badge.confidence-very-low,
+.quality-badge.verdict-blocked {
+    background: var(--bearish-bg);
+    border-color: rgba(239, 68, 68, 0.28);
+    color: var(--bearish);
+}
+
+.quality-debug-panel {
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: 10px;
+}
+
+.quality-debug-table-wrap {
+    overflow-x: auto;
+    margin-top: 10px;
+}
+
+.quality-debug-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+}
+
+.quality-debug-table th,
+.quality-debug-table td {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.quality-debug-table th {
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.68rem;
+}
+
+.debug-status.status-fresh {
+    color: var(--bullish);
+}
+
+.debug-status.status-degraded,
+.debug-status.status-stale {
+    color: #fbbf24;
+}
+
+.debug-status.status-missing,
+.debug-status.status-invalid {
+    color: var(--bearish);
+}
