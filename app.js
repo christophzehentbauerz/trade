@@ -9,6 +9,7 @@
 
 const CONFIG = {
     refreshInterval: 300000, // 5 minutes in ms
+    signalHysteresis: 0.25, // Prevent rapid LONG/SHORT/NEUTRAL flip-flops near thresholds.
     apis: {
         coinGecko: 'https://api.coingecko.com/api/v3',
         marketOverview: '/api/market/overview',
@@ -1615,18 +1616,42 @@ function calculateScores() {
         state.scores.sentiment * CONFIG.weights.sentiment +
         state.scores.macro * CONFIG.weights.macro;
 
-    // Determine signal and confidence
-    if (weightedScore >= 6.5) {
-        state.signal = 'LONG';
-        state.confidence = Math.min(85, 50 + (weightedScore - 5) * 7);
-    } else if (weightedScore <= 3.5) {
-        state.signal = 'SHORT';
-        state.confidence = Math.min(85, 50 + (5 - weightedScore) * 7);
+    const previousSignal = state.signal;
+    const longThreshold = 6.5;
+    const shortThreshold = 3.5;
+    const hysteresis = Math.max(0, CONFIG.signalHysteresis || 0);
+
+    let finalSignal = 'NEUTRAL';
+
+    // Hysteresis keeps active signals stable and requires stronger confirmation for re-entry.
+    if (previousSignal === 'LONG') {
+        if (weightedScore >= (longThreshold - hysteresis)) {
+            finalSignal = 'LONG';
+        } else if (weightedScore <= shortThreshold) {
+            finalSignal = 'SHORT';
+        }
+    } else if (previousSignal === 'SHORT') {
+        if (weightedScore <= (shortThreshold + hysteresis)) {
+            finalSignal = 'SHORT';
+        } else if (weightedScore >= longThreshold) {
+            finalSignal = 'LONG';
+        }
     } else {
-        state.signal = 'NEUTRAL';
-        state.confidence = calculateNeutralConfidence(weightedScore);
+        if (weightedScore >= (longThreshold + hysteresis)) {
+            finalSignal = 'LONG';
+        } else if (weightedScore <= (shortThreshold - hysteresis)) {
+            finalSignal = 'SHORT';
+        }
     }
 
+    state.signal = finalSignal;
+    if (finalSignal === 'LONG') {
+        state.confidence = Math.min(85, 50 + (weightedScore - 5) * 7);
+    } else if (finalSignal === 'SHORT') {
+        state.confidence = Math.min(85, 50 + (5 - weightedScore) * 7);
+    } else {
+        state.confidence = calculateNeutralConfidence(weightedScore);
+    }
     return weightedScore;
 }
 

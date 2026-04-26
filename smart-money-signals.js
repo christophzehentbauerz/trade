@@ -51,6 +51,7 @@ const SmartMoneySignal = {
         // Metadata
         lastCandle: null,
         priceChange24h: null,
+        lastClosedCandleTime: null,
         lastUpdate: null,
         error: null
     },
@@ -194,11 +195,13 @@ const SmartMoneySignal = {
             console.log('📊 Updating Smart Money Signal...');
 
             const candles = await this.fetchKlines();
-            if (!candles || candles.length < this.config.emaHTF) {
+            const closedCandles = candles.slice(0, -1); // Always evaluate on closed candles only.
+
+            if (!closedCandles || closedCandles.length < this.config.emaHTF) {
                 throw new Error('Insufficient candle data');
             }
 
-            const closePrices = candles.map(c => c.close);
+            const closePrices = closedCandles.map(c => c.close);
             const currentPrice = closePrices[closePrices.length - 1];
             const candle24hAgo = candles.length >= 25 ? candles[candles.length - 25] : null;
             const priceChange24h = candle24hAgo && candle24hAgo.close
@@ -210,7 +213,8 @@ const SmartMoneySignal = {
             const emaSlow = this.calculateEMA(closePrices, this.config.emaSlow);
             const emaHTF = this.calculateEMA(closePrices, this.config.emaHTF);
             const rsi = this.calculateRSI(closePrices, this.config.rsiPeriod);
-            const atr = this.calculateATR(candles, this.config.atrPeriod);
+            const atr = this.calculateATR(closedCandles, this.config.atrPeriod);
+            const lastClosedCandle = closedCandles[closedCandles.length - 1];
 
             // Update state
             this.state.currentPrice = currentPrice;
@@ -219,7 +223,8 @@ const SmartMoneySignal = {
             this.state.emaHTF = emaHTF;
             this.state.rsi = rsi;
             this.state.atr = atr;
-            this.state.lastCandle = candles[candles.length - 1];
+            this.state.lastCandle = lastClosedCandle;
+            this.state.lastClosedCandleTime = lastClosedCandle.time;
             this.state.priceChange24h = priceChange24h;
             this.state.lastUpdate = new Date();
             this.state.error = null;

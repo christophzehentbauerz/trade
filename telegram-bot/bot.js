@@ -132,6 +132,11 @@ async function fetchKlines1d() {
     }
 }
 
+function useClosedCandles(candles) {
+    if (!Array.isArray(candles) || candles.length === 0) return [];
+    return candles.length > 1 ? candles.slice(0, -1) : candles.slice();
+}
+
 function resampleOHLCV(candles, hours) {
     const out = [];
     for (let i = 0; i < candles.length; i += hours) {
@@ -319,9 +324,16 @@ function buildTradePlan(ctx = {}) {
 async function calculateAll() {
     console.log('\n📊 Fetching market data...');
 
-    state.candles1h = await fetchKlines1h();
-    state.candles4h = await fetchKlines4h();
-    state.candles1d = await fetchKlines1d();
+    state.candles1h = useClosedCandles(await fetchKlines1h());
+    state.candles4h = useClosedCandles(await fetchKlines4h());
+    state.candles1d = useClosedCandles(await fetchKlines1d());
+
+    if (state.candles1h.length < CONFIG.strategy.emaHTF) {
+        throw new Error(`Insufficient closed 1h candles: ${state.candles1h.length}/${CONFIG.strategy.emaHTF}`);
+    }
+    if (state.candles4h.length < 200 || state.candles1d.length < 200) {
+        throw new Error('Insufficient closed HTF candles for MTF trend analysis');
+    }
 
     const closes = state.candles1h.map(c => c.close);
     state.currentPrice = closes[closes.length-1];
@@ -681,7 +693,7 @@ function loadPreviousState() {
     try {
         if (fs.existsSync(CONFIG.stateFile)) return JSON.parse(fs.readFileSync(CONFIG.stateFile, 'utf8'));
     } catch {}
-    return { signal: 'NEUTRAL', lastNotified: null, lastDailyUpdate: null, position: null, lastUpdateId: 0 };
+    return { signal: 'NEUTRAL', lastNotified: null, lastDailyUpdate: null, position: null, lastUpdateId: 0, lastCandleTime: null };
 }
 
 function saveState(data) {
@@ -702,6 +714,8 @@ async function checkSignal() {
 
     console.log('\n' + '='.repeat(50));
     const prev = loadPreviousState();
+    const latestClosedCandleTime = state.candles1h[state.candles1h.length - 1]?.time ?? null;
+    const isNewClosedCandle = latestClosedCandleTime !== null && latestClosedCandleTime !== prev.lastCandleTime;
     const hasPos = !!prev.position;
 
     if (hasPos) {
@@ -720,18 +734,46 @@ async function checkSignal() {
         const exits = checkExitConditions(pos, state.currentPrice, state.atr);
         if (exits.length) {
             await sendTelegramMessage(msgExit(pos, exits));
-            saveState({ signal: state.signal, lastNotified: new Date().toISOString(), lastDailyUpdate: prev.lastDailyUpdate, position: null, lastUpdateId: prev.lastUpdateId||0 });
+            saveState({
+                signal: state.signal,
+                lastNotified: new Date().toISOString(),
+                lastDailyUpdate: prev.lastDailyUpdate,
+                position: null,
+                lastUpdateId: prev.lastUpdateId || 0,
+                lastCandleTime: latestClosedCandleTime
+            });
         } else {
-            saveState({ signal: state.signal, lastNotified: prev.lastNotified, lastDailyUpdate: prev.lastDailyUpdate, position: pos, lastUpdateId: prev.lastUpdateId||0 });
+            saveState({
+                signal: state.signal,
+                lastNotified: prev.lastNotified,
+                lastDailyUpdate: prev.lastDailyUpdate,
+                position: pos,
+                lastUpdateId: prev.lastUpdateId || 0,
+                lastCandleTime: latestClosedCandleTime
+            });
         }
     } else {
         const changed = prev.signal !== state.signal;
-        if (state.signal === 'LONG' && (changed || prev.signal !== 'LONG')) {
+        if (state.signal === 'LONG' && isNewClosedCandle && (changed || prev.signal !== 'LONG')) {
             const newPos = { entryPrice: state.currentPrice, entryTime: new Date().toISOString(), trailingStop: state.currentPrice - state.atr * CONFIG.strategy.atrMultiplier, highestPrice: state.currentPrice, currentTier: 1, entryATR: state.atr };
             await sendTelegramMessage(msgEntry(newPos));
-            saveState({ signal: state.signal, lastNotified: new Date().toISOString(), lastDailyUpdate: prev.lastDailyUpdate, position: newPos, lastUpdateId: prev.lastUpdateId||0 });
+            saveState({
+                signal: state.signal,
+                lastNotified: new Date().toISOString(),
+                lastDailyUpdate: prev.lastDailyUpdate,
+                position: newPos,
+                lastUpdateId: prev.lastUpdateId || 0,
+                lastCandleTime: latestClosedCandleTime
+            });
         } else {
-            saveState({ signal: state.signal, lastNotified: prev.lastNotified, lastDailyUpdate: prev.lastDailyUpdate, position: null, lastUpdateId: prev.lastUpdateId||0 });
+            saveState({
+                signal: state.signal,
+                lastNotified: prev.lastNotified,
+                lastDailyUpdate: prev.lastDailyUpdate,
+                position: null,
+                lastUpdateId: prev.lastUpdateId || 0,
+                lastCandleTime: latestClosedCandleTime
+            });
         }
     }
     console.log('✅ Done!');

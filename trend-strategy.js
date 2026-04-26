@@ -47,6 +47,7 @@ const TrendStrategy = {
         positionSize: 0, // in BTC for 100k account example
 
         // Metadata
+        lastClosedCandleTime: null,
         lastUpdate: null,
         error: null
     },
@@ -235,18 +236,27 @@ const TrendStrategy = {
             console.log('📊 Updating TrendGuard Signal...');
 
             const candles = await this.fetchKlines();
-            if (candles.length < this.config.smaPeriod) {
-                throw new Error(`Insufficient data: ${candles.length}/${this.config.smaPeriod} candles`);
+            const closedCandles = candles.slice(0, -1); // Evaluate only on closed candles.
+            const minCandles = Math.max(
+                this.config.smaPeriod,
+                this.config.donchianPeriod + 1,
+                this.config.adxPeriod * 2 + 1,
+                this.config.atrPeriod + 1
+            );
+
+            if (closedCandles.length < minCandles) {
+                throw new Error(`Insufficient data: ${closedCandles.length}/${minCandles} closed candles`);
             }
 
-            const currentPrice = candles[candles.length - 1].close;
-            const closePrices = candles.map(c => c.close);
+            const currentPrice = closedCandles[closedCandles.length - 1].close;
+            const closePrices = closedCandles.map(c => c.close);
 
             // Calculate Indicators
             const sma800 = this.calculateSMA(closePrices, this.config.smaPeriod);
-            const donchian = this.calculateDonchian(candles, this.config.donchianPeriod);
-            const adx = this.calculateADX(candles, this.config.adxPeriod);
-            const atr = this.calculateATR(candles, this.config.atrPeriod);
+            const donchian = this.calculateDonchian(closedCandles, this.config.donchianPeriod);
+            const adx = this.calculateADX(closedCandles, this.config.adxPeriod);
+            const atr = this.calculateATR(closedCandles, this.config.atrPeriod);
+            this.state.lastClosedCandleTime = closedCandles[closedCandles.length - 1].time;
 
             // Store State
             this.state.currentPrice = currentPrice;

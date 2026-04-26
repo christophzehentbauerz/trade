@@ -2,9 +2,13 @@ name: BTC Signal Check
 
 on:
   schedule:
-    # Signal Check alle 5 Minuten
-    - cron: '*/5 * * * *'
-  workflow_dispatch: # Allows manual trigger
+    # Signal Check every 5 minutes
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: btc-signal-check
+  cancel-in-progress: true
 
 jobs:
   check-signals:
@@ -17,7 +21,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Restore bot state
         uses: actions/cache/restore@v4
@@ -34,22 +38,6 @@ jobs:
         run: |
           cd telegram-bot
           node bot.js check
-
-      - name: Daily Report (07:00 CET = 06:00 UTC)
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          HOUR=$(date -u +%H)
-          MIN=$(date -u +%M)
-          echo "Current UTC time: ${HOUR}:${MIN}"
-          if [ "$HOUR" = "06" ] && [ "$MIN" -lt "30" ]; then
-            echo "🕖 07:00 CET window (06:00-06:30 UTC) - sending daily report..."
-            cd telegram-bot
-            node bot.js daily
-          else
-            echo "⏭️ Not in daily report window (06:00-06:30 UTC), skipping."
-          fi
 
       - name: Save bot state
         uses: actions/cache/save@v4
