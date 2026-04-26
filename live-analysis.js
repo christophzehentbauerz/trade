@@ -130,9 +130,7 @@ async function generateLiveAnalysis() {
         console.warn('⚠️ Keine Volumendaten verfügbar für Analyse');
     }
 
-    // Calculate Confluence Score...
-
-    // Calculate Confluence Score (same logic as backtester)
+    // Calculate Confluence Score (pass volumeAnalysis directly to avoid stale-global issue)
     const confluenceScore = calculateLiveConfluenceScore(
         currentPrice,
         rsi,
@@ -140,7 +138,8 @@ async function generateLiveAnalysis() {
         fearGreed,
         ath,
         sr,
-        volatility
+        volatility,
+        volumeAnalysis
     );
 
     // Determine signal from unified coach recommendation (fallback to confluence)
@@ -301,7 +300,7 @@ function detectSupportResistance(priceWindow, currentPrice) {
     };
 }
 
-function calculateLiveConfluenceScore(price, rsi, trend, fearGreed, ath, sr, volatility) {
+function calculateLiveConfluenceScore(price, rsi, trend, fearGreed, ath, sr, volatility, volumeAnalysis) {
     const scores = {
         trend: 0,
         momentum: 0,
@@ -357,9 +356,7 @@ function calculateLiveConfluenceScore(price, rsi, trend, fearGreed, ath, sr, vol
     else if (direction === 'SHORT' && hasFearGreed && fearGreed > 50) scores.marketStructure = 1;
 
     // 5. Volume & Macro (0-2)
-    // Replaced pure volatility macro with Volume/OBV/RVOL which is more actionable
-    // If OBV trend matches direction OR RVOL is high/extreme -> +1 point each
-    const volAnalysis = window.lastAnalysisData?.volumeAnalysis;
+    const volAnalysis = volumeAnalysis ?? window.lastAnalysisData?.volumeAnalysis;
 
     if (volAnalysis) {
         // Point 1: RVOL confirmation (High volume interests)
@@ -390,7 +387,7 @@ function generateReasons(confluenceScore, rsi, trend, fearGreed, sr) {
     const reasons = [];
 
     if (confluenceScore.breakdown.trend >= 1) {
-        const trendText = trend === 'up' ? 'Aufwaertstrend' : trend === 'down' ? 'Abwaertstrend' : 'Seitwaertsbewegung';
+        const trendText = trend === 'up' ? 'Aufwärtstrend' : trend === 'down' ? 'Abwärtstrend' : 'Seitwärtsbewegung';
         reasons.push(`Trend: ${trendText} stuetzt das Signal`);
     }
 
