@@ -117,8 +117,14 @@ async function fetchKlines4h() {
         if (data.Response !== 'Success') throw new Error(data.Message);
         return data.Data.Data.map(c => ({ close: c.close, high: c.high, low: c.low }));
     } catch (e) {
-        // resample from 1h
-        return resampleOHLCV(state.candles1h, 4);
+        console.error('CryptoCompare 4h failed:', e.message);
+        try {
+            const data = await fetchJSON(`${CONFIG.apis.binance}/klines?symbol=BTCUSDT&interval=4h&limit=1000`);
+            return data.map(c => ({ close: +c[4], high: +c[2], low: +c[3] }));
+        } catch (e2) {
+            console.error('Binance 4h failed, resampling from 1h:', e2.message);
+            return resampleOHLCV(state.candles1h, 4);
+        }
     }
 }
 
@@ -128,7 +134,14 @@ async function fetchKlines1d() {
         if (data.Response !== 'Success') throw new Error(data.Message);
         return data.Data.Data.map(c => ({ close: c.close, high: c.high, low: c.low }));
     } catch (e) {
-        return resampleOHLCV(state.candles1h, 24);
+        console.error('CryptoCompare 1d failed:', e.message);
+        try {
+            const data = await fetchJSON(`${CONFIG.apis.binance}/klines?symbol=BTCUSDT&interval=1d&limit=1000`);
+            return data.map(c => ({ close: +c[4], high: +c[2], low: +c[3] }));
+        } catch (e2) {
+            console.error('Binance 1d failed, resampling from 1h:', e2.message);
+            return resampleOHLCV(state.candles1h, 24);
+        }
     }
 }
 
@@ -389,6 +402,34 @@ async function sendTelegramMessage(text, chatId) {
     }
 }
 
+function assertTelegramConfigured() {
+    if (!CONFIG.telegram.botToken || !CONFIG.telegram.chatId) {
+        throw new Error('Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID');
+    }
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function sendTelegramMessageWithRetry(text, chatId, options = {}) {
+    const token  = CONFIG.telegram.botToken;
+    const target = chatId || CONFIG.telegram.chatId;
+    if (!token || !target) return false;
+
+    const attempts = Math.max(1, options.attempts || 3);
+    const delayMs  = Math.max(0, options.delayMs || 1500);
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+        const ok = await sendTelegramMessage(text, chatId);
+        if (ok) return true;
+        if (attempt < attempts) {
+            console.warn(`Retrying Telegram send (${attempt}/${attempts}) ...`);
+            await sleep(delayMs * attempt);
+        }
+    }
+    return false;
+}
+
 // ─────────────────────────────────────────
 // COACH RESPONSES
 // ─────────────────────────────────────────
@@ -499,7 +540,7 @@ function coachFallback(q) {
 async function pollAndRespond() {
     const token = CONFIG.telegram.botToken;
     if (!token) return;
-    const prev = loadPreviousState();
+    let prev = loadPreviousState();
     const offset = prev.lastUpdateId ? prev.lastUpdateId + 1 : 0;
 
     let updates;
@@ -531,10 +572,18 @@ async function pollAndRespond() {
         else if (text.startsWith('/hilfe') || text.startsWith('/help') || text.startsWith('/start')) reply = coachAnswerHelp();
         else reply = coachFallback(text);
 
-        await sendTelegramMessage(reply, chatId);
+        const replySent = await sendTelegramMessageWithRetry(reply, chatId, { attempts: 3, delayMs: 900 });
+        if (!replySent) {
+            prev = enqueuePendingNotification(prev, buildPendingNotification({
+                type: 'CHAT_REPLY',
+                text: reply,
+                chatId,
+                dedupeKey: `reply-${upd.update_id}`
+            }));
+        }
     }
 
-    saveState({ ...prev, lastUpdateId: lastId });
+    saveState(buildPersistedState(prev, { lastUpdateId: lastId }));
 }
 
 // ─────────────────────────────────────────
@@ -689,31 +738,107 @@ function msgTrailUpdate(pos, info) {
 // ─────────────────────────────────────────
 // STATE PERSISTENCE
 // ─────────────────────────────────────────
+const DEFAULT_PERSISTED_STATE = {
+    signal: 'NEUTRAL',
+    lastNotified: null,
+    lastDailyUpdate: null,
+    position: null,
+    lastUpdateId: 0,
+    lastCandleTime: null,
+    pendingNotifications: []
+};
+
+function normalizePersistedState(data) {
+    const next = { ...DEFAULT_PERSISTED_STATE, ...(data || {}) };
+    if (!Array.isArray(next.pendingNotifications)) next.pendingNotifications = [];
+    if (typeof next.lastUpdateId !== 'number') next.lastUpdateId = 0;
+    return next;
+}
+
 function loadPreviousState() {
     try {
-        if (fs.existsSync(CONFIG.stateFile)) return JSON.parse(fs.readFileSync(CONFIG.stateFile, 'utf8'));
-    } catch {}
-    return { signal: 'NEUTRAL', lastNotified: null, lastDailyUpdate: null, position: null, lastUpdateId: 0, lastCandleTime: null };
+        if (fs.existsSync(CONFIG.stateFile)) {
+            return normalizePersistedState(JSON.parse(fs.readFileSync(CONFIG.stateFile, 'utf8')));
+        }
+    } catch (e) {
+        console.error('loadPreviousState:', e.message);
+    }
+    return normalizePersistedState();
 }
 
 function saveState(data) {
-    try { fs.writeFileSync(CONFIG.stateFile, JSON.stringify(data)); } catch (e) { console.error('saveState:', e.message); }
+    try {
+        fs.writeFileSync(CONFIG.stateFile, JSON.stringify(normalizePersistedState(data)));
+    } catch (e) {
+        console.error('saveState:', e.message);
+    }
+}
+
+function buildPersistedState(prev, overrides = {}) {
+    return { ...normalizePersistedState(prev), ...overrides };
+}
+
+function buildPendingNotification({ type, text, chatId, dedupeKey }) {
+    return {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+        type: type || 'GENERIC',
+        text,
+        chatId: chatId || null,
+        dedupeKey: dedupeKey || null,
+        createdAt: new Date().toISOString(),
+        attempts: 0
+    };
+}
+
+function enqueuePendingNotification(prev, notification) {
+    const next = normalizePersistedState(prev);
+    if (!notification || !notification.text) return next;
+    if (notification.dedupeKey && next.pendingNotifications.some(n => n?.dedupeKey === notification.dedupeKey)) {
+        return next;
+    }
+    return { ...next, pendingNotifications: [...next.pendingNotifications, notification] };
+}
+
+async function flushPendingNotifications(prev) {
+    const next = normalizePersistedState(prev);
+    if (!next.pendingNotifications.length) return next;
+
+    console.log(`📬 Replaying ${next.pendingNotifications.length} queued Telegram message(s)...`);
+    const remaining = [];
+    for (const item of next.pendingNotifications) {
+        const ok = await sendTelegramMessageWithRetry(item.text, item.chatId, { attempts: 3, delayMs: 1200 });
+        if (ok) {
+            console.log(`✅ Delivered queued notification (${item.type})`);
+            continue;
+        }
+        remaining.push({
+            ...item,
+            attempts: (item.attempts || 0) + 1,
+            lastTriedAt: new Date().toISOString()
+        });
+    }
+    return { ...next, pendingNotifications: remaining };
 }
 
 // ─────────────────────────────────────────
 // MAIN FLOWS
 // ─────────────────────────────────────────
 async function checkSignal() {
+    assertTelegramConfigured();
     console.log('🚀 BTC Smart Money Coach — Signal Check\n' + '='.repeat(50));
     await calculateAll();
     await fetchFearGreed();
     await fetch24hChange();
 
-    // Respond to any pending Telegram messages
+    // First drain any queued notifications from previous failed runs.
+    let prev = await flushPendingNotifications(loadPreviousState());
+    saveState(prev);
+
+    // Respond to any pending Telegram messages.
     await pollAndRespond();
 
     console.log('\n' + '='.repeat(50));
-    const prev = loadPreviousState();
+    prev = loadPreviousState();
     const latestClosedCandleTime = state.candles1h[state.candles1h.length - 1]?.time ?? null;
     const isNewClosedCandle = latestClosedCandleTime !== null && latestClosedCandleTime !== prev.lastCandleTime;
     const hasPos = !!prev.position;
@@ -726,71 +851,108 @@ async function checkSignal() {
         if (state.currentPrice > (pos.highestPrice || pos.entryPrice)) pos.highestPrice = state.currentPrice;
 
         const info  = calcTrailingStop(pos.entryPrice, state.currentPrice, state.atr);
-        const oldStop = pos.trailingStop, oldTier = pos.currentTier || 1;
+        const oldTier = pos.currentTier || 1;
         if (info.newStop > pos.trailingStop) { pos.trailingStop = info.newStop; }
         pos.currentTier = info.tier;
-        if (info.tier > oldTier) await sendTelegramMessage(msgTrailUpdate(pos, info));
+        if (info.tier > oldTier) {
+            const trailMsg = msgTrailUpdate(pos, info);
+            const trailSent = await sendTelegramMessageWithRetry(trailMsg, null, { attempts: 3, delayMs: 900 });
+            if (!trailSent) {
+                prev = enqueuePendingNotification(prev, buildPendingNotification({
+                    type: 'TRAIL_UPDATE',
+                    text: trailMsg,
+                    dedupeKey: `trail-${pos.entryTime}-tier-${info.tier}-${latestClosedCandleTime || 'na'}`
+                }));
+            }
+        }
 
         const exits = checkExitConditions(pos, state.currentPrice, state.atr);
         if (exits.length) {
-            await sendTelegramMessage(msgExit(pos, exits));
-            saveState({
+            const exitMsg = msgExit(pos, exits);
+            const exitSent = await sendTelegramMessageWithRetry(exitMsg);
+            if (!exitSent) {
+                prev = enqueuePendingNotification(prev, buildPendingNotification({
+                    type: 'EXIT',
+                    text: exitMsg,
+                    dedupeKey: `exit-${pos.entryTime}-${latestClosedCandleTime || 'na'}`
+                }));
+            }
+            saveState(buildPersistedState(prev, {
                 signal: state.signal,
-                lastNotified: new Date().toISOString(),
-                lastDailyUpdate: prev.lastDailyUpdate,
+                lastNotified: exitSent ? new Date().toISOString() : prev.lastNotified,
                 position: null,
-                lastUpdateId: prev.lastUpdateId || 0,
                 lastCandleTime: latestClosedCandleTime
-            });
+            }));
         } else {
-            saveState({
+            saveState(buildPersistedState(prev, {
                 signal: state.signal,
                 lastNotified: prev.lastNotified,
-                lastDailyUpdate: prev.lastDailyUpdate,
                 position: pos,
-                lastUpdateId: prev.lastUpdateId || 0,
                 lastCandleTime: latestClosedCandleTime
-            });
+            }));
         }
     } else {
         const changed = prev.signal !== state.signal;
         if (state.signal === 'LONG' && isNewClosedCandle && (changed || prev.signal !== 'LONG')) {
             const newPos = { entryPrice: state.currentPrice, entryTime: new Date().toISOString(), trailingStop: state.currentPrice - state.atr * CONFIG.strategy.atrMultiplier, highestPrice: state.currentPrice, currentTier: 1, entryATR: state.atr };
-            await sendTelegramMessage(msgEntry(newPos));
-            saveState({
+            const entryMsg = msgEntry(newPos);
+            const entrySent = await sendTelegramMessageWithRetry(entryMsg);
+            if (!entrySent) {
+                prev = enqueuePendingNotification(prev, buildPendingNotification({
+                    type: 'ENTRY',
+                    text: entryMsg,
+                    dedupeKey: `entry-${newPos.entryTime}`
+                }));
+            }
+            saveState(buildPersistedState(prev, {
                 signal: state.signal,
-                lastNotified: new Date().toISOString(),
-                lastDailyUpdate: prev.lastDailyUpdate,
+                lastNotified: entrySent ? new Date().toISOString() : prev.lastNotified,
                 position: newPos,
-                lastUpdateId: prev.lastUpdateId || 0,
                 lastCandleTime: latestClosedCandleTime
-            });
+            }));
         } else {
-            saveState({
+            saveState(buildPersistedState(prev, {
                 signal: state.signal,
                 lastNotified: prev.lastNotified,
-                lastDailyUpdate: prev.lastDailyUpdate,
                 position: null,
-                lastUpdateId: prev.lastUpdateId || 0,
                 lastCandleTime: latestClosedCandleTime
-            });
+            }));
         }
+    }
+    const finalState = loadPreviousState();
+    if (finalState.pendingNotifications.length) {
+        throw new Error(`Telegram delivery pending for ${finalState.pendingNotifications.length} queued message(s)`);
     }
     console.log('✅ Done!');
 }
 
 async function sendDailyUpdate() {
+    assertTelegramConfigured();
     console.log('📅 BTC Smart Money Coach — Daily Update\n' + '='.repeat(50));
     await calculateAll();
     await fetchFearGreed();
     await fetch24hChange();
     const news = await fetchNews();
+    let prev = await flushPendingNotifications(loadPreviousState());
+    saveState(prev);
     await pollAndRespond();
     const msg = await formatDailyUpdate(news);
-    const ok  = await sendTelegramMessage(msg);
-    if (!ok) throw new Error('Telegram send failed');
-    const prev = loadPreviousState();
-    saveState({ ...prev, lastDailyUpdate: new Date().toISOString() });
+    const ok  = await sendTelegramMessageWithRetry(msg);
+    if (!ok) {
+        prev = enqueuePendingNotification(loadPreviousState(), buildPendingNotification({
+            type: 'DAILY_REPORT',
+            text: msg,
+            dedupeKey: `daily-${new Date().toISOString().slice(0, 10)}`
+        }));
+        saveState(prev);
+        throw new Error('Telegram send failed; daily report queued for retry');
+    }
+    prev = loadPreviousState();
+    saveState(buildPersistedState(prev, { lastDailyUpdate: new Date().toISOString() }));
+    const finalState = loadPreviousState();
+    if (finalState.pendingNotifications.length) {
+        throw new Error(`Telegram delivery pending for ${finalState.pendingNotifications.length} queued message(s)`);
+    }
     console.log('✅ Daily update sent!');
 }
 
@@ -801,5 +963,5 @@ const cmd = (process.argv[2] || 'check');
 if (cmd === 'daily') {
     sendDailyUpdate().catch(e => { console.error('💥', e.message); process.exit(1); });
 } else {
-    checkSignal().catch(e => { console.error('⚠️', e.message); });
+    checkSignal().catch(e => { console.error('⚠️', e.message); process.exit(1); });
 }
