@@ -1011,6 +1011,7 @@ async function checkSignal() {
                 signal: state.signal,
                 lastNotified: exitSent ? new Date().toISOString() : prev.lastNotified,
                 position: null,
+                lastTrendUp: state.trendUp,
                 lastCandleTime: latestClosedCandleTime
             }));
         } else {
@@ -1018,6 +1019,7 @@ async function checkSignal() {
                 signal: state.signal,
                 lastNotified: prev.lastNotified,
                 position: pos,
+                lastTrendUp: state.trendUp,
                 lastCandleTime: latestClosedCandleTime
             }));
         }
