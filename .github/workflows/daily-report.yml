@@ -30,21 +30,26 @@ jobs:
           restore-keys: |
             bot-state-
 
-      - name: Install Dependencies
+      - name: Validate secrets
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          cd telegram-bot
-          npm install --production 2>/dev/null || echo 'No dependencies to install'
+          if [ -z "$TELEGRAM_BOT_TOKEN" ]; then
+            echo "❌ TELEGRAM_BOT_TOKEN secret is not set"
+            exit 1
+          fi
+          if [ -z "$TELEGRAM_CHAT_ID" ]; then
+            echo "❌ TELEGRAM_CHAT_ID secret is not set"
+            exit 1
+          fi
+          echo "✅ Secrets configured"
 
       - name: Send Daily Report
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          echo "=== DIAGNOSTICS ==="
-          echo "Node version: $(node --version)"
-          echo "Bot token length: ${#TELEGRAM_BOT_TOKEN}"
-          echo "Chat ID length: ${#TELEGRAM_CHAT_ID}"
-          echo "=== RUNNING BOT ==="
           cd telegram-bot
           node bot.js daily
 
@@ -53,4 +58,4 @@ jobs:
         if: always()
         with:
           path: /tmp/btc-smart-money-state.json
-          key: bot-state-${{ github.run_id }}
+          key: bot-state-${{ github.run_id }}-${{ github.run_attempt }}
