@@ -6655,6 +6655,11 @@ body::before {
     line-height: 1.4;
 }
 
+.live-timestamp.data-age-fresh  { color: var(--bullish); }
+.live-timestamp.data-age-warn   { color: #f59e0b; }
+.live-timestamp.data-age-stale  { color: var(--bearish); font-weight: 600; }
+.live-timestamp.data-age-missing { color: var(--bearish); opacity: 0.7; }
+
 .field-timestamp {
     margin-top: 4px;
 }

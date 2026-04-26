@@ -27,7 +27,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: /tmp/btc-smart-money-state.json
-          key: bot-state-${{ github.run_id }}
+          key: bot-state-latest
           restore-keys: |
             bot-state-
 
@@ -56,4 +56,4 @@ jobs:
         if: always()
         with:
           path: /tmp/btc-smart-money-state.json
-          key: bot-state-${{ github.run_id }}
+          key: bot-state-latest
