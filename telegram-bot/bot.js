@@ -502,6 +502,20 @@ function coachAnswerStatus() {
     msg += `${s.htfFilter ? '✅' : '❌'} Über EMA 800\n`;
     msg += `${s.rsiInZone ? '✅' : '❌'} RSI in Zone\n`;
 
+    // Risk Management
+    const dailyLimitPct = CONFIG.coach.maxDailyLoss;
+    const dailyUsed = Math.abs(Math.min(prev.dailyPnL || 0, 0));
+    const dailyBar = dailyUsed >= dailyLimitPct ? '🔴' : dailyUsed >= dailyLimitPct * 0.67 ? '🟡' : '🟢';
+    msg += `\n💼 <b>Risk heute</b>\n`;
+    msg += `  ${dailyBar} Daily PnL: ${(prev.dailyPnL || 0) >= 0 ? '+' : ''}${(prev.dailyPnL || 0).toFixed(2)}% (Limit: -${dailyLimitPct}%)\n`;
+    msg += `  Trades heute: ${prev.dailyTradeCount || 0}\n`;
+    if (prev.openRiskPct > 0) msg += `  Open Risk: ${(prev.openRiskPct || 0).toFixed(2)}% (Max: ${CONFIG.coach.maxOpenRisk}%)\n`;
+
+    if (prev.tradeHistory && prev.tradeHistory.length > 0) {
+        const last = prev.tradeHistory[prev.tradeHistory.length - 1];
+        msg += `  Letzter Trade: ${last.pnlPct >= 0 ? '+' : ''}${last.pnlPct.toFixed(2)}% (${last.exitReason})\n`;
+    }
+
     if (prev.position) {
         const pos = prev.position;
         const pnl = ((s.currentPrice - pos.entryPrice) / pos.entryPrice * 100);
@@ -745,14 +759,57 @@ const DEFAULT_PERSISTED_STATE = {
     position: null,
     lastUpdateId: 0,
     lastCandleTime: null,
-    pendingNotifications: []
+    pendingNotifications: [],
+    // Risk management tracking
+    dailyPnL: 0,
+    dailyTradeCount: 0,
+    lastDailyReset: null,
+    openRiskPct: 0,
+    tradeHistory: []
 };
 
 function normalizePersistedState(data) {
     const next = { ...DEFAULT_PERSISTED_STATE, ...(data || {}) };
     if (!Array.isArray(next.pendingNotifications)) next.pendingNotifications = [];
+    if (!Array.isArray(next.tradeHistory)) next.tradeHistory = [];
     if (typeof next.lastUpdateId !== 'number') next.lastUpdateId = 0;
+    if (typeof next.dailyPnL !== 'number') next.dailyPnL = 0;
+    if (typeof next.dailyTradeCount !== 'number') next.dailyTradeCount = 0;
+    if (typeof next.openRiskPct !== 'number') next.openRiskPct = 0;
     return next;
+}
+
+function resetDailyStatsIfNeeded(prev) {
+    const today = new Date().toISOString().split('T')[0];
+    if (prev.lastDailyReset === today) return prev;
+    return { ...prev, dailyPnL: 0, dailyTradeCount: 0, lastDailyReset: today };
+}
+
+function calcOpenRiskPct(position, currentPrice, accountSize) {
+    if (!position || !position.trailingStop || !currentPrice) return 0;
+    const riskPerUnit = Math.max(currentPrice - position.trailingStop, 0);
+    const positionValue = position.entryPrice * (accountSize * (CONFIG.coach.riskPerTrade / 100) / Math.max(position.entryPrice - position.trailingStop, 0.001));
+    return (riskPerUnit / accountSize) * 100;
+}
+
+function recordClosedTrade(prev, position, exitPrice, exitReason) {
+    const pnlPct = ((exitPrice - position.entryPrice) / position.entryPrice) * 100;
+    const trade = {
+        entryTime: position.entryTime,
+        exitTime: new Date().toISOString(),
+        entryPrice: position.entryPrice,
+        exitPrice,
+        pnlPct: parseFloat(pnlPct.toFixed(4)),
+        exitReason
+    };
+    const history = [...(prev.tradeHistory || []), trade].slice(-50);
+    return {
+        ...prev,
+        tradeHistory: history,
+        dailyPnL: parseFloat(((prev.dailyPnL || 0) + pnlPct).toFixed(4)),
+        dailyTradeCount: (prev.dailyTradeCount || 0) + 1,
+        openRiskPct: 0
+    };
 }
 
 function loadPreviousState() {
@@ -852,10 +909,19 @@ async function checkSignal() {
     await pollAndRespond();
 
     console.log('\n' + '='.repeat(50));
-    prev = loadPreviousState();
+    prev = resetDailyStatsIfNeeded(loadPreviousState());
+    saveState(prev);
+
     const latestClosedCandleTime = state.candles1h[state.candles1h.length - 1]?.time ?? null;
     const isNewClosedCandle = latestClosedCandleTime !== null && latestClosedCandleTime !== prev.lastCandleTime;
     const hasPos = !!prev.position;
+
+    // Update open risk in state
+    if (hasPos) {
+        prev = { ...prev, openRiskPct: calcOpenRiskPct(prev.position, state.currentPrice, CONFIG.coach.accountSize) };
+    }
+
+    console.log(`📊 Daily PnL: ${prev.dailyPnL >= 0 ? '+' : ''}${prev.dailyPnL.toFixed(2)}% | Trades heute: ${prev.dailyTradeCount} | Open Risk: ${prev.openRiskPct.toFixed(2)}%`);
 
     if (hasPos) {
         const pos = prev.position;
@@ -891,6 +957,7 @@ async function checkSignal() {
                     dedupeKey: `exit-${pos.entryTime}-${latestClosedCandleTime || 'na'}`
                 }));
             }
+            prev = recordClosedTrade(prev, pos, state.currentPrice, exits[0]?.type || 'UNKNOWN');
             saveState(buildPersistedState(prev, {
                 signal: state.signal,
                 lastNotified: exitSent ? new Date().toISOString() : prev.lastNotified,
@@ -908,6 +975,12 @@ async function checkSignal() {
     } else {
         const changed = prev.signal !== state.signal;
         if (state.signal === 'LONG' && isNewClosedCandle && (changed || prev.signal !== 'LONG')) {
+            const plan = buildTradePlan({ dailyPnl: prev.dailyPnL, openRisk: prev.openRiskPct });
+            if (plan.blocked) {
+                console.log(`🚫 Entry blocked by guardrails: ${plan.guardrails.join(', ')}`);
+                saveState(buildPersistedState(prev, { signal: state.signal, position: null, lastCandleTime: latestClosedCandleTime }));
+                return;
+            }
             const newPos = { entryPrice: state.currentPrice, entryTime: new Date().toISOString(), trailingStop: state.currentPrice - state.atr * CONFIG.strategy.atrMultiplier, highestPrice: state.currentPrice, currentTier: 1, entryATR: state.atr };
             const entryMsg = msgEntry(newPos);
             const entrySent = await sendTelegramMessageWithRetry(entryMsg);

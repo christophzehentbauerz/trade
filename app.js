@@ -205,6 +205,29 @@ function formatLiveTimestamp(value) {
     }) + ' UTC';
 }
 
+function formatDataAge(value) {
+    const timestampMs = parseFearGreedTimestamp(value);
+    if (!timestampMs) return null;
+    const ageMs = Date.now() - timestampMs;
+    if (ageMs < 0) return 'gerade eben';
+    const mins = Math.floor(ageMs / 60000);
+    const hours = Math.floor(ageMs / 3600000);
+    const days = Math.floor(ageMs / 86400000);
+    if (mins < 2) return 'gerade eben';
+    if (mins < 60) return `${mins}min alt`;
+    if (hours < 24) return `${hours}h alt`;
+    return `${days}d alt`;
+}
+
+function getDataAgeClass(value, thresholds = { warn: 6 * 3600000, stale: 24 * 3600000 }) {
+    const timestampMs = parseFearGreedTimestamp(value);
+    if (!timestampMs) return 'data-age-missing';
+    const ageMs = Date.now() - timestampMs;
+    if (ageMs > thresholds.stale) return 'data-age-stale';
+    if (ageMs > thresholds.warn) return 'data-age-warn';
+    return 'data-age-fresh';
+}
+
 function resetUpdateRequestCache() {
     updateRequestCache = {
         marketOverviewPromise: null,
@@ -1710,7 +1733,12 @@ function updatePriceCard() {
         coinGeckoTimestampEl.textContent = `CoinGecko Stand: ${formatLiveTimestamp(state.priceTimestamp)}`;
     }
     if (fearGreedTimestampEl) {
-        fearGreedTimestampEl.textContent = `Fear & Greed Stand: ${formatLiveTimestamp(state.fearGreedTimestamp)}`;
+        const age = formatDataAge(state.fearGreedTimestamp);
+        const ageClass = getDataAgeClass(state.fearGreedTimestamp, { warn: 6 * 3600000, stale: 24 * 3600000 });
+        const ageLabel = age ? ` (${age})` : '';
+        const warnIcon = ageClass === 'data-age-stale' ? ' ⚠️' : ageClass === 'data-age-warn' ? ' 🕐' : '';
+        fearGreedTimestampEl.textContent = `Fear & Greed Stand: ${formatLiveTimestamp(state.fearGreedTimestamp)}${ageLabel}${warnIcon}`;
+        fearGreedTimestampEl.className = `live-timestamp ${ageClass}`;
     }
 
     document.getElementById('marketCap').title = 'Quelle: CoinGecko';
