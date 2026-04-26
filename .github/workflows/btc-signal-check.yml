@@ -32,12 +32,15 @@ jobs:
             bot-state-
 
       - name: Validate secrets
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          if [ -z "${{ secrets.TELEGRAM_BOT_TOKEN }}" ]; then
+          if [ -z "$TELEGRAM_BOT_TOKEN" ]; then
             echo "❌ TELEGRAM_BOT_TOKEN secret is not set"
             exit 1
           fi
-          if [ -z "${{ secrets.TELEGRAM_CHAT_ID }}" ]; then
+          if [ -z "$TELEGRAM_CHAT_ID" ]; then
             echo "❌ TELEGRAM_CHAT_ID secret is not set"
             exit 1
           fi

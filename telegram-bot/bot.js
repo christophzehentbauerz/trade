@@ -25,7 +25,9 @@ const CONFIG = {
         },
         deathCrossMaxProfit: 0.05,
         timeStopHours: 72,
-        timeStopMinProfit: 0.005
+        timeStopMinProfit: 0.005,
+        adxPeriod: 14,
+        adxThreshold: 20
     },
     coach: {
         accountSize:  5000,
@@ -56,7 +58,7 @@ let state = {
     signal: 'NEUTRAL', signalStrength: 0, stopLoss: 0,
     fearGreedIndex: 0, priceChange24h: 0,
     mtf: { trend1h: 'neutral', trend4h: 'neutral', trend1d: 'neutral', aligned: 'mixed' },
-    signalScore: 0,
+    signalScore: 0, adx: 0, trendUp: false,
     lastUpdate: null,
     candles1h: [],
     candles4h: [],
@@ -101,7 +103,7 @@ function fetchJSON(url, postData) {
 // ─────────────────────────────────────────
 async function fetchKlines1h() {
     try {
-        const data = await fetchJSON(`${CONFIG.apis.cryptoCompare}/v2/histohour?fsym=BTC&tsym=USD&limit=1000`);
+        const data = await fetchJSON(`${CONFIG.apis.cryptoCompare}/v2/histohour?fsym=BTC&tsym=USD&limit=2000`);
         if (data.Response !== 'Success') throw new Error(data.Message);
         return data.Data.Data.map(c => ({ time: c.time*1000, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volumefrom }));
     } catch (e) {
@@ -130,17 +132,25 @@ async function fetchKlines4h() {
 
 async function fetchKlines1d() {
     try {
-        const data = await fetchJSON(`${CONFIG.apis.cryptoCompare}/v2/histoday?fsym=BTC&tsym=USD&limit=1000`);
+        const data = await fetchJSON(`${CONFIG.apis.cryptoCompare}/v2/histoday?fsym=BTC&tsym=USD&limit=365`);
         if (data.Response !== 'Success') throw new Error(data.Message);
         return data.Data.Data.map(c => ({ close: c.close, high: c.high, low: c.low }));
     } catch (e) {
         console.error('CryptoCompare 1d failed:', e.message);
         try {
-            const data = await fetchJSON(`${CONFIG.apis.binance}/klines?symbol=BTCUSDT&interval=1d&limit=1000`);
-            return data.map(c => ({ close: +c[4], high: +c[2], low: +c[3] }));
+            // CoinGecko: free, no API key, not geo-blocked — returns [ts,o,h,l,c]
+            const cg = await fetchJSON('https://api.coingecko.com/api/v3/coins/bitcoin/ohlc?vs_currency=usd&days=365');
+            if (!Array.isArray(cg) || !cg.length) throw new Error('empty');
+            return cg.map(c => ({ close: c[4], high: c[2], low: c[3] }));
         } catch (e2) {
-            console.error('Binance 1d failed, resampling from 1h:', e2.message);
-            return resampleOHLCV(state.candles1h, 24);
+            console.error('CoinGecko 1d failed:', e2.message);
+            try {
+                const data = await fetchJSON(`${CONFIG.apis.binance}/klines?symbol=BTCUSDT&interval=1d&limit=365`);
+                return data.map(c => ({ close: +c[4], high: +c[2], low: +c[3] }));
+            } catch (e3) {
+                console.error('Binance 1d failed, resampling from 1h:', e3.message);
+                return resampleOHLCV(state.candles1h, 24);
+            }
         }
     }
 }
@@ -226,6 +236,38 @@ function calcATR(candles, period = 14) {
     let atr = trs.slice(0, period).reduce((a,b)=>a+b,0)/period;
     for (let i = period; i < trs.length; i++) atr = trs[i]*k + atr*(1-k);
     return atr;
+}
+
+function calcADX(candles, period = 14) {
+    const n = candles.length;
+    if (n < period * 2 + 2) return NaN;
+    const plusDM = [], minusDM = [], tr = [];
+    for (let i = 1; i < n; i++) {
+        const up = candles[i].high - candles[i-1].high;
+        const dn = candles[i-1].low  - candles[i].low;
+        plusDM.push((up > dn && up > 0) ? up : 0);
+        minusDM.push((dn > up && dn > 0) ? dn : 0);
+        const h = candles[i].high, l = candles[i].low, pc = candles[i-1].close;
+        tr.push(Math.max(h-l, Math.abs(h-pc), Math.abs(l-pc)));
+    }
+    // Wilder smoothing
+    let smTR = tr.slice(0, period).reduce((a,b)=>a+b,0);
+    let smP  = plusDM.slice(0, period).reduce((a,b)=>a+b,0);
+    let smM  = minusDM.slice(0, period).reduce((a,b)=>a+b,0);
+    const dxArr = [];
+    for (let i = period; i < tr.length; i++) {
+        smTR = smTR - smTR/period + tr[i];
+        smP  = smP  - smP/period  + plusDM[i];
+        smM  = smM  - smM/period  + minusDM[i];
+        const pDI = smTR ? 100*smP/smTR : 0;
+        const mDI = smTR ? 100*smM/smTR : 0;
+        const sum = pDI + mDI;
+        dxArr.push(sum ? 100*Math.abs(pDI-mDI)/sum : 0);
+    }
+    if (dxArr.length < period) return NaN;
+    let adx = dxArr.slice(0, period).reduce((a,b)=>a+b,0) / period;
+    for (let i = period; i < dxArr.length; i++) adx = (adx*(period-1) + dxArr[i]) / period;
+    return adx;
 }
 
 function trendFromCandles(candles) {
@@ -344,8 +386,12 @@ async function calculateAll() {
     if (state.candles1h.length < CONFIG.strategy.emaHTF) {
         throw new Error(`Insufficient closed 1h candles: ${state.candles1h.length}/${CONFIG.strategy.emaHTF}`);
     }
-    if (state.candles4h.length < 200 || state.candles1d.length < 200) {
-        throw new Error('Insufficient closed HTF candles for MTF trend analysis');
+    if (state.candles4h.length < 50) {
+        throw new Error(`Insufficient 4h candles: ${state.candles4h.length}`);
+    }
+    // 1d: warn if few candles but don't abort — trendFromCandles returns 'neutral' if < 50
+    if (state.candles1d.length < 50) {
+        console.warn(`⚠️ Only ${state.candles1d.length} daily candles — 1d trend will be neutral`);
     }
 
     const closes = state.candles1h.map(c => c.close);
@@ -360,6 +406,8 @@ async function calculateAll() {
     state.goldenCross = state.emaFast > state.emaSlow;
     state.htfFilter   = state.currentPrice > state.emaHTF;
     state.rsiInZone   = state.rsi >= CONFIG.strategy.rsiMin && state.rsi <= CONFIG.strategy.rsiMax;
+    state.trendUp     = state.goldenCross && state.htfFilter;
+    state.adx         = calcADX(state.candles1h, CONFIG.strategy.adxPeriod);
     state.signalStrength = (state.goldenCross?1:0) + (state.htfFilter?1:0) + (state.rsiInZone?1:0);
 
     if (state.goldenCross && state.htfFilter && state.rsiInZone) state.signal = 'LONG';
@@ -759,8 +807,8 @@ const DEFAULT_PERSISTED_STATE = {
     position: null,
     lastUpdateId: 0,
     lastCandleTime: null,
+    lastTrendUp: false,
     pendingNotifications: [],
-    // Risk management tracking
     dailyPnL: 0,
     dailyTradeCount: 0,
     lastDailyReset: null,
@@ -776,6 +824,7 @@ function normalizePersistedState(data) {
     if (typeof next.dailyPnL !== 'number') next.dailyPnL = 0;
     if (typeof next.dailyTradeCount !== 'number') next.dailyTradeCount = 0;
     if (typeof next.openRiskPct !== 'number') next.openRiskPct = 0;
+    if (typeof next.lastTrendUp !== 'boolean') next.lastTrendUp = false;
     return next;
 }
 
@@ -973,12 +1022,18 @@ async function checkSignal() {
             }));
         }
     } else {
-        const changed = prev.signal !== state.signal;
-        if (state.signal === 'LONG' && isNewClosedCandle && (changed || prev.signal !== 'LONG')) {
+        // Fresh cross: trendUp (EMA15>EMA300 AND price>EMA800) just turned true this candle
+        const freshCross = !prev.lastTrendUp && state.trendUp;
+        const adxOk = Number.isFinite(state.adx) && state.adx >= CONFIG.strategy.adxThreshold;
+        const entryTriggered = freshCross && state.rsiInZone && adxOk && isNewClosedCandle;
+
+        console.log(`📐 lastTrendUp=${prev.lastTrendUp} trendUp=${state.trendUp} freshCross=${freshCross} ADX=${isNaN(state.adx)?'NaN':state.adx.toFixed(1)} adxOk=${adxOk} rsiInZone=${state.rsiInZone}`);
+
+        if (entryTriggered) {
             const plan = buildTradePlan({ dailyPnl: prev.dailyPnL, openRisk: prev.openRiskPct });
             if (plan.blocked) {
                 console.log(`🚫 Entry blocked by guardrails: ${plan.guardrails.join(', ')}`);
-                saveState(buildPersistedState(prev, { signal: state.signal, position: null, lastCandleTime: latestClosedCandleTime }));
+                saveState(buildPersistedState(prev, { signal: state.signal, position: null, lastTrendUp: state.trendUp, lastCandleTime: latestClosedCandleTime }));
                 return;
             }
             const newPos = { entryPrice: state.currentPrice, entryTime: new Date().toISOString(), trailingStop: state.currentPrice - state.atr * CONFIG.strategy.atrMultiplier, highestPrice: state.currentPrice, currentTier: 1, entryATR: state.atr };
@@ -995,6 +1050,7 @@ async function checkSignal() {
                 signal: state.signal,
                 lastNotified: entrySent ? new Date().toISOString() : prev.lastNotified,
                 position: newPos,
+                lastTrendUp: state.trendUp,
                 lastCandleTime: latestClosedCandleTime
             }));
         } else {
@@ -1002,6 +1058,7 @@ async function checkSignal() {
                 signal: state.signal,
                 lastNotified: prev.lastNotified,
                 position: null,
+                lastTrendUp: state.trendUp,
                 lastCandleTime: latestClosedCandleTime
             }));
         }
