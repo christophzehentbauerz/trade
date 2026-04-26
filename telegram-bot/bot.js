@@ -799,13 +799,27 @@ function enqueuePendingNotification(prev, notification) {
     return { ...next, pendingNotifications: [...next.pendingNotifications, notification] };
 }
 
+const PENDING_NOTIFICATION_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
 async function flushPendingNotifications(prev) {
     const next = normalizePersistedState(prev);
     if (!next.pendingNotifications.length) return next;
 
-    console.log(`📬 Replaying ${next.pendingNotifications.length} queued Telegram message(s)...`);
+    const now = Date.now();
+    const fresh = next.pendingNotifications.filter(item => {
+        const age = now - new Date(item.createdAt).getTime();
+        if (age > PENDING_NOTIFICATION_TTL_MS) {
+            console.warn(`⏰ Dropping stale notification (${item.type}, ${Math.round(age/60000)}min old)`);
+            return false;
+        }
+        return true;
+    });
+
+    if (!fresh.length) return { ...next, pendingNotifications: [] };
+
+    console.log(`📬 Replaying ${fresh.length} queued Telegram message(s)...`);
     const remaining = [];
-    for (const item of next.pendingNotifications) {
+    for (const item of fresh) {
         const ok = await sendTelegramMessageWithRetry(item.text, item.chatId, { attempts: 3, delayMs: 1200 });
         if (ok) {
             console.log(`✅ Delivered queued notification (${item.type})`);
@@ -921,7 +935,7 @@ async function checkSignal() {
     }
     const finalState = loadPreviousState();
     if (finalState.pendingNotifications.length) {
-        throw new Error(`Telegram delivery pending for ${finalState.pendingNotifications.length} queued message(s)`);
+        console.warn(`⚠️ ${finalState.pendingNotifications.length} Telegram message(s) queued for retry next run`);
     }
     console.log('✅ Done!');
 }
@@ -951,7 +965,7 @@ async function sendDailyUpdate() {
     saveState(buildPersistedState(prev, { lastDailyUpdate: new Date().toISOString() }));
     const finalState = loadPreviousState();
     if (finalState.pendingNotifications.length) {
-        throw new Error(`Telegram delivery pending for ${finalState.pendingNotifications.length} queued message(s)`);
+        console.warn(`⚠️ ${finalState.pendingNotifications.length} Telegram message(s) queued for retry next run`);
     }
     console.log('✅ Daily update sent!');
 }

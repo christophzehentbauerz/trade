@@ -31,6 +31,18 @@ jobs:
           restore-keys: |
             bot-state-
 
+      - name: Validate secrets
+        run: |
+          if [ -z "${{ secrets.TELEGRAM_BOT_TOKEN }}" ]; then
+            echo "❌ TELEGRAM_BOT_TOKEN secret is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.TELEGRAM_CHAT_ID }}" ]; then
+            echo "❌ TELEGRAM_CHAT_ID secret is not set"
+            exit 1
+          fi
+          echo "✅ Secrets configured"
+
       - name: Signal Check
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
