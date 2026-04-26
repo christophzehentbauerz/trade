@@ -817,14 +817,21 @@ const DEFAULT_PERSISTED_STATE = {
 };
 
 function normalizePersistedState(data) {
-    const next = { ...DEFAULT_PERSISTED_STATE, ...(data || {}) };
+    const raw = data || {};
+    const next = { ...DEFAULT_PERSISTED_STATE, ...raw };
     if (!Array.isArray(next.pendingNotifications)) next.pendingNotifications = [];
     if (!Array.isArray(next.tradeHistory)) next.tradeHistory = [];
     if (typeof next.lastUpdateId !== 'number') next.lastUpdateId = 0;
     if (typeof next.dailyPnL !== 'number') next.dailyPnL = 0;
     if (typeof next.dailyTradeCount !== 'number') next.dailyTradeCount = 0;
     if (typeof next.openRiskPct !== 'number') next.openRiskPct = 0;
-    if (typeof next.lastTrendUp !== 'boolean') next.lastTrendUp = false;
+    // Bootstrap migration: if lastTrendUp is missing from older state,
+    // infer from previous signal/position to avoid a spurious entry on
+    // the first run after upgrading. If the bot was already LONG or has
+    // an open position, the trend was clearly up; mark it accordingly.
+    if (!('lastTrendUp' in raw) || typeof next.lastTrendUp !== 'boolean') {
+        next.lastTrendUp = (raw.signal === 'LONG') || !!raw.position;
+    }
     return next;
 }
 
