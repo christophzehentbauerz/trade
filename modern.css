@@ -1,0 +1,577 @@
+/* =====================================================
+   Modern Design Layer — 2026 Glassmorphism + Mesh Gradient
+   Loaded AFTER styles.css to override key visual surfaces.
+   ===================================================== */
+
+:root {
+    /* Refined palette — slightly warmer accents, deeper backgrounds */
+    --bg-primary: #050810;
+    --bg-secondary: #0a0e1a;
+    --bg-card: rgba(15, 20, 32, 0.6);
+    --bg-card-hover: rgba(20, 26, 42, 0.78);
+    --bg-card-solid: #0f1420;
+
+    --accent-primary: #6366f1;
+    --accent-secondary: #06b6d4;
+    --accent-tertiary: #a855f7;
+    --accent-pink: #ec4899;
+    --accent-emerald: #10b981;
+
+    --accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 35%, #06b6d4 100%);
+    --accent-gradient-warm: linear-gradient(135deg, #f97316 0%, #ec4899 50%, #a855f7 100%);
+    --accent-gradient-cool: linear-gradient(135deg, #06b6d4 0%, #6366f1 100%);
+
+    --bullish: #22c55e;
+    --bullish-glow: rgba(34, 197, 94, 0.35);
+    --bearish: #ef4444;
+    --bearish-glow: rgba(239, 68, 68, 0.35);
+
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.14);
+    --border-glow: rgba(99, 102, 241, 0.35);
+
+    --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.35), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+    --shadow-card-hover: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(99, 102, 241, 0.25) inset, 0 0 32px rgba(99, 102, 241, 0.15);
+    --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    --shadow-popover: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06);
+
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --radius-full: 9999px;
+}
+
+/* ─────────────────────────────────────────────────
+   Background — Mesh gradient orbs over dot grid
+   ───────────────────────────────────────────────── */
+
+body {
+    background:
+        radial-gradient(circle at 20% 0%, rgba(99, 102, 241, 0.16) 0%, transparent 40%),
+        radial-gradient(circle at 80% 30%, rgba(168, 85, 247, 0.12) 0%, transparent 45%),
+        radial-gradient(circle at 50% 100%, rgba(6, 182, 212, 0.10) 0%, transparent 50%),
+        var(--bg-primary);
+    background-attachment: fixed;
+}
+
+body::before {
+    background-image: radial-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px);
+    background-size: 32px 32px;
+    opacity: 0.7;
+}
+
+/* ─────────────────────────────────────────────────
+   Header — Frosted glass with gradient accent
+   ───────────────────────────────────────────────── */
+
+.header {
+    background: rgba(8, 12, 20, 0.65);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border-bottom: 1px solid var(--border-color);
+    padding: 16px 28px;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.logo-icon {
+    font-size: 2rem;
+    filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.5));
+}
+
+/* ─────────────────────────────────────────────────
+   Cards — Glassmorphism with rounded corners
+   ───────────────────────────────────────────────── */
+
+.card {
+    background: var(--bg-card);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    margin: 8px;
+    transition: transform 240ms cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 240ms cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 240ms ease;
+    overflow: hidden;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-glow);
+    box-shadow: var(--shadow-card-hover);
+    background: var(--bg-card-hover);
+}
+
+.card-header {
+    padding: 18px 22px 14px 22px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    background: linear-gradient(180deg, rgba(99, 102, 241, 0.03) 0%, transparent 100%);
+}
+
+.card-header h2 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+    gap: 12px;
+}
+
+.card-icon {
+    font-size: 1.25rem;
+    filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.3));
+}
+
+.card-body {
+    padding: 20px 22px;
+}
+
+.card-badge {
+    padding: 4px 12px;
+    border-radius: var(--radius-full);
+    font-size: 0.72rem;
+    font-weight: 600;
+    background: rgba(99, 102, 241, 0.12);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    color: #c7d2fe;
+    letter-spacing: 0.02em;
+    backdrop-filter: blur(8px);
+}
+
+.card-badge.bullish {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(16, 185, 129, 0.12));
+    border-color: rgba(34, 197, 94, 0.4);
+    color: #6ee7b7;
+    box-shadow: 0 0 16px rgba(34, 197, 94, 0.18);
+}
+
+.card-badge.bearish {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.18), rgba(220, 38, 38, 0.12));
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #fca5a5;
+    box-shadow: 0 0 16px rgba(239, 68, 68, 0.18);
+}
+
+/* ─────────────────────────────────────────────────
+   Dashboard Grid — More breathing room
+   ───────────────────────────────────────────────── */
+
+.dashboard-grid {
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 4px;
+    padding: 12px;
+}
+
+/* ─────────────────────────────────────────────────
+   Price Ticker Bar — Hero treatment
+   ───────────────────────────────────────────────── */
+
+.price-ticker-bar {
+    background: linear-gradient(135deg, rgba(15, 20, 32, 0.85), rgba(20, 26, 42, 0.7));
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    margin: 14px;
+    padding: 22px 28px;
+    box-shadow: var(--shadow-glass);
+    position: relative;
+    overflow: hidden;
+}
+
+.price-ticker-bar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.6), rgba(168, 85, 247, 0.6), transparent);
+}
+
+.ticker-value {
+    background: linear-gradient(135deg, #f1f5f9 0%, #c7d2fe 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    font-feature-settings: "tnum";
+}
+
+.ticker-item {
+    background: rgba(15, 20, 32, 0.4);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    transition: border-color 200ms ease;
+}
+
+.ticker-item:hover {
+    border-color: rgba(99, 102, 241, 0.3);
+}
+
+.ticker-data {
+    font-feature-settings: "tnum";
+    font-weight: 600;
+}
+
+/* ─────────────────────────────────────────────────
+   Strategy Tabs — Floating pill design
+   ───────────────────────────────────────────────── */
+
+.strategy-tabs-container {
+    padding: 0 14px;
+    margin: 16px 0 4px 0;
+}
+
+.strategy-tabs {
+    background: rgba(15, 20, 32, 0.6);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-full);
+    padding: 5px;
+    display: inline-flex;
+    gap: 2px;
+}
+
+.strategy-tab {
+    padding: 10px 22px;
+    border-radius: var(--radius-full);
+    border-bottom: none !important;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.strategy-tab:hover {
+    background: rgba(99, 102, 241, 0.08);
+    color: var(--text-primary);
+}
+
+.strategy-tab.active {
+    background: var(--accent-gradient);
+    color: #ffffff;
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    border-bottom: none !important;
+}
+
+.strategy-tab.active::after {
+    display: none;
+}
+
+/* ─────────────────────────────────────────────────
+   Signal Banner & Score — Bigger, more impactful
+   ───────────────────────────────────────────────── */
+
+.signal-banner {
+    background: linear-gradient(135deg, rgba(15, 20, 32, 0.85), rgba(20, 26, 42, 0.65));
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    margin: 14px;
+    padding: 24px;
+    box-shadow: var(--shadow-glass);
+}
+
+/* ─────────────────────────────────────────────────
+   Buttons — Modern gradient with shadow lift
+   ───────────────────────────────────────────────── */
+
+button,
+.btn,
+.notif-btn,
+.telegram-test-btn {
+    border-radius: var(--radius-md);
+    transition: transform 180ms cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 180ms ease,
+                background 200ms ease;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+}
+
+button:hover:not(:disabled),
+.btn:hover:not(:disabled),
+.notif-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+button:active,
+.btn:active,
+.notif-btn:active {
+    transform: translateY(0);
+}
+
+.telegram-test-btn {
+    background: rgba(15, 20, 32, 0.6);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 9px 18px;
+    backdrop-filter: blur(12px);
+}
+
+.telegram-test-btn:hover {
+    border-color: var(--border-glow);
+    background: rgba(99, 102, 241, 0.12);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.18);
+}
+
+.telegram-test-btn.active {
+    background: var(--accent-gradient);
+    border-color: transparent;
+    color: #ffffff;
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+/* ─────────────────────────────────────────────────
+   Notification / Telegram Bar
+   ───────────────────────────────────────────────── */
+
+.notification-settings.telegram-bar {
+    background: linear-gradient(135deg, rgba(15, 20, 32, 0.85), rgba(20, 26, 42, 0.6));
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border-bottom: 1px solid var(--border-color);
+    border-top: none;
+}
+
+/* ─────────────────────────────────────────────────
+   Bot Signal Section — refine to match modern theme
+   ───────────────────────────────────────────────── */
+
+.bot-signal-section {
+    margin: 14px;
+    border-radius: var(--radius-xl);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    box-shadow: var(--shadow-glass);
+}
+
+.bot-trades-section {
+    margin: 14px;
+    border-radius: var(--radius-xl);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    box-shadow: var(--shadow-glass);
+}
+
+.bot-signal-badge {
+    border-radius: var(--radius-full);
+    padding: 6px 14px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.15);
+}
+
+.bot-signal-badge.bot-signal-long {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(16, 185, 129, 0.18));
+    box-shadow: 0 0 24px rgba(34, 197, 94, 0.35);
+}
+
+.bot-check-item {
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+}
+
+.bot-level {
+    border-radius: var(--radius-md);
+}
+
+/* ─────────────────────────────────────────────────
+   Smart Money / Strategy sections
+   ───────────────────────────────────────────────── */
+
+.smart-money-signal-section {
+    background: linear-gradient(135deg, rgba(15, 20, 32, 0.85), rgba(20, 26, 42, 0.55));
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    margin: 14px;
+    box-shadow: var(--shadow-glass);
+}
+
+/* ─────────────────────────────────────────────────
+   Decision panel (signal action area)
+   ───────────────────────────────────────────────── */
+
+.decision-panel {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.06), rgba(168, 85, 247, 0.04));
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    margin: 14px;
+    box-shadow: var(--shadow-glass);
+}
+
+/* ─────────────────────────────────────────────────
+   Indicators (RSI, MACD etc) — Modern stat cards
+   ───────────────────────────────────────────────── */
+
+.indicator,
+.indicator-card,
+.sm-perf-item,
+.score-bar-item {
+    border-radius: var(--radius-md);
+    transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.indicator:hover,
+.indicator-card:hover,
+.sm-perf-item:hover {
+    transform: translateY(-1px);
+    border-color: var(--border-glow);
+}
+
+/* ─────────────────────────────────────────────────
+   Gauges & progress bars — smoother
+   ───────────────────────────────────────────────── */
+
+.gauge,
+.gauge-fill,
+.confidence-bar {
+    border-radius: var(--radius-full);
+}
+
+.confidence-fill {
+    background: var(--accent-gradient);
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+    transition: width 600ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─────────────────────────────────────────────────
+   Modal / Overlay — Premium look
+   ───────────────────────────────────────────────── */
+
+.analysis-card-container,
+.telegram-preview-overlay {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.72);
+}
+
+.analysis-card,
+.telegram-preview-modal {
+    background: linear-gradient(135deg, rgba(15, 20, 32, 0.96), rgba(20, 26, 42, 0.92));
+    backdrop-filter: blur(24px);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-popover);
+}
+
+/* ─────────────────────────────────────────────────
+   Form controls (selects, inputs)
+   ───────────────────────────────────────────────── */
+
+select,
+input[type="text"],
+input[type="number"],
+input[type="password"] {
+    background: rgba(15, 20, 32, 0.6);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    padding: 8px 12px;
+    transition: border-color 180ms ease, box-shadow 180ms ease;
+    backdrop-filter: blur(8px);
+}
+
+select:focus,
+input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
+}
+
+/* ─────────────────────────────────────────────────
+   Scrollbar — Subtle, modern
+   ───────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.25);
+    border-radius: var(--radius-full);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.45);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+}
+
+/* ─────────────────────────────────────────────────
+   Selection styling
+   ───────────────────────────────────────────────── */
+
+::selection {
+    background: rgba(99, 102, 241, 0.4);
+    color: #ffffff;
+}
+
+/* ─────────────────────────────────────────────────
+   Text — Better hierarchy
+   ───────────────────────────────────────────────── */
+
+h1, h2, h3 {
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+
+.text-bullish {
+    color: var(--bullish);
+    text-shadow: 0 0 12px rgba(34, 197, 94, 0.25);
+}
+
+.text-bearish {
+    color: var(--bearish);
+    text-shadow: 0 0 12px rgba(239, 68, 68, 0.25);
+}
+
+/* ─────────────────────────────────────────────────
+   Reduce motion respect
+   ───────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ─────────────────────────────────────────────────
+   Mobile refinement
+   ───────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+    .card {
+        margin: 6px;
+        border-radius: var(--radius-md);
+    }
+    .price-ticker-bar,
+    .signal-banner,
+    .bot-signal-section,
+    .bot-trades-section,
+    .smart-money-signal-section,
+    .decision-panel {
+        margin: 8px;
+        border-radius: var(--radius-lg);
+    }
+    .strategy-tabs {
+        flex-wrap: wrap;
+    }
+}

@@ -3,7 +3,7 @@
 // Network-First with stale-fallback for API responses.
 // =====================================================
 
-const VERSION = 'v2';
+const VERSION = 'v3';
 const STATIC_CACHE = `btc-static-${VERSION}`;
 const API_CACHE = `btc-api-${VERSION}`;
 
@@ -13,6 +13,7 @@ const STATIC_ASSETS = [
     '/styles.css',
     '/analysis-styles.css',
     '/bot-signal.css',
+    '/modern.css',
     '/app.js',
     '/live-analysis.js',
     '/bot-signal.js',
