@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="bot-signal.css">
     <!-- Modern design layer — must load last to override -->
     <link rel="stylesheet" href="modern.css">
+    <link rel="stylesheet" href="coach.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
@@ -109,6 +110,31 @@
             </div>
         </header>
 
+        <!-- ═══════════════════════════════════════════════════════════
+             COACH HERO — Plain-German verdict at the top of the page.
+             This is THE thing the user reads. Everything else is detail.
+             ═══════════════════════════════════════════════════════════ -->
+        <section class="coach-hero" id="coachHero" data-verdict="wait" aria-label="Bitcoin Trading-Coach">
+            <div class="coach-loading">
+                <div class="coach-loading-spinner" aria-hidden="true"></div>
+                Mein Coach analysiert gerade den Markt …
+            </div>
+        </section>
+
+        <!-- ═══════════════════════════════════════════════════════════
+             EVERYTHING BELOW IS COLLAPSED BY DEFAULT.
+             The Coach Hero above is the at-a-glance verdict.
+             Power users can expand for charts, metrics, strategies.
+             ═══════════════════════════════════════════════════════════ -->
+        <details class="dashboard-details" id="dashboardDetails">
+            <summary>
+                <span class="dashboard-details-summary-label">
+                    📊 Alle Details, Charts &amp; Indikatoren
+                    <span class="dashboard-details-summary-hint">— Live-Chart, Trade-Historie, Technische Analyse, Sentiment, Derivate, weitere Strategien</span>
+                </span>
+                <span class="dashboard-details-summary-chevron" aria-hidden="true">▾</span>
+            </summary>
+            <div class="dashboard-details-content">
         <!-- How it Works Section (Collapsible) -->
         <section class="how-it-works-section">
             <details class="how-it-works">
@@ -1808,6 +1834,9 @@
         </main>
 
         <!-- Disclaimer Footer -->
+            </div>
+        </details>
+
         <footer class="disclaimer">
             <p>⚠️ <strong>Disclaimer:</strong> Dies ist KEINE Finanzberatung. Kryptowährungen sind hochvolatil.
                 Investiere nur, was du verlieren kannst. Die Konfidenz-Werte sind Schätzungen basierend auf
@@ -1833,6 +1862,7 @@
     <script src="bot-signal.js" defer></script>
     <script src="live-price.js" defer></script>
     <script src="bot-trades.js" defer></script>
+    <script src="coach.js" defer></script>
 
     <!-- Sync Fear & Greed value to ticker bar -->
     <script>
