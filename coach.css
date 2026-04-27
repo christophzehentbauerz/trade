@@ -1,0 +1,451 @@
+/* =====================================================
+   Coach Hero — At-a-glance Bitcoin verdict in plain German
+   Single source of truth: should I trade now? Why? How?
+   ===================================================== */
+
+.coach-hero {
+    margin: 16px 6px 20px 6px;
+    padding: 0;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    background: var(--surface-1);
+    box-shadow: var(--elevation-2);
+    position: relative;
+}
+
+.coach-hero[data-verdict="buy"] {
+    background:
+        radial-gradient(ellipse 100% 60% at 50% 0%, rgba(34, 197, 94, 0.18), transparent 60%),
+        var(--surface-1);
+    border-color: rgba(34, 197, 94, 0.3);
+}
+
+.coach-hero[data-verdict="watch"] {
+    background:
+        radial-gradient(ellipse 100% 60% at 50% 0%, rgba(217, 119, 6, 0.16), transparent 60%),
+        var(--surface-1);
+    border-color: rgba(217, 119, 6, 0.3);
+}
+
+.coach-hero[data-verdict="wait"] {
+    background: var(--surface-1);
+    border-color: var(--border-default);
+}
+
+/* ─── Top strip: date + bot status ─── */
+
+.coach-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 22px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: rgba(0, 0, 0, 0.18);
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+}
+
+.coach-strip-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+}
+
+.coach-strip-icon {
+    font-size: 0.85rem;
+}
+
+.coach-strip-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-feature-settings: "tnum";
+}
+
+/* ─── Verdict block ─── */
+
+.coach-verdict-row {
+    display: grid;
+    grid-template-columns: minmax(280px, 1.2fr) 1fr;
+    gap: 24px;
+    padding: 28px 28px 20px 28px;
+    align-items: center;
+}
+
+.coach-verdict {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.coach-verdict-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 22px;
+    border-radius: var(--radius-lg);
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    width: fit-content;
+    box-shadow: var(--elevation-1);
+}
+
+.coach-hero[data-verdict="buy"] .coach-verdict-badge {
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+    color: #ffffff;
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.18);
+}
+
+.coach-hero[data-verdict="watch"] .coach-verdict-badge {
+    background: linear-gradient(135deg, #d97706, #f59e0b);
+    color: #ffffff;
+    box-shadow: 0 0 0 4px rgba(217, 119, 6, 0.18);
+}
+
+.coach-hero[data-verdict="wait"] .coach-verdict-badge {
+    background: var(--surface-3);
+    color: var(--text-primary);
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.05);
+}
+
+.coach-verdict-emoji {
+    font-size: 1.6rem;
+    line-height: 1;
+}
+
+.coach-confidence {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-width: 320px;
+}
+
+.coach-confidence-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 500;
+}
+
+.coach-confidence-value {
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-feature-settings: "tnum";
+}
+
+.coach-confidence-bar {
+    height: 6px;
+    border-radius: var(--radius-pill);
+    background: var(--surface-2);
+    overflow: hidden;
+    border: 1px solid var(--border-subtle);
+}
+
+.coach-confidence-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    transition: width var(--duration-slow) var(--ease-out);
+    border-radius: inherit;
+}
+
+.coach-hero[data-verdict="buy"] .coach-confidence-fill {
+    background: linear-gradient(90deg, #16a34a, #22c55e);
+}
+
+/* ─── Price block (right side of verdict row) ─── */
+
+.coach-price {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: right;
+}
+
+.coach-price-label {
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 500;
+}
+
+.coach-price-value {
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.04em;
+    font-feature-settings: "tnum";
+    line-height: 1;
+}
+
+.coach-price-change {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-top: 4px;
+    font-feature-settings: "tnum";
+}
+
+.coach-price-change.up { color: var(--bullish-bright); }
+.coach-price-change.down { color: var(--bearish-bright); }
+
+/* ─── Why explanation ─── */
+
+.coach-why {
+    padding: 0 28px 22px 28px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.coach-why-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.coach-why-text {
+    font-size: 1rem;
+    line-height: 1.55;
+    color: var(--text-primary);
+    max-width: 760px;
+    letter-spacing: -0.005em;
+}
+
+/* ─── Trade plan (only when buy/watch) ─── */
+
+.coach-plan {
+    padding: 22px 28px;
+    background: rgba(0, 0, 0, 0.15);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.coach-plan-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+}
+
+.coach-plan-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border-subtle);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.coach-plan-item {
+    background: var(--surface-1);
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.coach-plan-item-label {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.coach-plan-item-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    font-feature-settings: "tnum";
+    line-height: 1;
+}
+
+.coach-plan-item-meta {
+    font-size: 0.78rem;
+    font-weight: 500;
+    font-feature-settings: "tnum";
+}
+
+.coach-plan-item.entry .coach-plan-item-meta { color: var(--text-secondary); }
+.coach-plan-item.stop .coach-plan-item-meta { color: var(--bearish-bright); }
+.coach-plan-item.target .coach-plan-item-meta { color: var(--bullish-bright); }
+
+/* ─── Context strip (3 mini-cards) ─── */
+
+.coach-context {
+    padding: 18px 28px 24px 28px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.coach-ctx-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.coach-ctx-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.66rem;
+    color: var(--text-tertiary);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 500;
+}
+
+.coach-ctx-headline {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+}
+
+.coach-ctx-detail {
+    font-size: 0.74rem;
+    color: var(--text-tertiary);
+    line-height: 1.4;
+}
+
+.coach-ctx-card.bull .coach-ctx-headline { color: var(--bullish-bright); }
+.coach-ctx-card.bear .coach-ctx-headline { color: var(--bearish-bright); }
+.coach-ctx-card.warn .coach-ctx-headline { color: #fbbf24; }
+
+/* ─── Loading / error states ─── */
+
+.coach-loading,
+.coach-error {
+    padding: 40px 28px;
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: 0.92rem;
+}
+
+.coach-loading-spinner {
+    width: 28px;
+    height: 28px;
+    border: 2px solid var(--surface-3);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 800ms linear infinite;
+    margin: 0 auto 12px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ─── Details disclosure (collapse heavy stuff) ─── */
+
+.dashboard-details {
+    margin: 8px 6px 0 6px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    background: var(--surface-1);
+    overflow: hidden;
+}
+
+.dashboard-details > summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 14px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+    transition: background var(--duration-fast) var(--ease-out);
+}
+
+.dashboard-details > summary::-webkit-details-marker { display: none; }
+
+.dashboard-details > summary:hover {
+    background: var(--surface-2);
+}
+
+.dashboard-details-summary-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+}
+
+.dashboard-details-summary-hint {
+    font-size: 0.78rem;
+    color: var(--text-tertiary);
+    font-weight: 400;
+}
+
+.dashboard-details-summary-chevron {
+    color: var(--text-tertiary);
+    font-size: 0.85rem;
+    transition: transform var(--duration-base) var(--ease-out);
+}
+
+.dashboard-details[open] > summary > .dashboard-details-summary-chevron {
+    transform: rotate(180deg);
+}
+
+.dashboard-details-content {
+    padding: 4px 0 0 0;
+    border-top: 1px solid var(--border-subtle);
+    background: var(--surface-0);
+}
+
+/* ─── Mobile ─── */
+
+@media (max-width: 768px) {
+    .coach-hero { margin: 8px 4px 14px 4px; }
+    .coach-strip { padding: 8px 16px; }
+    .coach-verdict-row {
+        grid-template-columns: 1fr;
+        padding: 22px 18px 16px 18px;
+        gap: 18px;
+        text-align: left;
+    }
+    .coach-price { text-align: left; }
+    .coach-price-change { margin-left: 0; }
+    .coach-why { padding: 0 18px 18px 18px; }
+    .coach-why-text { font-size: 0.92rem; }
+    .coach-plan { padding: 16px 18px; }
+    .coach-plan-grid { grid-template-columns: 1fr; }
+    .coach-context {
+        grid-template-columns: 1fr;
+        padding: 14px 18px 18px 18px;
+    }
+    .coach-verdict-badge { font-size: 1.15rem; padding: 12px 18px; }
+    .coach-price-value { font-size: 2rem; }
+    .coach-plan-item-value { font-size: 1.2rem; }
+}
