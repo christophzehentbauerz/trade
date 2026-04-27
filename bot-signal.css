@@ -1,4 +1,36 @@
 /* =====================================================
+   Accessibility: Skip-link
+   ===================================================== */
+
+.skip-link {
+    position: absolute;
+    top: -100px;
+    left: 0;
+    background: #1e293b;
+    color: #f8fafc;
+    padding: 0.75rem 1rem;
+    z-index: 9999;
+    border-radius: 0 0 8px 0;
+    text-decoration: none;
+    font-weight: 600;
+    transition: top 150ms ease;
+}
+
+.skip-link:focus {
+    top: 0;
+    outline: 3px solid #60a5fa;
+    outline-offset: 2px;
+}
+
+/* Focus styling for keyboard nav */
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
+}
+
+/* =====================================================
    Bot Live Signal — same strategy as Telegram Bot
    ===================================================== */
 
@@ -257,5 +289,198 @@
     }
     .bot-checks-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+/* =====================================================
+   Live Status Badge (WebSocket)
+   ===================================================== */
+
+.live-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    color: #94a3b8;
+    margin-left: 0.5rem;
+    transition: background-color 200ms ease, border-color 200ms ease;
+}
+
+.live-status-badge[data-state="live"] {
+    color: #6ee7b7;
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.4);
+    animation: liveBadgePulse 2s ease-in-out infinite;
+}
+
+.live-status-badge[data-state="stale"] {
+    color: #fcd34d;
+    background: rgba(251, 191, 36, 0.1);
+    border-color: rgba(251, 191, 36, 0.4);
+}
+
+.live-status-badge[data-state="offline"] {
+    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+@keyframes liveBadgePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.65; }
+}
+
+@keyframes priceTickUp {
+    0% { background-color: rgba(16, 185, 129, 0.3); }
+    100% { background-color: transparent; }
+}
+@keyframes priceTickDown {
+    0% { background-color: rgba(239, 68, 68, 0.3); }
+    100% { background-color: transparent; }
+}
+
+.price-tick-up {
+    animation: priceTickUp 600ms ease-out;
+}
+.price-tick-down {
+    animation: priceTickDown 600ms ease-out;
+}
+
+/* =====================================================
+   Bot Trade Journal
+   ===================================================== */
+
+.bot-trades-section {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.6), rgba(30, 41, 59, 0.4));
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin: 1rem 0 2rem 0;
+}
+
+.bot-trades-section .bot-signal-header {
+    margin-bottom: 1rem;
+}
+
+.bot-trade-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.bt-stat {
+    background: rgba(15, 23, 42, 0.5);
+    padding: 0.6rem 0.7rem;
+    border-radius: 8px;
+    border-left: 3px solid rgba(96, 165, 250, 0.4);
+}
+
+.bt-stat-label {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.15rem;
+}
+
+.bt-stat-value {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #e2e8f0;
+    font-variant-numeric: tabular-nums;
+}
+
+.bt-stat-value.pos { color: #6ee7b7; }
+.bt-stat-value.neg { color: #fca5a5; }
+
+.bot-trade-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    max-height: 480px;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+.bt-trade {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 0.5rem 1rem;
+    align-items: center;
+    padding: 0.65rem 0.8rem;
+    background: rgba(15, 23, 42, 0.4);
+    border-radius: 8px;
+    border-left: 3px solid rgba(148, 163, 184, 0.3);
+}
+
+.bt-trade.win { border-left-color: #10b981; }
+.bt-trade.loss { border-left-color: #ef4444; }
+.bt-trade.open {
+    border-left-color: #60a5fa;
+    background: rgba(59, 130, 246, 0.08);
+    grid-template-columns: 80px 1fr;
+}
+
+.bt-trade-pnl {
+    font-size: 1rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.bt-trade-pnl.win { color: #6ee7b7; }
+.bt-trade-pnl.loss { color: #fca5a5; }
+
+.bt-trade-status {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #60a5fa;
+}
+
+.bt-trade-prices {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    font-variant-numeric: tabular-nums;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.bt-trade-arrow { color: #64748b; }
+
+.bt-trade-meta {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    font-size: 0.72rem;
+    color: #94a3b8;
+}
+
+.bt-trade-meta-item {
+    background: rgba(30, 41, 59, 0.6);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+}
+
+.bt-empty {
+    text-align: center;
+    padding: 1.5rem;
+    color: #94a3b8;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 640px) {
+    .bot-trade-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .bt-trade {
+        grid-template-columns: 70px 1fr;
+        font-size: 0.85rem;
     }
 }
