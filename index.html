@@ -17,12 +17,13 @@
 </head>
 
 <body>
+    <a href="#main-content" class="skip-link">Zum Hauptinhalt springen</a>
     <!-- Signal Alert Popup (slides in from top when new signal) -->
-    <div id="signalAlert" class="signal-alert">
+    <div id="signalAlert" class="signal-alert" role="alert" aria-live="assertive">
         <!-- Content filled by JS -->
     </div>
 
-    <div class="app">
+    <main class="app" id="main-content" tabindex="-1">
         <!-- Notification Settings Bar -->
         <section class="notification-settings telegram-bar">
             <div class="notification-settings-content">
@@ -701,10 +702,11 @@
         </section>
 
         <!-- Price Ticker Bar -->
-        <section class="price-ticker-bar">
+        <section class="price-ticker-bar" aria-label="Bitcoin Live-Preis und Marktdaten">
             <div class="ticker-price">
-                <span class="ticker-currency">$</span>
-                <span class="ticker-value" id="btcPrice">--,---</span>
+                <span class="ticker-currency" aria-hidden="true">$</span>
+                <span class="ticker-value" id="btcPrice" aria-live="polite" aria-atomic="true">--,---</span>
+                <span class="live-status-badge" id="liveStatusBadge" data-state="offline" role="status" aria-label="Live-Stream Status">⚪ INIT</span>
                 <span class="ticker-change" id="priceChange">
                     <span class="change-value">--%</span>
                     <span class="change-period">24h</span>
@@ -761,6 +763,18 @@
                     <span class="stat-label">Backtest 12 Monate (BTC 1h):</span>
                     <span class="stat-value">+38% Return · PF 1.94 · MaxDD -8% · 68 Trades</span>
                 </div>
+            </div>
+        </section>
+
+        <!-- Bot Trade Journal — last 90 days replay -->
+        <section class="bot-trades-section" id="botTradesSection" aria-labelledby="botTradesHeader">
+            <div class="bot-signal-header">
+                <h2 id="botTradesHeader"><span class="bot-icon" aria-hidden="true">📒</span> Bot Trade-Historie</h2>
+                <span class="bot-status" id="botTradeStatus">Lade Backtest…</span>
+            </div>
+            <div class="bot-trade-stats" id="botTradeStats" role="list" aria-label="Trading-Statistiken"></div>
+            <div class="bot-trade-list" id="botTradeList" role="list" aria-label="Letzte Trades">
+                <div class="bt-empty">Lade Trade-Historie…</div>
             </div>
         </section>
 
@@ -1797,24 +1811,26 @@
                 Investiere nur, was du verlieren kannst. Die Konfidenz-Werte sind Schätzungen basierend auf
                 historischen Mustern, keine Garantien.</p>
         </footer>
-    </div>
+    </main>
 
     <!-- Telegram Config (optional - erstelle telegram-config.js aus telegram-config.example.js) -->
     <script src="telegram-config.js" onerror="/* config nicht vorhanden, localStorage wird verwendet */"></script>
     <!-- CoinMarketCap Config (optional - erstelle cmc-config.js aus cmc-config.example.js) -->
     <script src="cmc-config.js" onerror="/* config nicht vorhanden, CMC bleibt deaktiviert */"></script>
 
-    <script src="smart-money-strategy.js"></script>
-    <script src="smart-money-signals.js"></script>
-    <script src="backtester.js"></script>
-    <script src="live-analysis.js"></script>
-    <script src="app.js"></script>
-    <script src="trend-strategy.js"></script>
-    <script src="spot-strategy.js"></script>
+    <script src="smart-money-strategy.js" defer></script>
+    <script src="smart-money-signals.js" defer></script>
+    <script src="backtester.js" defer></script>
+    <script src="live-analysis.js" defer></script>
+    <script src="app.js" defer></script>
+    <script src="trend-strategy.js" defer></script>
+    <script src="spot-strategy.js" defer></script>
 
     <!-- Bot Live Signal: same strategy as Telegram bot (EMA + ADX + Fresh Cross) -->
     <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js" defer></script>
     <script src="bot-signal.js" defer></script>
+    <script src="live-price.js" defer></script>
+    <script src="bot-trades.js" defer></script>
 
     <!-- Sync Fear & Greed value to ticker bar -->
     <script>
@@ -1994,6 +2010,17 @@
                 }
             });
         });
+    </script>
+
+    <!-- Service Worker: offline cache for static assets, network-first for /api/ -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(err =>
+                    console.warn('SW registration failed:', err)
+                );
+            });
+        }
     </script>
 </body>
 
