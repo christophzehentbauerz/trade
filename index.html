@@ -9,6 +9,7 @@
         content="Echtzeit Bitcoin Marktanalyse mit technischen Indikatoren, On-Chain Daten und Trading-Signalen">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="analysis-styles.css">
+    <link rel="stylesheet" href="bot-signal.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
@@ -737,6 +738,29 @@
             <div class="live-timestamp-row">
                 <span class="live-timestamp" id="coinGeckoTimestampText">CoinGecko Stand: --</span>
                 <span class="live-timestamp" id="fearGreedTickerTimestampText">Fear &amp; Greed Stand: --</span>
+            </div>
+        </section>
+
+        <!-- Telegram Bot Live Signal — same strategy as the bot uses -->
+        <section class="bot-signal-section" id="botSignalSection" data-signal="LOADING">
+            <div class="bot-signal-header">
+                <h2><span class="bot-icon">🤖</span> Telegram-Bot Live-Signal</h2>
+                <span class="bot-status" id="botSignalStatus">Lade...</span>
+            </div>
+            <div class="bot-signal-body">
+                <div class="bot-signal-main">
+                    <div class="bot-signal-badge bot-signal-neutral" id="botSignalBadge">--</div>
+                    <div class="bot-signal-label" id="botSignalLabel">Wird geladen...</div>
+                </div>
+                <div class="bot-checks-grid" id="botChecksGrid"></div>
+                <div class="bot-trade-levels" id="botTradeLevels" style="display: none;"></div>
+                <div class="bot-chart-container">
+                    <div id="botChart" class="bot-chart"></div>
+                </div>
+                <div class="bot-strategy-stats">
+                    <span class="stat-label">Backtest 12 Monate (BTC 1h):</span>
+                    <span class="stat-value">+38% Return · PF 1.94 · MaxDD -8% · 68 Trades</span>
+                </div>
             </div>
         </section>
 
@@ -1787,6 +1811,10 @@
     <script src="app.js"></script>
     <script src="trend-strategy.js"></script>
     <script src="spot-strategy.js"></script>
+
+    <!-- Bot Live Signal: same strategy as Telegram bot (EMA + ADX + Fresh Cross) -->
+    <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js" defer></script>
+    <script src="bot-signal.js" defer></script>
 
     <!-- Sync Fear & Greed value to ticker bar -->
     <script>

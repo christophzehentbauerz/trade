@@ -1,0 +1,261 @@
+/* =====================================================
+   Bot Live Signal — same strategy as Telegram Bot
+   ===================================================== */
+
+.bot-signal-section {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(139, 92, 246, 0.08));
+    border: 1px solid rgba(96, 165, 250, 0.25);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin: 1rem 0 2rem 0;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+
+.bot-signal-section[data-signal="LONG"] {
+    border-color: rgba(16, 185, 129, 0.5);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(59, 130, 246, 0.06));
+}
+
+.bot-signal-section[data-signal="WATCH"] {
+    border-color: rgba(251, 191, 36, 0.4);
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.08), rgba(59, 130, 246, 0.06));
+}
+
+.bot-signal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.bot-signal-header h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.bot-icon {
+    font-size: 1.4rem;
+}
+
+.bot-status {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    font-variant-numeric: tabular-nums;
+}
+
+.bot-signal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.bot-signal-main {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    background: rgba(15, 23, 42, 0.4);
+    border-radius: 10px;
+}
+
+.bot-signal-badge {
+    font-size: 1.2rem;
+    font-weight: 700;
+    padding: 0.4rem 0.9rem;
+    border-radius: 8px;
+    letter-spacing: 0.05em;
+    background: rgba(148, 163, 184, 0.2);
+    color: #cbd5e1;
+}
+
+.bot-signal-badge.bot-signal-long {
+    background: rgba(16, 185, 129, 0.25);
+    color: #6ee7b7;
+}
+
+.bot-signal-badge.bot-signal-watch {
+    background: rgba(251, 191, 36, 0.25);
+    color: #fcd34d;
+}
+
+.bot-signal-badge.bot-signal-neutral {
+    background: rgba(148, 163, 184, 0.2);
+    color: #cbd5e1;
+}
+
+.bot-signal-label {
+    font-size: 0.95rem;
+    color: #e2e8f0;
+    flex: 1;
+    line-height: 1.4;
+}
+
+.bot-checks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.5rem;
+}
+
+.bot-check-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.8rem;
+    background: rgba(15, 23, 42, 0.4);
+    border-radius: 8px;
+    border: 1px solid transparent;
+    transition: border-color 120ms ease;
+}
+
+.bot-check-item.ok {
+    border-color: rgba(16, 185, 129, 0.3);
+    background: rgba(16, 185, 129, 0.08);
+}
+
+.bot-check-item.pending {
+    background: rgba(15, 23, 42, 0.5);
+}
+
+.bot-check-icon {
+    font-size: 0.95rem;
+}
+
+.bot-check-label {
+    flex: 1;
+    font-size: 0.82rem;
+    color: #cbd5e1;
+}
+
+.bot-check-value {
+    font-size: 0.85rem;
+    color: #e2e8f0;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.bot-trade-levels {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: rgba(15, 23, 42, 0.4);
+    border-radius: 10px;
+}
+
+.bot-level {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.5rem;
+    background: rgba(30, 41, 59, 0.4);
+    border-radius: 6px;
+    border-left: 3px solid rgba(148, 163, 184, 0.3);
+}
+
+.bot-level.entry {
+    border-left-color: #60a5fa;
+}
+
+.bot-level.sl {
+    border-left-color: #ef4444;
+}
+
+.bot-level.tp {
+    border-left-color: #10b981;
+}
+
+.bot-level-label {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.bot-level-value {
+    font-size: 1.05rem;
+    color: #e2e8f0;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.bot-level-pct {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    font-variant-numeric: tabular-nums;
+}
+
+.bot-chart-container {
+    position: relative;
+    background: rgba(15, 23, 42, 0.5);
+    border-radius: 10px;
+    padding: 0.5rem;
+    height: 360px;
+    overflow: hidden;
+}
+
+.bot-chart {
+    width: 100%;
+    height: 100%;
+}
+
+.chart-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #94a3b8;
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 1rem;
+}
+
+.bot-strategy-stats {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 0.6rem 0.9rem;
+    background: rgba(15, 23, 42, 0.4);
+    border-radius: 8px;
+    font-size: 0.82rem;
+}
+
+.bot-strategy-stats .stat-label {
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.bot-strategy-stats .stat-value {
+    color: #6ee7b7;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+    .bot-signal-section {
+        padding: 1rem;
+        margin: 0.75rem 0 1.25rem 0;
+    }
+    .bot-signal-header h2 {
+        font-size: 1rem;
+    }
+    .bot-signal-main {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .bot-chart-container {
+        height: 280px;
+    }
+    .bot-checks-grid {
+        grid-template-columns: 1fr;
+    }
+}
