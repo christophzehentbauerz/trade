@@ -1,285 +1,419 @@
 /* =====================================================
-   Modern Design Layer — 2026 Glassmorphism + Mesh Gradient
-   Loaded AFTER styles.css to override key visual surfaces.
+   Modern Design System v2 — Linear/Stripe/Vercel Vibes
+   Disciplined: less noise, more hierarchy, data-forward.
    ===================================================== */
 
 :root {
-    /* Refined palette — slightly warmer accents, deeper backgrounds */
-    --bg-primary: #050810;
-    --bg-secondary: #0a0e1a;
-    --bg-card: rgba(15, 20, 32, 0.6);
-    --bg-card-hover: rgba(20, 26, 42, 0.78);
-    --bg-card-solid: #0f1420;
+    /* ─── Surface system (3 elevations, true neutral) ─── */
+    --surface-0: #08090d;        /* App background */
+    --surface-1: #0d0f15;        /* Card */
+    --surface-2: #12151d;        /* Hovered card / nested */
+    --surface-3: #181c26;        /* Tooltip / popover */
+    --surface-overlay: rgba(8, 9, 13, 0.85);
 
-    --accent-primary: #6366f1;
-    --accent-secondary: #06b6d4;
-    --accent-tertiary: #a855f7;
-    --accent-pink: #ec4899;
-    --accent-emerald: #10b981;
-
-    --accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 35%, #06b6d4 100%);
-    --accent-gradient-warm: linear-gradient(135deg, #f97316 0%, #ec4899 50%, #a855f7 100%);
-    --accent-gradient-cool: linear-gradient(135deg, #06b6d4 0%, #6366f1 100%);
-
-    --bullish: #22c55e;
-    --bullish-glow: rgba(34, 197, 94, 0.35);
-    --bearish: #ef4444;
-    --bearish-glow: rgba(239, 68, 68, 0.35);
-
-    --border-color: rgba(255, 255, 255, 0.08);
+    /* ─── Borders ─── */
+    --border-subtle: rgba(255, 255, 255, 0.06);
+    --border-default: rgba(255, 255, 255, 0.09);
     --border-strong: rgba(255, 255, 255, 0.14);
-    --border-glow: rgba(99, 102, 241, 0.35);
+    --border-active: rgba(99, 102, 241, 0.4);
 
-    --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.35), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
-    --shadow-card-hover: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(99, 102, 241, 0.25) inset, 0 0 32px rgba(99, 102, 241, 0.15);
-    --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    --shadow-popover: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06);
+    /* ─── Text (refined ramp) ─── */
+    --text-primary: #f4f4f5;
+    --text-secondary: #a1a1aa;
+    --text-tertiary: #71717a;
+    --text-muted: #52525b;
 
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 16px;
-    --radius-xl: 24px;
-    --radius-full: 9999px;
+    /* ─── Brand accent (single, used sparingly) ─── */
+    --accent: #6366f1;
+    --accent-hover: #818cf8;
+    --accent-soft: rgba(99, 102, 241, 0.12);
+    --accent-soft-strong: rgba(99, 102, 241, 0.18);
+
+    /* ─── Semantic ─── */
+    --bullish: #16a34a;
+    --bullish-bright: #22c55e;
+    --bullish-soft: rgba(34, 197, 94, 0.1);
+    --bearish: #dc2626;
+    --bearish-bright: #ef4444;
+    --bearish-soft: rgba(239, 68, 68, 0.1);
+    --warning: #d97706;
+    --warning-soft: rgba(217, 119, 6, 0.1);
+
+    /* ─── Elevation (three-tier subtle shadow system) ─── */
+    --elevation-1: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 1px 2px rgba(0, 0, 0, 0.3);
+    --elevation-2: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 4px 12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.02);
+    --elevation-3: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04);
+
+    /* ─── Radii (modern, not too round) ─── */
+    --radius-xs: 4px;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-pill: 9999px;
+
+    /* ─── Motion (Apple-style cubic-bezier) ─── */
+    --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    --duration-fast: 120ms;
+    --duration-base: 200ms;
+    --duration-slow: 400ms;
 }
 
 /* ─────────────────────────────────────────────────
-   Background — Mesh gradient orbs over dot grid
+   Background — single subtle accent orb, refined grid
    ───────────────────────────────────────────────── */
 
 body {
     background:
-        radial-gradient(circle at 20% 0%, rgba(99, 102, 241, 0.16) 0%, transparent 40%),
-        radial-gradient(circle at 80% 30%, rgba(168, 85, 247, 0.12) 0%, transparent 45%),
-        radial-gradient(circle at 50% 100%, rgba(6, 182, 212, 0.10) 0%, transparent 50%),
-        var(--bg-primary);
+        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(99, 102, 241, 0.12), transparent 60%),
+        radial-gradient(ellipse 60% 40% at 100% 0%, rgba(168, 85, 247, 0.06), transparent 50%),
+        var(--surface-0);
     background-attachment: fixed;
+    color: var(--text-primary);
+    font-feature-settings: "cv11", "ss01", "ss02", "tnum";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
 }
 
 body::before {
-    background-image: radial-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px);
+    background-image: radial-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px);
     background-size: 32px 32px;
-    opacity: 0.7;
+    opacity: 1;
+}
+
+body::after {
+    background: linear-gradient(180deg, transparent 0%, var(--surface-0) 95%);
+    z-index: 0;
 }
 
 /* ─────────────────────────────────────────────────
-   Header — Frosted glass with gradient accent
+   Header — Minimal, no heavy glass
    ───────────────────────────────────────────────── */
 
 .header {
-    background: rgba(8, 12, 20, 0.65);
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border-bottom: 1px solid var(--border-color);
-    padding: 16px 28px;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 8px 24px rgba(0, 0, 0, 0.18);
+    background: rgba(8, 9, 13, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 14px 24px;
+    box-shadow: none;
 }
 
+.header::before { display: none; }
+
 .logo-icon {
-    font-size: 2rem;
-    filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.5));
+    font-size: 1.65rem;
+    filter: none;
+    animation: none;
+    background: linear-gradient(135deg, #818cf8, #a78bfa);
+    -webkit-background-clip: text;
+    background-clip: text;
+}
+
+.logo h1,
+.logo .logo-text {
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
 }
 
 /* ─────────────────────────────────────────────────
-   Cards — Glassmorphism with rounded corners
+   App container — efficient max-width
+   ───────────────────────────────────────────────── */
+
+.app {
+    max-width: 1320px;
+    padding: 0 16px;
+}
+
+/* ─────────────────────────────────────────────────
+   Cards — Subtle, confident, no glass overload
    ───────────────────────────────────────────────── */
 
 .card {
-    background: var(--bg-card);
-    backdrop-filter: blur(16px) saturate(140%);
-    -webkit-backdrop-filter: blur(16px) saturate(140%);
-    border: 1px solid var(--border-color);
+    background: var(--surface-1);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-card);
-    margin: 8px;
-    transition: transform 240ms cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow 240ms cubic-bezier(0.4, 0, 0.2, 1),
-                border-color 240ms ease;
+    box-shadow: var(--elevation-1);
+    margin: 6px;
+    transition: border-color var(--duration-base) var(--ease-out),
+                background var(--duration-base) var(--ease-out),
+                transform var(--duration-base) var(--ease-out);
     overflow: hidden;
 }
 
 .card:hover {
-    transform: translateY(-2px);
-    border-color: var(--border-glow);
-    box-shadow: var(--shadow-card-hover);
-    background: var(--bg-card-hover);
+    transform: none;
+    background: var(--surface-2);
+    border-color: var(--border-default);
+    box-shadow: var(--elevation-2);
 }
 
 .card-header {
-    padding: 18px 22px 14px 22px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-    background: linear-gradient(180deg, rgba(99, 102, 241, 0.03) 0%, transparent 100%);
+    padding: 16px 20px 12px 20px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: transparent;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .card-header h2 {
-    font-size: 0.95rem;
-    font-weight: 600;
-    text-transform: none;
-    letter-spacing: -0.01em;
-    color: var(--text-primary);
-    gap: 12px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-tertiary);
+    gap: 8px;
+    margin: 0;
 }
 
 .card-icon {
-    font-size: 1.25rem;
-    filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.3));
+    font-size: 0.95rem;
+    filter: grayscale(0.4) opacity(0.85);
 }
 
 .card-body {
-    padding: 20px 22px;
+    padding: 18px 20px 20px 20px;
 }
 
 .card-badge {
-    padding: 4px 12px;
-    border-radius: var(--radius-full);
-    font-size: 0.72rem;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 0.7rem;
     font-weight: 600;
-    background: rgba(99, 102, 241, 0.12);
-    border: 1px solid rgba(99, 102, 241, 0.3);
-    color: #c7d2fe;
-    letter-spacing: 0.02em;
-    backdrop-filter: blur(8px);
+    background: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    letter-spacing: 0;
+    backdrop-filter: none;
+    box-shadow: none;
+    font-feature-settings: "tnum";
 }
 
 .card-badge.bullish {
-    background: linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(16, 185, 129, 0.12));
-    border-color: rgba(34, 197, 94, 0.4);
-    color: #6ee7b7;
-    box-shadow: 0 0 16px rgba(34, 197, 94, 0.18);
+    background: var(--bullish-soft);
+    border-color: rgba(34, 197, 94, 0.25);
+    color: #4ade80;
 }
 
 .card-badge.bearish {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.18), rgba(220, 38, 38, 0.12));
-    border-color: rgba(239, 68, 68, 0.4);
-    color: #fca5a5;
-    box-shadow: 0 0 16px rgba(239, 68, 68, 0.18);
+    background: var(--bearish-soft);
+    border-color: rgba(239, 68, 68, 0.25);
+    color: #f87171;
 }
 
 /* ─────────────────────────────────────────────────
-   Dashboard Grid — More breathing room
+   Dashboard grid — efficient density
    ───────────────────────────────────────────────── */
 
 .dashboard-grid {
-    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-    gap: 4px;
-    padding: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 0;
+    padding: 0;
 }
 
 /* ─────────────────────────────────────────────────
-   Price Ticker Bar — Hero treatment
+   Price Ticker — Hero with confident typography
    ───────────────────────────────────────────────── */
 
 .price-ticker-bar {
-    background: linear-gradient(135deg, rgba(15, 20, 32, 0.85), rgba(20, 26, 42, 0.7));
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border: 1px solid var(--border-color);
+    background: var(--surface-1);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-xl);
-    margin: 14px;
-    padding: 22px 28px;
-    box-shadow: var(--shadow-glass);
+    margin: 12px 6px;
+    padding: 22px 24px 20px 24px;
+    box-shadow: var(--elevation-2);
     position: relative;
     overflow: hidden;
 }
 
 .price-ticker-bar::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.6), rgba(168, 85, 247, 0.6), transparent);
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.5;
+}
+
+.ticker-price {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.ticker-currency {
+    font-size: 1.3rem;
+    color: var(--text-tertiary);
+    font-weight: 500;
 }
 
 .ticker-value {
-    background: linear-gradient(135deg, #f1f5f9 0%, #c7d2fe 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    font-weight: 800;
+    font-size: 2.6rem;
+    font-weight: 700;
+    background: none;
+    -webkit-text-fill-color: var(--text-primary);
+    color: var(--text-primary);
     letter-spacing: -0.04em;
     font-feature-settings: "tnum";
+    line-height: 1;
+}
+
+.ticker-change {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: var(--radius-pill);
+    background: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+}
+
+.ticker-change .change-value {
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-feature-settings: "tnum";
+}
+
+.ticker-change .change-period {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+}
+
+.ticker-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 16px;
 }
 
 .ticker-item {
-    background: rgba(15, 20, 32, 0.4);
-    border: 1px solid var(--border-color);
+    background: transparent;
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
-    padding: 10px 14px;
-    transition: border-color 200ms ease;
+    padding: 8px 12px;
+    transition: border-color var(--duration-base) var(--ease-out), background var(--duration-base) var(--ease-out);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 90px;
 }
 
 .ticker-item:hover {
-    border-color: rgba(99, 102, 241, 0.3);
+    background: var(--surface-2);
+    border-color: var(--border-default);
+}
+
+.ticker-label {
+    font-size: 0.65rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 500;
 }
 
 .ticker-data {
-    font-feature-settings: "tnum";
+    font-size: 0.95rem;
     font-weight: 600;
+    color: var(--text-primary);
+    font-feature-settings: "tnum";
+}
+
+.ticker-sources {
+    margin-top: 12px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.live-timestamp-row {
+    margin-top: 8px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 0.7rem;
+}
+
+.live-timestamp {
+    color: var(--text-tertiary);
 }
 
 /* ─────────────────────────────────────────────────
-   Strategy Tabs — Floating pill design
+   Live status badge — tighter
+   ───────────────────────────────────────────────── */
+
+.live-status-badge {
+    margin-left: 0;
+    font-size: 0.65rem;
+    padding: 2px 8px;
+    height: 22px;
+    line-height: 1;
+}
+
+/* ─────────────────────────────────────────────────
+   Strategy Tabs — Linear-style segmented control
    ───────────────────────────────────────────────── */
 
 .strategy-tabs-container {
-    padding: 0 14px;
-    margin: 16px 0 4px 0;
+    padding: 0 6px;
+    margin: 16px 0 8px 0;
 }
 
 .strategy-tabs {
-    background: rgba(15, 20, 32, 0.6);
-    backdrop-filter: blur(16px);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-full);
-    padding: 5px;
+    background: var(--surface-1);
+    backdrop-filter: none;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 4px;
     display: inline-flex;
     gap: 2px;
+    box-shadow: var(--elevation-1);
 }
 
 .strategy-tab {
-    padding: 10px 22px;
-    border-radius: var(--radius-full);
+    padding: 7px 16px;
+    border-radius: var(--radius-sm);
     border-bottom: none !important;
-    font-size: 0.88rem;
-    font-weight: 600;
+    font-size: 0.83rem;
+    font-weight: 500;
     color: var(--text-secondary);
-    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all var(--duration-fast) var(--ease-out);
+    background: transparent;
 }
 
 .strategy-tab:hover {
-    background: rgba(99, 102, 241, 0.08);
+    background: var(--surface-2);
     color: var(--text-primary);
 }
 
 .strategy-tab.active {
-    background: var(--accent-gradient);
-    color: #ffffff;
-    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    background: var(--surface-3);
+    color: var(--text-primary);
+    box-shadow: var(--elevation-1);
     border-bottom: none !important;
 }
 
-.strategy-tab.active::after {
-    display: none;
-}
+.strategy-tab.active::after { display: none; }
 
 /* ─────────────────────────────────────────────────
-   Signal Banner & Score — Bigger, more impactful
+   Signal Banner — Refined
    ───────────────────────────────────────────────── */
 
 .signal-banner {
-    background: linear-gradient(135deg, rgba(15, 20, 32, 0.85), rgba(20, 26, 42, 0.65));
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border: 1px solid var(--border-color);
+    background: var(--surface-1);
+    backdrop-filter: none;
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-xl);
-    margin: 14px;
-    padding: 24px;
-    box-shadow: var(--shadow-glass);
+    margin: 12px 6px;
+    padding: 22px 24px;
+    box-shadow: var(--elevation-2);
 }
 
 /* ─────────────────────────────────────────────────
-   Buttons — Modern gradient with shadow lift
+   Buttons — Refined, subtle
    ───────────────────────────────────────────────── */
 
 button,
@@ -287,44 +421,41 @@ button,
 .notif-btn,
 .telegram-test-btn {
     border-radius: var(--radius-md);
-    transition: transform 180ms cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow 180ms ease,
-                background 200ms ease;
-    font-weight: 600;
+    transition: background var(--duration-fast) var(--ease-out),
+                border-color var(--duration-fast) var(--ease-out),
+                color var(--duration-fast) var(--ease-out);
+    font-weight: 500;
     letter-spacing: -0.005em;
+    font-size: 0.85rem;
 }
 
 button:hover:not(:disabled),
 .btn:hover:not(:disabled),
 .notif-btn:hover:not(:disabled) {
-    transform: translateY(-1px);
-}
-
-button:active,
-.btn:active,
-.notif-btn:active {
-    transform: translateY(0);
+    transform: none;
 }
 
 .telegram-test-btn {
-    background: rgba(15, 20, 32, 0.6);
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-    padding: 9px 18px;
-    backdrop-filter: blur(12px);
+    background: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    padding: 7px 14px;
+    backdrop-filter: none;
+    box-shadow: none;
 }
 
 .telegram-test-btn:hover {
-    border-color: var(--border-glow);
-    background: rgba(99, 102, 241, 0.12);
-    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.18);
+    border-color: var(--border-default);
+    background: var(--surface-3);
+    color: var(--text-primary);
+    box-shadow: none;
 }
 
 .telegram-test-btn.active {
-    background: var(--accent-gradient);
-    border-color: transparent;
+    background: var(--accent);
+    border-color: var(--accent);
     color: #ffffff;
-    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 /* ─────────────────────────────────────────────────
@@ -332,168 +463,422 @@ button:active,
    ───────────────────────────────────────────────── */
 
 .notification-settings.telegram-bar {
-    background: linear-gradient(135deg, rgba(15, 20, 32, 0.85), rgba(20, 26, 42, 0.6));
-    backdrop-filter: blur(20px) saturate(160%);
-    -webkit-backdrop-filter: blur(20px) saturate(160%);
-    border-bottom: 1px solid var(--border-color);
+    background: var(--surface-1);
+    backdrop-filter: none;
+    border-bottom: 1px solid var(--border-subtle);
     border-top: none;
+    padding: 12px 20px;
 }
 
 /* ─────────────────────────────────────────────────
-   Bot Signal Section — refine to match modern theme
+   Bot Signal Section — Hero, but disciplined
    ───────────────────────────────────────────────── */
 
 .bot-signal-section {
-    margin: 14px;
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-xl);
-    backdrop-filter: blur(20px) saturate(160%);
-    -webkit-backdrop-filter: blur(20px) saturate(160%);
-    box-shadow: var(--shadow-glass);
+    margin: 12px 6px;
+    padding: 22px 24px;
+    box-shadow: var(--elevation-2);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
 }
 
-.bot-trades-section {
-    margin: 14px;
-    border-radius: var(--radius-xl);
-    backdrop-filter: blur(20px) saturate(160%);
-    -webkit-backdrop-filter: blur(20px) saturate(160%);
-    box-shadow: var(--shadow-glass);
+.bot-signal-section[data-signal="LONG"] {
+    border-color: rgba(34, 197, 94, 0.25);
+    background: linear-gradient(180deg, var(--bullish-soft), var(--surface-1) 60%);
+}
+
+.bot-signal-section[data-signal="WATCH"] {
+    border-color: rgba(217, 119, 6, 0.25);
+    background: linear-gradient(180deg, var(--warning-soft), var(--surface-1) 60%);
+}
+
+.bot-signal-header {
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+}
+
+.bot-signal-header h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+}
+
+.bot-status {
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    font-feature-settings: "tnum";
+}
+
+.bot-signal-main {
+    background: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
+    box-shadow: none;
 }
 
 .bot-signal-badge {
-    border-radius: var(--radius-full);
-    padding: 6px 14px;
-    backdrop-filter: blur(8px);
-    box-shadow: 0 0 20px rgba(99, 102, 241, 0.15);
+    border-radius: var(--radius-md);
+    padding: 4px 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    backdrop-filter: none;
+    box-shadow: none;
+    background: var(--surface-3);
+    color: var(--text-secondary);
 }
 
 .bot-signal-badge.bot-signal-long {
-    background: linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(16, 185, 129, 0.18));
-    box-shadow: 0 0 24px rgba(34, 197, 94, 0.35);
+    background: var(--bullish);
+    color: #ffffff;
+    box-shadow: 0 0 0 3px var(--bullish-soft);
+}
+
+.bot-signal-badge.bot-signal-watch {
+    background: var(--warning);
+    color: #ffffff;
+    box-shadow: 0 0 0 3px var(--warning-soft);
+}
+
+.bot-signal-badge.bot-signal-neutral {
+    background: var(--surface-3);
+    color: var(--text-secondary);
+}
+
+.bot-signal-label {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.bot-checks-grid {
+    gap: 1px;
+    background: var(--border-subtle);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
 }
 
 .bot-check-item {
-    border-radius: var(--radius-md);
-    padding: 10px 12px;
+    background: var(--surface-1);
+    border: none;
+    border-radius: 0;
+    padding: 12px 14px;
+}
+
+.bot-check-item.ok {
+    background: var(--surface-1);
+}
+
+.bot-check-icon {
+    font-size: 0.85rem;
+}
+
+.bot-check-label {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+
+.bot-check-value {
+    font-size: 0.82rem;
+    color: var(--text-primary);
+    font-weight: 600;
+    font-feature-settings: "tnum";
+}
+
+.bot-trade-levels {
+    background: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 12px;
 }
 
 .bot-level {
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
+    border-left-width: 3px;
+}
+
+.bot-level-label {
+    font-size: 0.65rem;
+    color: var(--text-tertiary);
+    letter-spacing: 0.06em;
+}
+
+.bot-level-value {
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    font-feature-settings: "tnum";
+}
+
+.bot-level-pct {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    font-feature-settings: "tnum";
+}
+
+.bot-chart-container {
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 8px;
+    height: 380px;
+}
+
+.bot-strategy-stats {
+    background: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    font-size: 0.78rem;
+}
+
+.bot-strategy-stats .stat-label {
+    color: var(--text-tertiary);
+}
+
+.bot-strategy-stats .stat-value {
+    color: var(--bullish-bright);
+    font-feature-settings: "tnum";
 }
 
 /* ─────────────────────────────────────────────────
-   Smart Money / Strategy sections
+   Bot Trade Journal
+   ───────────────────────────────────────────────── */
+
+.bot-trades-section {
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    margin: 12px 6px;
+    padding: 22px 24px;
+    box-shadow: var(--elevation-2);
+    backdrop-filter: none;
+}
+
+.bt-stat {
+    background: var(--surface-2);
+    border-left: none;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 12px;
+}
+
+.bt-stat-label {
+    font-size: 0.65rem;
+    color: var(--text-tertiary);
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+}
+
+.bt-stat-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    font-feature-settings: "tnum";
+}
+
+.bt-stat-value.pos { color: var(--bullish-bright); }
+.bt-stat-value.neg { color: var(--bearish-bright); }
+
+.bt-trade {
+    background: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+    border-left-width: 2px;
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    transition: background var(--duration-fast) var(--ease-out);
+}
+
+.bt-trade:hover {
+    background: var(--surface-3);
+}
+
+.bt-trade-pnl {
+    font-size: 0.95rem;
+    font-feature-settings: "tnum";
+    letter-spacing: -0.01em;
+}
+
+.bt-trade-meta-item {
+    background: var(--surface-3);
+    color: var(--text-tertiary);
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+}
+
+/* ─────────────────────────────────────────────────
+   Smart Money / Other Strategy sections
    ───────────────────────────────────────────────── */
 
 .smart-money-signal-section {
-    background: linear-gradient(135deg, rgba(15, 20, 32, 0.85), rgba(20, 26, 42, 0.55));
-    backdrop-filter: blur(20px) saturate(150%);
-    -webkit-backdrop-filter: blur(20px) saturate(150%);
-    border: 1px solid var(--border-color);
+    background: var(--surface-1);
+    backdrop-filter: none;
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-xl);
-    margin: 14px;
-    box-shadow: var(--shadow-glass);
+    margin: 12px 6px;
+    box-shadow: var(--elevation-2);
 }
-
-/* ─────────────────────────────────────────────────
-   Decision panel (signal action area)
-   ───────────────────────────────────────────────── */
 
 .decision-panel {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.06), rgba(168, 85, 247, 0.04));
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--border-color);
+    background: var(--surface-1);
+    backdrop-filter: none;
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-xl);
-    margin: 14px;
-    box-shadow: var(--shadow-glass);
+    margin: 12px 6px;
+    box-shadow: var(--elevation-2);
 }
 
 /* ─────────────────────────────────────────────────
-   Indicators (RSI, MACD etc) — Modern stat cards
+   Indicator cards / sub-cards
    ───────────────────────────────────────────────── */
 
 .indicator,
 .indicator-card,
 .sm-perf-item,
 .score-bar-item {
+    background: var(--surface-2);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
-    transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+    transition: background var(--duration-fast) var(--ease-out),
+                border-color var(--duration-fast) var(--ease-out);
 }
 
 .indicator:hover,
 .indicator-card:hover,
 .sm-perf-item:hover {
-    transform: translateY(-1px);
-    border-color: var(--border-glow);
+    transform: none;
+    background: var(--surface-3);
+    border-color: var(--border-default);
+}
+
+.indicator-name {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+}
+
+.indicator-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    font-feature-settings: "tnum";
+}
+
+.sm-perf-label {
+    font-size: 0.65rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.sm-perf-value {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
 }
 
 /* ─────────────────────────────────────────────────
-   Gauges & progress bars — smoother
+   Gauges & confidence bars
    ───────────────────────────────────────────────── */
 
 .gauge,
 .gauge-fill,
 .confidence-bar {
-    border-radius: var(--radius-full);
+    border-radius: var(--radius-pill);
 }
 
 .confidence-fill {
-    background: var(--accent-gradient);
-    box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
-    transition: width 600ms cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--accent);
+    box-shadow: none;
+    transition: width var(--duration-slow) var(--ease-out);
+}
+
+.gauge-value {
+    font-size: 2.2rem;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    font-feature-settings: "tnum";
+}
+
+.gauge-label {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
 }
 
 /* ─────────────────────────────────────────────────
-   Modal / Overlay — Premium look
+   Modals — clean and minimal
    ───────────────────────────────────────────────── */
 
 .analysis-card-container,
 .telegram-preview-overlay {
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    background: rgba(0, 0, 0, 0.7);
 }
 
 .analysis-card,
 .telegram-preview-modal {
-    background: linear-gradient(135deg, rgba(15, 20, 32, 0.96), rgba(20, 26, 42, 0.92));
-    backdrop-filter: blur(24px);
-    border: 1px solid var(--border-strong);
+    background: var(--surface-1);
+    backdrop-filter: none;
+    border: 1px solid var(--border-default);
     border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-popover);
+    box-shadow: var(--elevation-3);
 }
 
 /* ─────────────────────────────────────────────────
-   Form controls (selects, inputs)
+   Form controls
    ───────────────────────────────────────────────── */
 
 select,
 input[type="text"],
 input[type="number"],
 input[type="password"] {
-    background: rgba(15, 20, 32, 0.6);
-    border: 1px solid var(--border-color);
+    background: var(--surface-2);
+    border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
     color: var(--text-primary);
     padding: 8px 12px;
-    transition: border-color 180ms ease, box-shadow 180ms ease;
-    backdrop-filter: blur(8px);
+    font-size: 0.85rem;
+    transition: border-color var(--duration-fast) var(--ease-out),
+                box-shadow var(--duration-fast) var(--ease-out);
+    backdrop-filter: none;
 }
 
-select:focus,
-input:focus {
+select:hover, input:hover {
+    border-color: var(--border-strong);
+}
+
+select:focus, input:focus {
     outline: none;
-    border-color: var(--accent-primary);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 /* ─────────────────────────────────────────────────
-   Scrollbar — Subtle, modern
+   Scrollbar — refined, near-invisible until hover
    ───────────────────────────────────────────────── */
 
 ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -501,48 +886,87 @@ input:focus {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: rgba(99, 102, 241, 0.25);
-    border-radius: var(--radius-full);
-    border: 2px solid transparent;
-    background-clip: padding-box;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-pill);
+    transition: background var(--duration-base) var(--ease-out);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: rgba(99, 102, 241, 0.45);
-    background-clip: padding-box;
-    border: 2px solid transparent;
+    background: rgba(255, 255, 255, 0.18);
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
 }
 
 /* ─────────────────────────────────────────────────
-   Selection styling
+   Selection
    ───────────────────────────────────────────────── */
 
 ::selection {
-    background: rgba(99, 102, 241, 0.4);
+    background: var(--accent-soft-strong);
     color: #ffffff;
 }
 
 /* ─────────────────────────────────────────────────
-   Text — Better hierarchy
+   Typography ramp
    ───────────────────────────────────────────────── */
 
 h1, h2, h3 {
-    letter-spacing: -0.02em;
-    line-height: 1.2;
+    letter-spacing: -0.025em;
+    line-height: 1.18;
+    color: var(--text-primary);
 }
 
+h1 { font-size: 1.6rem; font-weight: 700; }
+h2 { font-size: 1.05rem; font-weight: 600; }
+h3 { font-size: 0.92rem; font-weight: 600; }
+
 .text-bullish {
-    color: var(--bullish);
-    text-shadow: 0 0 12px rgba(34, 197, 94, 0.25);
+    color: var(--bullish-bright);
+    text-shadow: none;
+    font-feature-settings: "tnum";
 }
 
 .text-bearish {
-    color: var(--bearish);
-    text-shadow: 0 0 12px rgba(239, 68, 68, 0.25);
+    color: var(--bearish-bright);
+    text-shadow: none;
+    font-feature-settings: "tnum";
 }
 
 /* ─────────────────────────────────────────────────
-   Reduce motion respect
+   Footer — minimal
+   ───────────────────────────────────────────────── */
+
+footer {
+    color: var(--text-tertiary);
+    font-size: 0.78rem;
+    border-top: 1px solid var(--border-subtle);
+    margin-top: 32px;
+    padding: 16px 6px;
+}
+
+footer p {
+    color: var(--text-tertiary);
+}
+
+footer strong {
+    color: var(--text-secondary);
+}
+
+/* ─────────────────────────────────────────────────
+   Skip link refinement
+   ───────────────────────────────────────────────── */
+
+.skip-link {
+    background: var(--surface-3);
+    border: 1px solid var(--border-strong);
+    border-radius: 0 0 var(--radius-md) 0;
+}
+
+/* ─────────────────────────────────────────────────
+   Reduce motion
    ───────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
@@ -554,24 +978,19 @@ h1, h2, h3 {
 }
 
 /* ─────────────────────────────────────────────────
-   Mobile refinement
+   Mobile
    ───────────────────────────────────────────────── */
 
 @media (max-width: 768px) {
-    .card {
-        margin: 6px;
-        border-radius: var(--radius-md);
-    }
+    .app { padding: 0 8px; }
+    .card { margin: 4px; border-radius: var(--radius-lg); }
     .price-ticker-bar,
     .signal-banner,
     .bot-signal-section,
     .bot-trades-section,
     .smart-money-signal-section,
-    .decision-panel {
-        margin: 8px;
-        border-radius: var(--radius-lg);
-    }
-    .strategy-tabs {
-        flex-wrap: wrap;
-    }
+    .decision-panel { margin: 8px 4px; padding: 16px; }
+    .ticker-value { font-size: 2rem; }
+    .strategy-tabs { flex-wrap: wrap; }
+    .gauge-value { font-size: 1.8rem; }
 }
