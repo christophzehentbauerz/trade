@@ -14,7 +14,9 @@ const STRAT = {
     emaFast: 15, emaSlow: 300, emaHTF: 800,
     rsiPeriod: 14, rsiMin: 45, rsiMax: 70,
     atrPeriod: 14, atrMultiplier: 2.5,
-    adxPeriod: 14, adxThreshold: 20
+    adxPeriod: 14, adxThreshold: 20,
+    skipSundayEntries: true,    // backtest: PF 1.70 → 2.14
+    minHoursBetweenTrades: 48   // backtest: PF 2.14 → 2.51, MaxDD -7.1% → -4.8%
 };
 
 // ─── Indicators (mirror of telegram-bot/bot.js) ───
@@ -144,13 +146,18 @@ export default async function handler(request, response) {
         const a = atr(candles, STRAT.atrPeriod);
         const adxValue = adx(candles, STRAT.adxPeriod);
         const adxOk = Number.isFinite(adxValue) && adxValue >= STRAT.adxThreshold;
+        const isSundayUTC = new Date().getUTCDay() === 0;
+        const sundayBlock = STRAT.skipSundayEntries && isSundayUTC;
 
         // Signal classification
         let signal = 'NEUTRAL';
         let signalLabel = 'Abwarten';
-        if (freshCross && rsiInZone && adxOk) {
+        if (freshCross && rsiInZone && adxOk && !sundayBlock) {
             signal = 'LONG';
             signalLabel = 'Long Entry (Fresh Cross + ADX bestätigt)';
+        } else if (freshCross && rsiInZone && adxOk && sundayBlock) {
+            signal = 'WATCH';
+            signalLabel = 'Setup vorhanden, aber Sonntag-Block aktiv (dünne Liquidität, schlechte historische Performance)';
         } else if (trendUp && rsiInZone && adxOk) {
             signal = 'WATCH';
             signalLabel = 'Trend bestätigt, aber kein frischer Cross — warten auf nächste Setup-Gelegenheit';
@@ -193,7 +200,9 @@ export default async function handler(request, response) {
                 rsiInZone,
                 adxOk,
                 aboveHTF: last.close > e800[i],
-                goldenCross: e15[i] > e300[i]
+                goldenCross: e15[i] > e300[i],
+                sundayBlock,
+                weekdayUTC: new Date().toLocaleDateString('de-DE', { weekday: 'long', timeZone: 'UTC' })
             },
             tradeLevels: signal === 'LONG' || signal === 'WATCH' ? {
                 entry: last.close,

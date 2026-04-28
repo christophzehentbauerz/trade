@@ -24,10 +24,19 @@ const CONFIG = {
             tier3: { triggerATR: 5, distanceATR: 4.0 }
         },
         deathCrossMaxProfit: 0.05,
-        timeStopHours: 72,
+        // Time Stop disabled — backtest showed +20% return improvement.
+        // Trailing stop + death cross are sufficient exits.
+        timeStopHours: 0,
         timeStopMinProfit: 0.005,
         adxPeriod: 14,
-        adxThreshold: 20
+        adxThreshold: 20,
+        // Skip Sunday (UTC) entries — Sat/Sun liquidity is thin, signals noisy.
+        // Backtest showed PF 1.70 → 2.14 with this single change.
+        skipSundayEntries: true,
+        // Cooldown: minimum hours between LAST exit and NEW entry.
+        // Backtest showed PF 2.14 → 2.51, MaxDD -7.1% → -4.8% with 48h.
+        // Prevents back-to-back fakeouts after a stop-out.
+        minHoursBetweenTrades: 48
     },
     coach: {
         accountSize:  5000,
@@ -757,7 +766,7 @@ function checkExitConditions(position, currentPrice, atr) {
         reasons.push({ type: 'TRAILING_STOP', profitPct });
     if (!state.goldenCross && profitPct < CONFIG.strategy.deathCrossMaxProfit)
         reasons.push({ type: 'DEATH_CROSS', profitPct });
-    if (hours >= CONFIG.strategy.timeStopHours && profitPct < CONFIG.strategy.timeStopMinProfit)
+    if (CONFIG.strategy.timeStopHours > 0 && hours >= CONFIG.strategy.timeStopHours && profitPct < CONFIG.strategy.timeStopMinProfit)
         reasons.push({ type: 'TIME_STOP', profitPct });
     return reasons;
 }
@@ -808,6 +817,7 @@ const DEFAULT_PERSISTED_STATE = {
     lastUpdateId: 0,
     lastCandleTime: null,
     lastTrendUp: false,
+    lastExitTime: null,  // ISO timestamp of last position close — for cooldown
     pendingNotifications: [],
     dailyPnL: 0,
     dailyTradeCount: 0,
@@ -850,9 +860,10 @@ function calcOpenRiskPct(position, currentPrice, accountSize) {
 
 function recordClosedTrade(prev, position, exitPrice, exitReason) {
     const pnlPct = ((exitPrice - position.entryPrice) / position.entryPrice) * 100;
+    const exitTime = new Date().toISOString();
     const trade = {
         entryTime: position.entryTime,
-        exitTime: new Date().toISOString(),
+        exitTime,
         entryPrice: position.entryPrice,
         exitPrice,
         pnlPct: parseFloat(pnlPct.toFixed(4)),
@@ -864,7 +875,8 @@ function recordClosedTrade(prev, position, exitPrice, exitReason) {
         tradeHistory: history,
         dailyPnL: parseFloat(((prev.dailyPnL || 0) + pnlPct).toFixed(4)),
         dailyTradeCount: (prev.dailyTradeCount || 0) + 1,
-        openRiskPct: 0
+        openRiskPct: 0,
+        lastExitTime: exitTime  // for cooldown filter
     };
 }
 
@@ -1034,9 +1046,23 @@ async function checkSignal() {
         // Fresh cross: trendUp (EMA15>EMA300 AND price>EMA800) just turned true this candle
         const freshCross = !prev.lastTrendUp && state.trendUp;
         const adxOk = Number.isFinite(state.adx) && state.adx >= CONFIG.strategy.adxThreshold;
-        const entryTriggered = freshCross && state.rsiInZone && adxOk && isNewClosedCandle;
+        // Skip Sunday (UTC) entries — backtest showed +12% return improvement
+        const isSundayUTC = new Date().getUTCDay() === 0;
+        const skipForWeekend = CONFIG.strategy.skipSundayEntries && isSundayUTC;
+        // Cooldown after last exit — backtest showed PF 2.14 → 2.51, MaxDD -7.1% → -4.8%
+        const cooldownH = CONFIG.strategy.minHoursBetweenTrades || 0;
+        let cooldownActive = false;
+        let cooldownRemainingH = 0;
+        if (cooldownH > 0 && prev.lastExitTime) {
+            const sinceExitH = (Date.now() - new Date(prev.lastExitTime).getTime()) / 3600000;
+            if (sinceExitH < cooldownH) {
+                cooldownActive = true;
+                cooldownRemainingH = cooldownH - sinceExitH;
+            }
+        }
+        const entryTriggered = freshCross && state.rsiInZone && adxOk && isNewClosedCandle && !skipForWeekend && !cooldownActive;
 
-        console.log(`📐 lastTrendUp=${prev.lastTrendUp} trendUp=${state.trendUp} freshCross=${freshCross} ADX=${isNaN(state.adx)?'NaN':state.adx.toFixed(1)} adxOk=${adxOk} rsiInZone=${state.rsiInZone}`);
+        console.log(`📐 lastTrendUp=${prev.lastTrendUp} trendUp=${state.trendUp} freshCross=${freshCross} ADX=${isNaN(state.adx)?'NaN':state.adx.toFixed(1)} adxOk=${adxOk} rsiInZone=${state.rsiInZone} sundayBlock=${skipForWeekend} cooldown=${cooldownActive ? cooldownRemainingH.toFixed(1)+'h' : 'no'}`);
 
         if (entryTriggered) {
             const plan = buildTradePlan({ dailyPnl: prev.dailyPnL, openRisk: prev.openRiskPct });

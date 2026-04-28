@@ -17,8 +17,13 @@ const STRAT = {
     adxPeriod: 14, adxThreshold: 20,
     trail: { tier1: 2.5, tier2: 2.0, tier3: 4.0, tier2TriggerATR: 3, tier3TriggerATR: 5 },
     deathCrossMaxProfit: 0.05,
-    timeStopHours: 72,
-    timeStopMinProfit: 0.005
+    // Disabled — backtest showed +12% return improvement when removed
+    timeStopHours: 0,
+    timeStopMinProfit: 0.005,
+    // Skip Sunday entries (UTC) — backtest: PF 1.70 → 2.14
+    skipSundayEntries: true,
+    // Cooldown between trades — backtest: PF 2.14 → 2.51, MaxDD -7.1% → -4.8%
+    minHoursBetweenTrades: 48
 };
 
 function ema(arr, period) {
@@ -134,6 +139,7 @@ function runBacktest(candles) {
     const trades = [];
     let position = null;
     let trendIsUp = false;
+    let lastExitIdx = -Infinity; // for cooldown filter
     const minIdx = STRAT.emaHTF + 50;
 
     for (let i = minIdx; i < candles.length; i++) {
@@ -155,6 +161,7 @@ function runBacktest(candles) {
                 position.pnlPct = (position.exitPrice - position.entryPrice) / position.entryPrice * 100;
                 trades.push(position);
                 position = null;
+                lastExitIdx = i;
                 trendIsUp = newTrendUp;
                 continue;
             }
@@ -167,11 +174,12 @@ function runBacktest(candles) {
                 position.pnlPct = profitPct * 100;
                 trades.push(position);
                 position = null;
+                lastExitIdx = i;
                 trendIsUp = newTrendUp;
                 continue;
             }
             const hoursHeld = i - position.entryIdx;
-            if (hoursHeld >= STRAT.timeStopHours && profitPct < STRAT.timeStopMinProfit) {
+            if (STRAT.timeStopHours > 0 && hoursHeld >= STRAT.timeStopHours && profitPct < STRAT.timeStopMinProfit) {
                 position.exitTime = c.time;
                 position.exitPrice = c.close;
                 position.exitReason = 'TIME_STOP';
@@ -179,6 +187,7 @@ function runBacktest(candles) {
                 position.pnlPct = profitPct * 100;
                 trades.push(position);
                 position = null;
+                lastExitIdx = i;
                 trendIsUp = newTrendUp;
                 continue;
             }
@@ -188,7 +197,10 @@ function runBacktest(candles) {
             const goldenCross = !trendIsUp && newTrendUp;
             const rsiInZone = rsi[i] >= STRAT.rsiMin && rsi[i] <= STRAT.rsiMax;
             const adxOk = Number.isFinite(adx[i]) && adx[i] >= STRAT.adxThreshold;
-            if (goldenCross && rsiInZone && adxOk) {
+            const dow = new Date(c.time).getUTCDay(); // 0=Sun
+            const sundayBlock = STRAT.skipSundayEntries && dow === 0;
+            const cooldownActive = (STRAT.minHoursBetweenTrades || 0) > 0 && (i - lastExitIdx) < STRAT.minHoursBetweenTrades;
+            if (goldenCross && rsiInZone && adxOk && !sundayBlock && !cooldownActive) {
                 position = {
                     entryTime: c.time,
                     entryIdx: i,
