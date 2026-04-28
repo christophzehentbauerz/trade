@@ -3,7 +3,7 @@
 // Network-First with stale-fallback for API responses.
 // =====================================================
 
-const VERSION = 'v4';
+const VERSION = 'v6';
 const STATIC_CACHE = `btc-static-${VERSION}`;
 const API_CACHE = `btc-api-${VERSION}`;
 
