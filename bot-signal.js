@@ -6,12 +6,16 @@
 
 const BOT_SIGNAL_URL = '/api/bot/signal';
 const BOT_SIGNAL_REFRESH_MS = 60_000; // 1 min — Vercel response is cached for 60s anyway
+const BOT_CHART_REFRESH_MS = 60_000;  // 1 min — refresh OHLC fully every minute
 let botChart = null;
 let botCandleSeries = null;
 let botEma15Series = null;
 let botEma300Series = null;
 let botEma800Series = null;
 let botSignalRefreshTimer = null;
+let botChartRefreshTimer = null;
+let botLastChartCandle = null; // {time, open, high, low, close}
+let botLastChartLoadedAt = 0;
 
 const fmtUsd = (v, digits = 0) => {
     if (!Number.isFinite(v)) return '—';
@@ -157,12 +161,14 @@ function calcEMASeries(closes, period) {
     return out;
 }
 
-async function loadBotChartData() {
+async function loadBotChartData(isRefresh = false) {
     ensureBotChart();
     if (!botChart || !botCandleSeries) return;
     try {
-        // Use CryptoCompare 1h candles directly — same source as bot
-        const res = await fetch('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=500');
+        // Use CryptoCompare 1h candles directly — same source as bot.
+        // Append a cache-buster so neither browser nor SW serves a stale response.
+        const url = `https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=500&_=${Date.now()}`;
+        const res = await fetch(url, { cache: 'no-store' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
         if (json.Response !== 'Success') throw new Error(json.Message);
@@ -175,19 +181,65 @@ async function loadBotChartData() {
         const closes = candles.map(c => c.close);
         const e15 = calcEMASeries(closes, 15);
         const e300 = calcEMASeries(closes, 300);
-        const e800 = calcEMASeries(closes, 500); // use shorter for visualization since we only have 500 bars
+        const e800 = calcEMASeries(closes, 500); // shorter for viz since we only have 500 bars
 
         const buildLine = (values) => candles.map((c, i) => values[i] != null ? { time: c.time, value: values[i] } : null).filter(Boolean);
         botEma15Series.setData(buildLine(e15));
         botEma300Series.setData(buildLine(e300));
         botEma800Series.setData(buildLine(e800));
 
-        botChart.timeScale().fitContent();
+        if (!isRefresh) botChart.timeScale().fitContent();
+
+        botLastChartCandle = candles.length ? { ...candles[candles.length - 1] } : null;
+        botLastChartLoadedAt = Date.now();
+        renderChartFreshness();
     } catch (e) {
         console.error('Chart data load failed:', e);
-        const container = document.getElementById('botChart');
-        if (container) container.innerHTML = `<div class="chart-error">Chart-Daten nicht verfügbar: ${e.message}</div>`;
+        if (!botLastChartCandle) {
+            const container = document.getElementById('botChart');
+            if (container) container.innerHTML = `<div class="chart-error">Chart-Daten nicht verfügbar: ${e.message}</div>`;
+        }
+        // If we already have data, keep showing it — just retry on next interval
     }
+}
+
+function renderChartFreshness() {
+    const el = document.getElementById('botChartFreshness');
+    if (!el || !botLastChartLoadedAt) return;
+    const t = new Date(botLastChartLoadedAt);
+    const time = t.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    el.textContent = `Chart-Daten: aktualisiert ${time} · 1h-Candles via CryptoCompare`;
+}
+
+// Live price (Binance WS) → update the forming candle's close in real-time
+function attachLivePriceUpdates() {
+    window.addEventListener('btc-live-price', (e) => {
+        if (!botCandleSeries || !botLastChartCandle) return;
+        const livePrice = e?.detail?.price;
+        if (!Number.isFinite(livePrice) || livePrice <= 0) return;
+
+        const nowSec = Math.floor(Date.now() / 1000);
+        const currentHourBucket = Math.floor(nowSec / 3600) * 3600;
+
+        if (currentHourBucket > botLastChartCandle.time) {
+            // New hour started — fetch a fresh full set instead of guessing OHLC
+            loadBotChartData(true);
+            return;
+        }
+
+        // Update the still-forming candle in place
+        const c = botLastChartCandle;
+        c.close = livePrice;
+        if (livePrice > c.high) c.high = livePrice;
+        if (livePrice < c.low) c.low = livePrice;
+        botCandleSeries.update({
+            time: c.time,
+            open: c.open,
+            high: c.high,
+            low: c.low,
+            close: c.close
+        });
+    });
 }
 
 let botPriceLines = [];
@@ -212,10 +264,25 @@ function drawBotPriceLevels(levels) {
 function startBotSignalUpdates() {
     fetchBotSignal();
     loadBotChartData();
+    attachLivePriceUpdates();
+
     if (botSignalRefreshTimer) clearInterval(botSignalRefreshTimer);
     botSignalRefreshTimer = setInterval(() => {
         fetchBotSignal();
     }, BOT_SIGNAL_REFRESH_MS);
+
+    if (botChartRefreshTimer) clearInterval(botChartRefreshTimer);
+    botChartRefreshTimer = setInterval(() => {
+        loadBotChartData(true);
+    }, BOT_CHART_REFRESH_MS);
+
+    // Also refresh whenever the tab becomes visible again
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            fetchBotSignal();
+            loadBotChartData(true);
+        }
+    });
 }
 
 if (document.readyState === 'loading') {
