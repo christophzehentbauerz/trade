@@ -374,6 +374,198 @@ a:focus-visible,
     margin: 1rem 0 2rem 0;
 }
 
+/* ─── Last Trigger Hero Card ─── */
+
+.bot-last-trigger {
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-left-width: 4px;
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+    transition: border-color 200ms ease, background 200ms ease;
+}
+
+.bot-last-trigger[data-state="loading"] {
+    border-left-color: rgba(148, 163, 184, 0.35);
+    color: #94a3b8;
+}
+
+.bot-last-trigger[data-state="open"] {
+    border-left-color: #60a5fa;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(15, 23, 42, 0.6));
+}
+
+.bot-last-trigger[data-state="win"] {
+    border-left-color: #10b981;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.10), rgba(15, 23, 42, 0.6));
+}
+
+.bot-last-trigger[data-state="loss"] {
+    border-left-color: #ef4444;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(15, 23, 42, 0.6));
+}
+
+.bot-last-trigger[data-state="none"] {
+    border-left-color: #94a3b8;
+}
+
+.lt-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.lt-status {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 220px;
+}
+
+.lt-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    width: fit-content;
+}
+
+.lt-badge.open { background: rgba(96, 165, 250, 0.2); color: #93c5fd; border: 1px solid rgba(96, 165, 250, 0.4); }
+.lt-badge.win { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4); }
+.lt-badge.loss { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); }
+
+.lt-when {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+}
+
+.lt-when strong {
+    color: #f1f5f9;
+    font-weight: 600;
+    font-feature-settings: "tnum";
+}
+
+.lt-rel {
+    color: #94a3b8;
+    font-size: 0.78rem;
+    margin-left: 4px;
+}
+
+.lt-pnl {
+    text-align: right;
+    min-width: 120px;
+}
+
+.lt-pnl-label {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 2px;
+}
+
+.lt-pnl-value {
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    font-feature-settings: "tnum";
+    line-height: 1.1;
+}
+
+.lt-pnl-value.pos { color: #10b981; }
+.lt-pnl-value.neg { color: #ef4444; }
+
+.lt-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 1px;
+    background: rgba(148, 163, 184, 0.18);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.lt-cell {
+    background: rgba(15, 23, 42, 0.65);
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.lt-cell-label {
+    font-size: 0.65rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.lt-cell-value {
+    font-size: 0.95rem;
+    color: #f1f5f9;
+    font-weight: 600;
+    font-feature-settings: "tnum";
+}
+
+.lt-cell-value.lt-reason {
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.lt-explain {
+    margin-top: 10px;
+    font-size: 0.78rem;
+    color: #94a3b8;
+    line-height: 1.4;
+    padding-left: 4px;
+}
+
+.lt-empty {
+    color: #cbd5e1;
+    font-size: 0.9rem;
+}
+
+.lt-empty strong {
+    display: block;
+    color: #f1f5f9;
+    margin-bottom: 4px;
+}
+
+.bt-list-header {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    padding: 6px 4px 8px 4px;
+    margin-top: 8px;
+    border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+@media (max-width: 640px) {
+    .lt-row {
+        flex-direction: column;
+    }
+    .lt-pnl {
+        text-align: left;
+    }
+    .lt-pnl-value {
+        font-size: 1.4rem;
+    }
+    .lt-detail-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 .bot-trades-section .bot-signal-header {
     margin-bottom: 1rem;
 }
