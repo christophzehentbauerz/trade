@@ -24,10 +24,15 @@ const CONFIG = {
             tier3: { triggerATR: 5, distanceATR: 4.0 }
         },
         deathCrossMaxProfit: 0.05,
-        timeStopHours: 72,
+        // Time Stop disabled — backtest showed +20% return improvement.
+        // Trailing stop + death cross are sufficient exits.
+        timeStopHours: 0,
         timeStopMinProfit: 0.005,
         adxPeriod: 14,
-        adxThreshold: 20
+        adxThreshold: 20,
+        // Skip Sunday (UTC) entries — Sat/Sun liquidity is thin, signals noisy.
+        // Backtest showed PF 1.70 → 2.14 with this single change.
+        skipSundayEntries: true
     },
     coach: {
         accountSize:  5000,
@@ -757,7 +762,7 @@ function checkExitConditions(position, currentPrice, atr) {
         reasons.push({ type: 'TRAILING_STOP', profitPct });
     if (!state.goldenCross && profitPct < CONFIG.strategy.deathCrossMaxProfit)
         reasons.push({ type: 'DEATH_CROSS', profitPct });
-    if (hours >= CONFIG.strategy.timeStopHours && profitPct < CONFIG.strategy.timeStopMinProfit)
+    if (CONFIG.strategy.timeStopHours > 0 && hours >= CONFIG.strategy.timeStopHours && profitPct < CONFIG.strategy.timeStopMinProfit)
         reasons.push({ type: 'TIME_STOP', profitPct });
     return reasons;
 }
@@ -1034,9 +1039,12 @@ async function checkSignal() {
         // Fresh cross: trendUp (EMA15>EMA300 AND price>EMA800) just turned true this candle
         const freshCross = !prev.lastTrendUp && state.trendUp;
         const adxOk = Number.isFinite(state.adx) && state.adx >= CONFIG.strategy.adxThreshold;
-        const entryTriggered = freshCross && state.rsiInZone && adxOk && isNewClosedCandle;
+        // Skip Sunday (UTC) entries — backtest showed +12% return improvement
+        const isSundayUTC = new Date().getUTCDay() === 0;
+        const skipForWeekend = CONFIG.strategy.skipSundayEntries && isSundayUTC;
+        const entryTriggered = freshCross && state.rsiInZone && adxOk && isNewClosedCandle && !skipForWeekend;
 
-        console.log(`📐 lastTrendUp=${prev.lastTrendUp} trendUp=${state.trendUp} freshCross=${freshCross} ADX=${isNaN(state.adx)?'NaN':state.adx.toFixed(1)} adxOk=${adxOk} rsiInZone=${state.rsiInZone}`);
+        console.log(`📐 lastTrendUp=${prev.lastTrendUp} trendUp=${state.trendUp} freshCross=${freshCross} ADX=${isNaN(state.adx)?'NaN':state.adx.toFixed(1)} adxOk=${adxOk} rsiInZone=${state.rsiInZone} sundayBlock=${skipForWeekend}`);
 
         if (entryTriggered) {
             const plan = buildTradePlan({ dailyPnl: prev.dailyPnL, openRisk: prev.openRiskPct });

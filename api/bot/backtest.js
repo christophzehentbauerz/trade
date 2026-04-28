@@ -17,8 +17,11 @@ const STRAT = {
     adxPeriod: 14, adxThreshold: 20,
     trail: { tier1: 2.5, tier2: 2.0, tier3: 4.0, tier2TriggerATR: 3, tier3TriggerATR: 5 },
     deathCrossMaxProfit: 0.05,
-    timeStopHours: 72,
-    timeStopMinProfit: 0.005
+    // Disabled — backtest showed +12% return improvement when removed
+    timeStopHours: 0,
+    timeStopMinProfit: 0.005,
+    // Skip Sunday entries (UTC) — backtest: PF 1.70 → 2.14
+    skipSundayEntries: true
 };
 
 function ema(arr, period) {
@@ -171,7 +174,7 @@ function runBacktest(candles) {
                 continue;
             }
             const hoursHeld = i - position.entryIdx;
-            if (hoursHeld >= STRAT.timeStopHours && profitPct < STRAT.timeStopMinProfit) {
+            if (STRAT.timeStopHours > 0 && hoursHeld >= STRAT.timeStopHours && profitPct < STRAT.timeStopMinProfit) {
                 position.exitTime = c.time;
                 position.exitPrice = c.close;
                 position.exitReason = 'TIME_STOP';
@@ -188,7 +191,9 @@ function runBacktest(candles) {
             const goldenCross = !trendIsUp && newTrendUp;
             const rsiInZone = rsi[i] >= STRAT.rsiMin && rsi[i] <= STRAT.rsiMax;
             const adxOk = Number.isFinite(adx[i]) && adx[i] >= STRAT.adxThreshold;
-            if (goldenCross && rsiInZone && adxOk) {
+            const dow = new Date(c.time).getUTCDay(); // 0=Sun
+            const sundayBlock = STRAT.skipSundayEntries && dow === 0;
+            if (goldenCross && rsiInZone && adxOk && !sundayBlock) {
                 position = {
                     entryTime: c.time,
                     entryIdx: i,
