@@ -35,7 +35,14 @@ function renderBotSignal(data) {
     const levelsEl = document.getElementById('botTradeLevels');
 
     section.dataset.signal = data.signal;
-    if (statusEl) statusEl.textContent = `Stand: ${new Date(data.lastCandleTime).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })}`;
+    if (statusEl) {
+        const candleTime = new Date(data.lastCandleTime);
+        const candleHour = candleTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
+        const apiTime = new Date(data.timestamp || Date.now());
+        const apiTimeStr = apiTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
+        statusEl.textContent = `Letzte 1h-Candle: ${candleHour} · API geprüft ${apiTimeStr}`;
+        statusEl.title = `Indikatoren rechnen mit der zuletzt geschlossenen 1h-Candle (${candleHour}). Die Candle die jetzt entsteht zählt erst, wenn sie schließt.`;
+    }
     if (badgeEl) {
         badgeEl.textContent = data.signal;
         badgeEl.className = `bot-signal-badge bot-signal-${data.signal.toLowerCase()}`;
@@ -208,7 +215,8 @@ function renderChartFreshness() {
     if (!el || !botLastChartLoadedAt) return;
     const t = new Date(botLastChartLoadedAt);
     const time = t.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    el.textContent = `Chart-Daten: aktualisiert ${time} · 1h-Candles via CryptoCompare`;
+    el.textContent = `1h-Candles: zuletzt geladen ${time} · Live-Preis tickt sekündlich`;
+    el.title = 'Die letzte Candle im Chart formt sich gerade — ihr Schluss-Preis wird live über den Binance WebSocket aktualisiert. Vollständiger Reload alle 60 Sekunden.';
 }
 
 // Live price (Binance WS) → update the forming candle's close in real-time
