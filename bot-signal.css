@@ -239,6 +239,16 @@ a:focus-visible,
     height: 100%;
 }
 
+.bot-chart-freshness {
+    margin-top: 6px;
+    text-align: right;
+    font-size: 0.72rem;
+    color: #94a3b8;
+    font-feature-settings: "tnum";
+    font-variant-numeric: tabular-nums;
+    padding: 0 4px;
+}
+
 .chart-error {
     display: flex;
     align-items: center;
