@@ -15,7 +15,8 @@ const STRAT = {
     rsiPeriod: 14, rsiMin: 45, rsiMax: 70,
     atrPeriod: 14, atrMultiplier: 2.5,
     adxPeriod: 14, adxThreshold: 20,
-    skipSundayEntries: true // backtest: PF 1.70 → 2.14
+    skipSundayEntries: true,    // backtest: PF 1.70 → 2.14
+    minHoursBetweenTrades: 48   // backtest: PF 2.14 → 2.51, MaxDD -7.1% → -4.8%
 };
 
 // ─── Indicators (mirror of telegram-bot/bot.js) ───

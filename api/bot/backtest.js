@@ -21,7 +21,9 @@ const STRAT = {
     timeStopHours: 0,
     timeStopMinProfit: 0.005,
     // Skip Sunday entries (UTC) — backtest: PF 1.70 → 2.14
-    skipSundayEntries: true
+    skipSundayEntries: true,
+    // Cooldown between trades — backtest: PF 2.14 → 2.51, MaxDD -7.1% → -4.8%
+    minHoursBetweenTrades: 48
 };
 
 function ema(arr, period) {
@@ -137,6 +139,7 @@ function runBacktest(candles) {
     const trades = [];
     let position = null;
     let trendIsUp = false;
+    let lastExitIdx = -Infinity; // for cooldown filter
     const minIdx = STRAT.emaHTF + 50;
 
     for (let i = minIdx; i < candles.length; i++) {
@@ -158,6 +161,7 @@ function runBacktest(candles) {
                 position.pnlPct = (position.exitPrice - position.entryPrice) / position.entryPrice * 100;
                 trades.push(position);
                 position = null;
+                lastExitIdx = i;
                 trendIsUp = newTrendUp;
                 continue;
             }
@@ -170,6 +174,7 @@ function runBacktest(candles) {
                 position.pnlPct = profitPct * 100;
                 trades.push(position);
                 position = null;
+                lastExitIdx = i;
                 trendIsUp = newTrendUp;
                 continue;
             }
@@ -182,6 +187,7 @@ function runBacktest(candles) {
                 position.pnlPct = profitPct * 100;
                 trades.push(position);
                 position = null;
+                lastExitIdx = i;
                 trendIsUp = newTrendUp;
                 continue;
             }
@@ -193,7 +199,8 @@ function runBacktest(candles) {
             const adxOk = Number.isFinite(adx[i]) && adx[i] >= STRAT.adxThreshold;
             const dow = new Date(c.time).getUTCDay(); // 0=Sun
             const sundayBlock = STRAT.skipSundayEntries && dow === 0;
-            if (goldenCross && rsiInZone && adxOk && !sundayBlock) {
+            const cooldownActive = (STRAT.minHoursBetweenTrades || 0) > 0 && (i - lastExitIdx) < STRAT.minHoursBetweenTrades;
+            if (goldenCross && rsiInZone && adxOk && !sundayBlock && !cooldownActive) {
                 position = {
                     entryTime: c.time,
                     entryIdx: i,
