@@ -1108,6 +1108,19 @@ async function checkSignal() {
 async function sendDailyUpdate() {
     assertTelegramConfigured();
     console.log('📅 BTC Smart Money Coach — Daily Update\n' + '='.repeat(50));
+
+    // Idempotency: skip if a daily report was already sent today
+    // (allows running multiple cron schedules as backup without duplicating)
+    const existing = loadPreviousState();
+    if (existing.lastDailyUpdate) {
+        const lastDate = existing.lastDailyUpdate.slice(0, 10);
+        const todayDate = new Date().toISOString().slice(0, 10);
+        if (lastDate === todayDate) {
+            console.log(`⏭ Daily report already sent today (${existing.lastDailyUpdate}). Skipping.`);
+            return;
+        }
+    }
+
     await calculateAll();
     await fetchFearGreed();
     await fetch24hChange();
