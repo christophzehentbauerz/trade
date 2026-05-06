@@ -2,14 +2,16 @@ name: Daily Report
 
 on:
   schedule:
-    # 06:00 UTC = 07:00 CET
+    # 06:00 UTC = 07:00/08:00 CET (depending on DST)
     - cron: '0 6 * * *'
+    # Backup at 06:30 UTC — runs only if 06:00 failed (idempotent thanks to lastDailyUpdate state)
+    - cron: '30 6 * * *'
   workflow_dispatch:
-    # Manual trigger for testing
 
 jobs:
   daily-update:
     runs-on: ubuntu-latest
+    timeout-minutes: 10  # Fail fast if runner stuck
     permissions:
       contents: read
 
