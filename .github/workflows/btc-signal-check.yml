@@ -6,16 +6,21 @@ on:
     # less GitHub runner pool pressure than every 5 min
     - cron: "*/10 * * * *"
   workflow_dispatch:
+    inputs:
+      mode:
+        description: 'diagnose prüft Telegram und Marktdaten ohne Nachrichtenversand'
+        type: choice
+        options: [diagnose, check]
+        default: diagnose
 
 concurrency:
-  group: btc-signal-check
-  cancel-in-progress: true
+  group: btc-bot-state
+  cancel-in-progress: false
 
 jobs:
   check-signals:
     runs-on: ubuntu-latest
-    # Hard timeout: if runner can't pick up job in 5 min, fail fast
-    # rather than waiting the default 360 min — frees the slot for the next run
+    # Bounds execution time after a runner starts the job.
     timeout-minutes: 5
 
     steps:
@@ -25,13 +30,13 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
 
       - name: Restore bot state
         uses: actions/cache/restore@v4
         with:
           path: /tmp/btc-smart-money-state.json
-          key: bot-state-${{ github.run_id }}
+          key: bot-state-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             bot-state-
 
@@ -54,13 +59,14 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          BOT_COMMAND: ${{ inputs.mode || 'check' }}
         run: |
           cd telegram-bot
-          node bot.js check
+          node bot.js "$BOT_COMMAND"
 
       - name: Save bot state
         uses: actions/cache/save@v4
-        if: always()
+        if: always() && inputs.mode != 'diagnose'
         with:
           path: /tmp/btc-smart-money-state.json
           key: bot-state-${{ github.run_id }}-${{ github.run_attempt }}

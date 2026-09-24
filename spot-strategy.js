@@ -125,16 +125,8 @@ const SpotStrategy = {
     },
 
     async fetchDailyCandles() {
-        const url = `https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=${this.config.candleLimit}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        return data.map(c => ({
-            time: c[0],
-            open: parseFloat(c[1]),
-            high: parseFloat(c[2]),
-            low: parseFloat(c[3]),
-            close: parseFloat(c[4])
-        }));
+        const { fetchCandles } = await import('./lib/market-data.mjs');
+        return fetchCandles('1d', this.config.candleLimit);
     },
 
     async fetchFearGreed() {

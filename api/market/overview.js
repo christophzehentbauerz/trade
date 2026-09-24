@@ -26,8 +26,8 @@ export default async function handler(request, response) {
 
     try {
         const [coinRes, historyRes] = await Promise.all([
-            fetch('https://api.coingecko.com/api/v3/coins/bitcoin?localization=false&tickers=false&community_data=false&developer_data=false'),
-            fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=14&interval=daily')
+            fetch('https://api.coingecko.com/api/v3/coins/bitcoin?localization=false&tickers=false&community_data=false&developer_data=false', { signal: AbortSignal.timeout(12000) }),
+            fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=14&interval=daily', { signal: AbortSignal.timeout(12000) })
         ]);
 
         if (!coinRes.ok) throw new Error(`CoinGecko coin HTTP ${coinRes.status}`);

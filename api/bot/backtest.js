@@ -1,3 +1,4 @@
+import { fetchCandles as loadCandles } from '../../lib/market-data.mjs';
 // =====================================================
 // /api/bot/backtest — Replays the bot's strategy on the
 // last N days of 1h candles and returns the resulting
@@ -246,22 +247,7 @@ function computeStats(trades) {
     };
 }
 
-async function fetchCandles(limit = 2000) {
-    try {
-        const res = await fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=${Math.min(limit, 2000)}`);
-        if (!res.ok) throw new Error(`CryptoCompare HTTP ${res.status}`);
-        const data = await res.json();
-        if (data.Response !== 'Success') throw new Error(data.Message);
-        return data.Data.Data
-            .filter(c => Number.isFinite(c.close))
-            .map(c => ({ time: c.time * 1000, open: c.open, high: c.high, low: c.low, close: c.close }));
-    } catch (e) {
-        const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=${Math.min(limit, 1000)}`);
-        if (!res.ok) throw new Error(`Binance HTTP ${res.status}: ${e.message}`);
-        const data = await res.json();
-        return data.map(c => ({ time: c[0], open: +c[1], high: +c[2], low: +c[3], close: +c[4] }));
-    }
-}
+async function fetchCandles(limit = 2000) { return loadCandles('1h', limit); }
 
 export default async function handler(request, response) {
     setCors(response);
@@ -270,8 +256,8 @@ export default async function handler(request, response) {
 
     try {
         const days = Math.max(30, Math.min(180, parseInt(request.query.days) || 90));
-        const limit = Math.min(2000, days * 24 + STRAT.emaHTF + 100);
-        const candles = await fetchCandles(limit);
+        const limit = days * 24 + STRAT.emaHTF + 51;
+        const candles = (await fetchCandles(limit)).filter(c => c.closeTime < Date.now());
         if (candles.length < STRAT.emaHTF + 50) {
             throw new Error(`Insufficient candles: ${candles.length}`);
         }
@@ -291,7 +277,7 @@ export default async function handler(request, response) {
         response.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=1800');
         response.status(200).json({
             timestamp: new Date().toISOString(),
-            window: { days, candles: candles.length },
+            window: { days, candles: candles.length, evaluatedDays: Math.max(0, (candles.length - STRAT.emaHTF - 50) / 24) },
             stats,
             recentTrades: recent,
             openPosition: openPosition ? {

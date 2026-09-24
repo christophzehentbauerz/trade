@@ -16,6 +16,8 @@ let botSignalRefreshTimer = null;
 let botChartRefreshTimer = null;
 let botLastChartCandle = null; // {time, open, high, low, close}
 let botLastChartLoadedAt = 0;
+let botSignalLoading = false;
+let botChartLoading = false;
 
 const fmtUsd = (v, digits = 0) => {
     if (!Number.isFinite(v)) return '—';
@@ -104,9 +106,7 @@ function renderBotSignal(data) {
     }
 
     // Chart: draw price line on entry/SL/TP
-    if (botChart && data.tradeLevels) {
-        drawBotPriceLevels(data.tradeLevels);
-    }
+    if (botChart) drawBotPriceLevels(data.tradeLevels);
 }
 
 function renderBotError(error) {
@@ -114,18 +114,28 @@ function renderBotError(error) {
     const labelEl = document.getElementById('botSignalLabel');
     if (statusEl) statusEl.textContent = '⚠️ Bot-Signal nicht verfügbar';
     if (labelEl) labelEl.textContent = error?.message || 'API-Fehler';
+    const badge = document.getElementById('botSignalBadge');
+    if (badge) { badge.textContent = 'DATEN FEHLEN'; badge.className = 'bot-signal-badge'; }
+    const levels = document.getElementById('botTradeLevels');
+    if (levels) levels.style.display = 'none';
+    const checks = document.getElementById('botChecksGrid');
+    if (checks) checks.replaceChildren();
+    document.getElementById('botSignalSection')?.setAttribute('data-signal', 'unavailable');
+    drawBotPriceLevels(null);
 }
 
 async function fetchBotSignal() {
+    if (botSignalLoading) return;
+    botSignalLoading = true;
     try {
-        const res = await fetch(BOT_SIGNAL_URL, { cache: 'no-store' });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+        const data = await window.MarketAPI.get('bot/signal');
         if (data.error) throw new Error(data.message || data.error);
         renderBotSignal(data);
     } catch (e) {
         console.error('Bot signal fetch failed:', e);
         renderBotError(e);
+    } finally {
+        botSignalLoading = false;
     }
 }
 
@@ -171,24 +181,21 @@ function calcEMASeries(closes, period) {
 async function loadBotChartData(isRefresh = false) {
     ensureBotChart();
     if (!botChart || !botCandleSeries) return;
+    if (botChartLoading) return;
+    botChartLoading = true;
     try {
-        // Use CryptoCompare 1h candles directly — same source as bot.
-        // Append a cache-buster so neither browser nor SW serves a stale response.
-        const url = `https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=500&_=${Date.now()}`;
-        const res = await fetch(url, { cache: 'no-store' });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
-        if (json.Response !== 'Success') throw new Error(json.Message);
-        const candles = json.Data.Data
+        // Same BTCUSDT candle source as the strategy; share in-flight requests.
+        const json = await window.MarketAPI.get('bot/candles');
+        const candles = json.candles
             .filter(c => Number.isFinite(c.close))
-            .map(c => ({ time: c.time, open: c.open, high: c.high, low: c.low, close: c.close }));
+            .map(c => ({ time: c.time / 1000, open: c.open, high: c.high, low: c.low, close: c.close }));
 
         botCandleSeries.setData(candles);
 
         const closes = candles.map(c => c.close);
         const e15 = calcEMASeries(closes, 15);
         const e300 = calcEMASeries(closes, 300);
-        const e800 = calcEMASeries(closes, 500); // shorter for viz since we only have 500 bars
+        const e800 = calcEMASeries(closes, 800);
 
         const buildLine = (values) => candles.map((c, i) => values[i] != null ? { time: c.time, value: values[i] } : null).filter(Boolean);
         botEma15Series.setData(buildLine(e15));
@@ -202,11 +209,11 @@ async function loadBotChartData(isRefresh = false) {
         renderChartFreshness();
     } catch (e) {
         console.error('Chart data load failed:', e);
-        if (!botLastChartCandle) {
-            const container = document.getElementById('botChart');
-            if (container) container.innerHTML = `<div class="chart-error">Chart-Daten nicht verfügbar: ${e.message}</div>`;
-        }
-        // If we already have data, keep showing it — just retry on next interval
+        const status = document.getElementById('botChartFreshness');
+        if (status) status.textContent = `Chart-Aktualisierung fehlgeschlagen: ${e.message}. Nächster Versuch in einer Minute.`;
+        // Preserve the canvas so a later successful request can render again.
+    } finally {
+        botChartLoading = false;
     }
 }
 
@@ -256,6 +263,7 @@ function drawBotPriceLevels(levels) {
     // Remove old lines
     botPriceLines.forEach(l => botCandleSeries.removePriceLine(l));
     botPriceLines = [];
+    if (!levels) return;
     const add = (price, color, title) => {
         if (!Number.isFinite(price)) return;
         botPriceLines.push(botCandleSeries.createPriceLine({

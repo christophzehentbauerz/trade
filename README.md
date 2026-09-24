@@ -17,7 +17,25 @@ Features:
 - Telegram-Report/Signal Integrationen
 
 Start lokal:
-- `index.html` im Browser öffnen
+```bash
+python -m http.server 8765 --bind 127.0.0.1
+```
+Danach `http://127.0.0.1:8765/` öffnen. Ein HTTP-Server ist für die gemeinsam genutzten JavaScript-Module erforderlich.
+
+Das Dashboard unterstützt GitHub Pages und Vercel. Auf GitHub Pages bzw. localhost führt `market-client.js` die öffentlichen Datenadapter im Browser aus; auf Vercel nutzt es die Server-Endpunkte. Chart und Markt-Setup teilen sich die Kerzendaten aus `lib/market-data.mjs`. Im Browser wird die Binance Spot API verwendet, im Bot die offizielle reine Marktdaten-API `data-api.binance.vision`.
+
+Auf statischen Hosts ist Alternative.me die Standardquelle für Fear & Greed. Eine ausdrücklich gespeicherte Quellenauswahl bleibt erhalten. CoinMarketCap benötigt einen eigenen Server-Proxy oder eine entsprechende Konfiguration.
+
+Die Historie auf der Seite ist eine **historische Simulation**, kein Nachweis versendeter Telegram-Signale oder ausgeführter Orders. Der Bot-Status in der Telegram-Leiste zeigt separat die GitHub-Zeitpläne und die letzten Ausführungen. Ein Markt-Setup allein bestätigt keinen Nachrichtenversand; der zustandsbehaftete Bot berücksichtigt zusätzlich Risikolimits und Wartezeiten.
+
+Prüfungen ohne Zugangsdaten und ohne Nachrichtenversand:
+```bash
+node --test tests/*.test.cjs
+```
+
+Telegram-Einrichtung und Diagnose: [telegram-bot/SETUP.md](telegram-bot/SETUP.md).
+
+Der Pages-Workflow veröffentlicht nur Web-Dateien und injiziert keine geheimen API-Schlüssel in HTML. Falls ein früherer Deploy einen `OPENAI_API_KEY` injiziert hat, muss dieser Schlüssel beim Anbieter ersetzt werden; das Entfernen aus einem späteren Deploy macht einen bereits veröffentlichten Schlüssel nicht wieder geheim.
 
 ### CoinMarketCap Fear & Greed auf Vercel
 

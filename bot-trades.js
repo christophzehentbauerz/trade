@@ -1,3 +1,4 @@
+(() => {
 // =====================================================
 // Bot Trade Journal — Replays bot strategy on history
 // and renders the resulting trades + stats.
@@ -7,6 +8,7 @@ const BACKTEST_URL = '/api/bot/backtest?days=90';
 const TRADES_REFRESH_MS = 5 * 60 * 1000; // Re-replay every 5 min
 let tradesRefreshTimer = null;
 let openPositionState = null; // for live PnL updates
+let tradesLoading = false;
 
 const fmtUSD = v => Number.isFinite(v) ? '$' + Math.round(v).toLocaleString('de-DE') : '—';
 const fmtPct = (v, digits = 2) => Number.isFinite(v) ? `${v >= 0 ? '+' : ''}${v.toFixed(digits)}%` : '—';
@@ -197,12 +199,12 @@ function updateLivePnL() {
 }
 
 async function loadBotTrades() {
+    if (tradesLoading) return;
+    tradesLoading = true;
     const statusEl = document.getElementById('botTradeStatus');
     if (statusEl) statusEl.textContent = 'Lade Backtest…';
     try {
-        const res = await fetch(`${BACKTEST_URL}&_=${Date.now()}`, { cache: 'no-store' });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+        const data = await window.MarketAPI.get('bot/backtest', 'days=90');
         if (data.error) throw new Error(data.message || data.error);
 
         openPositionState = data.openPosition || null;
@@ -212,13 +214,16 @@ async function loadBotTrades() {
 
         if (statusEl) {
             const lastUpdate = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-            statusEl.textContent = `90 Tage Replay · aktualisiert ${lastUpdate}`;
+            statusEl.textContent = `Simulation · ${Math.floor(data.window.evaluatedDays)} Tage ausgewertet · Stand ${lastUpdate}`;
         }
     } catch (e) {
         console.error('Bot trades load failed:', e);
         if (statusEl) statusEl.textContent = '⚠️ Trade-Historie nicht verfügbar';
         const list = document.getElementById('botTradeList');
-        if (list) list.innerHTML = `<div class="bt-empty">Fehler: ${e.message}</div>`;
+        if (list) list.textContent = `Historische Simulation nicht verfügbar: ${e.message}`;
+        openPositionState = null;
+    } finally {
+        tradesLoading = false;
     }
 }
 
@@ -240,3 +245,5 @@ if (document.readyState === 'loading') {
 } else {
     init();
 }
+
+})();

@@ -994,3 +994,56 @@ footer strong {
     .strategy-tabs { flex-wrap: wrap; }
     .gauge-value { font-size: 1.8rem; }
 }
+
+/* Reading order follows the document, including keyboard navigation. */
+.app > * { order: 0; min-width: 0; }
+.app { padding: 24px 24px 48px; gap: 20px; }
+.app > .header { margin: 0; padding: 20px 24px; border-radius: 18px; }
+.logo-text { font-size: clamp(1.15rem, 2vw, 1.5rem); }
+.header-right { flex-wrap: wrap; gap: 8px; }
+.header .trade-analysis-btn { width: auto; flex: 0 1 auto; padding: 10px 16px; background: #172331; color: #cde8ee; box-shadow: none; border: 1px solid #2b4054; border-radius: 10px; font-size: .75rem; }
+.header .logo-text { background: none; color: #edf4fb; -webkit-text-fill-color: currentColor; }
+.header .last-update { color: #aebed0; }
+.last-update { font-size: .75rem; }
+.price-ticker-bar { margin: 0; padding: 24px; border-radius: 18px; gap: 18px; }
+.price-ticker-bar .ticker-meta { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); width: 100%; gap: 10px; }
+.price-ticker-bar .ticker-item { min-width: 0; }
+.ticker-sources { color: #a4b2c4; }
+.ticker-value { font-size: clamp(2rem, 5vw, 3.25rem); letter-spacing: -.05em; }
+.bot-signal-section { margin: 0; padding: 24px; border-radius: 18px; }
+.bot-signal-header { flex-wrap: wrap; gap: 12px; }
+.bot-signal-status, .field-timestamp, .live-timestamp { color: #a5b3c7; }
+.telegram-bar { margin: 0; padding: 16px 20px; border-radius: 14px; }
+.notification-settings-content { gap: 16px; }
+.notification-status { line-height: 1.5; }
+.bot-run-link { display: inline-block; margin-top: 6px; color: #8ac8e8; font-size: .78rem; }
+.simulation-note { margin: 0 0 16px; color: #aebed0; line-height: 1.6; font-size: .8rem; }
+#botAutomationStatus[data-tone="error"] { color: #fca5a5; }
+#botAutomationStatus[data-tone="pending"] { color: #f5ce80; }
+#botAutomationStatus[data-tone="success"] { color: #7fdbb2; }
+.notification-buttons { flex-wrap: wrap; }
+.decision-panel, .signal-banner, .signal-audit-section { margin: 0; border-radius: 18px; }
+.card-header h2 { line-height: 1.4; }
+.telegram-preview-overlay { z-index: 10000; padding: 16px; }
+.telegram-preview-modal { width: min(640px, 100%); max-height: 90dvh; overflow-y: auto; }
+.telegram-preview-modal input { min-height: 44px; width: 100%; }
+.telegram-preview-modal button, .notif-btn { min-height: 44px; }
+.telegram-config-help { line-height: 1.5; color: #b8c4d6; }
+button:disabled { opacity: .6; cursor: wait; }
+.quality-debug-table { min-width: 700px; }
+@media (max-width: 700px) {
+    .app { padding: 12px 12px 32px; gap: 14px; }
+    .app > .header, .price-ticker-bar, .bot-signal-section { padding: 18px; }
+    .header-right { display: flex; justify-content: flex-start; }
+    .header-right .last-update { flex: 1 1 130px; }
+    .header .trade-analysis-btn { flex: 1 1 40%; }
+    .notification-settings-content { flex-direction: column; align-items: stretch; }
+    .notification-buttons { display: grid; grid-template-columns: 1fr 1fr; }
+    .price-ticker-bar .ticker-meta { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .notification-buttons .notif-btn { padding: 10px; font-size: .8rem; }
+    .bot-checks-grid, .quality-summary-grid, .live-integrity-grid,
+    .execution-ladder, .decision-summary-grid { grid-template-columns: 1fr; }
+    .dashboard-grid { grid-template-columns: minmax(0, 1fr); }
+    .card { min-width: 0; margin: 0; }
+    .telegram-preview-footer .qt-actions { flex-wrap: wrap; gap: 12px; }
+}
