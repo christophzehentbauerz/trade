@@ -46,6 +46,8 @@ jobs:
           cp -R api/* _site/api/
           cp lib/*.mjs _site/lib/
           cp web/*.html _site/web/
+          echo '// Optional credentials are entered locally through the dashboard.' > _site/telegram-config.js
+          echo '// No public API key. Configure a server proxy to use CoinMarketCap.' > _site/cmc-config.js
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

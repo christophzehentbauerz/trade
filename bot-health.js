@@ -4,7 +4,7 @@
         const status = document.getElementById('botAutomationStatus');
         if (!status) return;
         try {
-            const response = await fetch(`${root}/workflows`, { signal: AbortSignal.timeout(10000) });
+            const response = await fetch(`${root}/workflows`, { signal: AbortSignal.timeout(10000), cache: 'no-store' });
             if (!response.ok) throw new Error('Status nicht erreichbar');
             const data = await response.json();
             const bots = data.workflows.filter(w => ['BTC Signal Check', 'Daily Report'].includes(w.name));
@@ -15,7 +15,7 @@
                 status.dataset.tone = 'error';
                 return;
             }
-            const runsResponse = await fetch(`${root}/runs?per_page=20`, { signal: AbortSignal.timeout(10000) });
+            const runsResponse = await fetch(`${root}/runs?branch=main&per_page=20`, { signal: AbortSignal.timeout(10000), cache: 'no-store' });
             if (!runsResponse.ok) throw new Error('Ausführungen nicht erreichbar');
             const runs = (await runsResponse.json()).workflow_runs;
             const latest = bots.map(bot => runs.find(run => run.workflow_id === bot.id));
