@@ -1,3 +1,4 @@
+import { fetchCandles } from '../../lib/market-data.mjs';
 // =====================================================
 // /api/bot/signal — Live signal using the same strategy
 // as the Telegram bot (EMA15>EMA300, price>EMA800,
@@ -94,21 +95,7 @@ function adx(candles, period = 14) {
 }
 
 // ─── Data fetching ───
-async function fetchCandles1h() {
-    try {
-        const res = await fetch('https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=2000');
-        if (!res.ok) throw new Error(`CryptoCompare HTTP ${res.status}`);
-        const data = await res.json();
-        if (data.Response !== 'Success') throw new Error(data.Message || 'CryptoCompare error');
-        return data.Data.Data.map(c => ({ time: c.time * 1000, open: c.open, high: c.high, low: c.low, close: c.close }));
-    } catch (e) {
-        // Fallback: Binance (may 451 from US IPs but Vercel is global)
-        const res = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=1000');
-        if (!res.ok) throw new Error(`Binance HTTP ${res.status}: ${e.message}`);
-        const data = await res.json();
-        return data.map(c => ({ time: c[0], open: +c[1], high: +c[2], low: +c[3], close: +c[4] }));
-    }
-}
+async function fetchCandles1h() { return fetchCandles('1h', 1000); }
 
 // ─── Handler ───
 export default async function handler(request, response) {
@@ -118,8 +105,7 @@ export default async function handler(request, response) {
 
     try {
         const allCandles = await fetchCandles1h();
-        // Drop the still-forming candle
-        const candles = allCandles.length > 1 ? allCandles.slice(0, -1) : allCandles;
+        const candles = allCandles.filter(c => c.closeTime < Date.now());
 
         if (candles.length < STRAT.emaHTF + 50) {
             throw new Error(`Insufficient candles: ${candles.length}`);

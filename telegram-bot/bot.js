@@ -9,6 +9,8 @@
 
 const https = require('https');
 const fs    = require('fs');
+const path = require('path');
+const os = require('os');
 
 // ─────────────────────────────────────────
 // CONFIG
@@ -51,10 +53,10 @@ const CONFIG = {
         fearGreed:     'https://api.alternative.me/fng/'
     },
     telegram: {
-        botToken: process.env.TELEGRAM_BOT_TOKEN,
-        chatId:   process.env.TELEGRAM_CHAT_ID
+        botToken: process.env.TELEGRAM_BOT_TOKEN?.trim(),
+        chatId:   process.env.TELEGRAM_CHAT_ID?.trim()
     },
-    stateFile: process.env.STATE_FILE || '/tmp/btc-smart-money-state.json'
+    stateFile: process.env.STATE_FILE || path.join(os.tmpdir(), 'btc-smart-money-state.json')
 };
 
 // ─────────────────────────────────────────
@@ -65,7 +67,7 @@ let state = {
     rsi: 0, atr: 0, atr4h: 0,
     goldenCross: false, htfFilter: false, rsiInZone: false,
     signal: 'NEUTRAL', signalStrength: 0, stopLoss: 0,
-    fearGreedIndex: 0, priceChange24h: 0,
+    fearGreedIndex: null, priceChange24h: 0,
     mtf: { trend1h: 'neutral', trend4h: 'neutral', trend1d: 'neutral', aligned: 'mixed' },
     signalScore: 0, adx: 0, trendUp: false,
     lastUpdate: null,
@@ -77,7 +79,7 @@ let state = {
 // ─────────────────────────────────────────
 // HTTP HELPER
 // ─────────────────────────────────────────
-function fetchJSON(url, postData) {
+function fetchJSON(url, postData, timeoutMs = 20000) {
     return new Promise((resolve, reject) => {
         const u = new URL(url);
         const opts = {
@@ -96,12 +98,14 @@ function fetchJSON(url, postData) {
             res.on('end', () => {
                 try {
                     const p = JSON.parse(d);
-                    if (res.statusCode >= 400) reject(new Error(`HTTP ${res.statusCode}`));
+                    if (res.statusCode >= 400 || p.ok === false) reject(new Error(`HTTP ${res.statusCode}: ${String(p.description || p.Message || 'Request failed').replace(CONFIG.telegram.botToken || /$^/, '[redacted]')}`));
                     else resolve(p);
                 } catch (e) { reject(e); }
             });
         });
         req.on('error', reject);
+        const timer = setTimeout(() => req.destroy(new Error('Request timed out')), timeoutMs);
+        req.on('close', () => clearTimeout(timer));
         if (postData) req.write(postData);
         req.end();
     });
@@ -110,63 +114,17 @@ function fetchJSON(url, postData) {
 // ─────────────────────────────────────────
 // DATA FETCHING
 // ─────────────────────────────────────────
-async function fetchKlines1h() {
-    try {
-        const data = await fetchJSON(`${CONFIG.apis.cryptoCompare}/v2/histohour?fsym=BTC&tsym=USD&limit=2000`);
-        if (data.Response !== 'Success') throw new Error(data.Message);
-        return data.Data.Data.map(c => ({ time: c.time*1000, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volumefrom }));
-    } catch (e) {
-        console.error('CryptoCompare 1h failed:', e.message);
-        const data = await fetchJSON(`${CONFIG.apis.binance}/klines?symbol=BTCUSDT&interval=1h&limit=1000`);
-        return data.map(c => ({ time: c[0], open: +c[1], high: +c[2], low: +c[3], close: +c[4], volume: +c[5] }));
-    }
+async function marketCandles(interval, count) {
+    const { fetchCandles } = await import('../lib/market-data.mjs');
+    return fetchCandles(interval, count);
 }
-
-async function fetchKlines4h() {
-    try {
-        const data = await fetchJSON(`${CONFIG.apis.cryptoCompare}/v2/histohour?fsym=BTC&tsym=USD&limit=500&aggregate=4`);
-        if (data.Response !== 'Success') throw new Error(data.Message);
-        return data.Data.Data.map(c => ({ close: c.close, high: c.high, low: c.low }));
-    } catch (e) {
-        console.error('CryptoCompare 4h failed:', e.message);
-        try {
-            const data = await fetchJSON(`${CONFIG.apis.binance}/klines?symbol=BTCUSDT&interval=4h&limit=1000`);
-            return data.map(c => ({ close: +c[4], high: +c[2], low: +c[3] }));
-        } catch (e2) {
-            console.error('Binance 4h failed, resampling from 1h:', e2.message);
-            return resampleOHLCV(state.candles1h, 4);
-        }
-    }
-}
-
-async function fetchKlines1d() {
-    try {
-        const data = await fetchJSON(`${CONFIG.apis.cryptoCompare}/v2/histoday?fsym=BTC&tsym=USD&limit=365`);
-        if (data.Response !== 'Success') throw new Error(data.Message);
-        return data.Data.Data.map(c => ({ close: c.close, high: c.high, low: c.low }));
-    } catch (e) {
-        console.error('CryptoCompare 1d failed:', e.message);
-        try {
-            // CoinGecko: free, no API key, not geo-blocked — returns [ts,o,h,l,c]
-            const cg = await fetchJSON('https://api.coingecko.com/api/v3/coins/bitcoin/ohlc?vs_currency=usd&days=365');
-            if (!Array.isArray(cg) || !cg.length) throw new Error('empty');
-            return cg.map(c => ({ close: c[4], high: c[2], low: c[3] }));
-        } catch (e2) {
-            console.error('CoinGecko 1d failed:', e2.message);
-            try {
-                const data = await fetchJSON(`${CONFIG.apis.binance}/klines?symbol=BTCUSDT&interval=1d&limit=365`);
-                return data.map(c => ({ close: +c[4], high: +c[2], low: +c[3] }));
-            } catch (e3) {
-                console.error('Binance 1d failed, resampling from 1h:', e3.message);
-                return resampleOHLCV(state.candles1h, 24);
-            }
-        }
-    }
-}
+async function fetchKlines1h() { return marketCandles('1h', 1000); }
+async function fetchKlines4h() { return marketCandles('4h', 300); }
+async function fetchKlines1d() { return marketCandles('1d', 300); }
 
 function useClosedCandles(candles) {
     if (!Array.isArray(candles) || candles.length === 0) return [];
-    return candles.length > 1 ? candles.slice(0, -1) : candles.slice();
+    return candles.filter(c => Number.isFinite(c.closeTime) && c.closeTime < Date.now());
 }
 
 function resampleOHLCV(candles, hours) {
@@ -186,18 +144,16 @@ function resampleOHLCV(candles, hours) {
 async function fetchFearGreed() {
     try {
         const d = await fetchJSON(CONFIG.apis.fearGreed);
-        state.fearGreedIndex = parseInt(d.data[0].value);
-    } catch { state.fearGreedIndex = 50; }
+        const value = Number(d.data?.[0]?.value);
+        const timestamp = Number(d.data?.[0]?.timestamp) * 1000;
+        if (!Number.isFinite(value) || value < 0 || value > 100 || !Number.isFinite(timestamp) || Date.now() - timestamp > 36 * 3600000) throw new Error('Invalid or stale sentiment');
+        state.fearGreedIndex = value;
+    } catch { state.fearGreedIndex = null; }
 }
 
 async function fetch24hChange() {
-    try {
-        const d = await fetchJSON(`${CONFIG.apis.cryptoCompare}/v2/histohour?fsym=BTC&tsym=USD&limit=24`);
-        if (d.Response === 'Success') {
-            const c = d.Data.Data;
-            state.priceChange24h = ((c[c.length-1].close - c[0].open) / c[0].open) * 100;
-        }
-    } catch { state.priceChange24h = 0; }
+    const rows = state.candles1h;
+    state.priceChange24h = rows.length >= 25 ? (rows.at(-1).close / rows.at(-25).close - 1) * 100 : null;
 }
 
 async function fetchNews() {
@@ -334,11 +290,12 @@ function calcSignalScore() {
 // TRADE PLAN
 // ─────────────────────────────────────────
 function buildTradePlan(ctx = {}) {
+    const persisted = resetDailyStatsIfNeeded(loadPreviousState());
     const account   = ctx.account   || CONFIG.coach.accountSize;
     const riskPct   = ctx.riskPct   || CONFIG.coach.riskPerTrade;
     const minScore  = ctx.minScore  || CONFIG.coach.minScore;
-    const dailyPnl  = ctx.dailyPnl  || 0;
-    const openRisk  = ctx.openRisk  || 0;
+    const dailyPnl  = ctx.dailyPnl ?? persisted.dailyPnL;
+    const openRisk  = ctx.openRisk ?? calcOpenRiskPct(persisted.position, state.currentPrice, account);
 
     const score  = state.signalScore;
     const close  = state.currentPrice;
@@ -348,6 +305,7 @@ function buildTradePlan(ctx = {}) {
 
     // Guardrails
     const guardrails = [];
+    if (!(close > 0) || !(atr > 0) || !Number.isFinite(ema200)) guardrails.push('Keine belastbaren Marktdaten');
     if (score < minScore)                               guardrails.push(`Score ${score} < Min ${minScore}`);
     if (dailyPnl <= -Math.abs(CONFIG.coach.maxDailyLoss)) guardrails.push(`Daily Loss Limit erreicht (${dailyPnl.toFixed(1)}%)`);
     if (openRisk >= CONFIG.coach.maxOpenRisk)           guardrails.push(`Open Risk Limit (${openRisk.toFixed(1)}% >= ${CONFIG.coach.maxOpenRisk}%)`);
@@ -388,11 +346,10 @@ function buildTradePlan(ctx = {}) {
 async function calculateAll() {
     console.log('\n📊 Fetching market data...');
 
-    state.candles1h = useClosedCandles(await fetchKlines1h());
-    state.candles4h = useClosedCandles(await fetchKlines4h());
-    state.candles1d = useClosedCandles(await fetchKlines1d());
+    const candles = await Promise.all([fetchKlines1h(), fetchKlines4h(), fetchKlines1d()]);
+    [state.candles1h, state.candles4h, state.candles1d] = candles.map(useClosedCandles);
 
-    if (state.candles1h.length < CONFIG.strategy.emaHTF) {
+    if (state.candles1h.length < CONFIG.strategy.emaHTF + 1) {
         throw new Error(`Insufficient closed 1h candles: ${state.candles1h.length}/${CONFIG.strategy.emaHTF}`);
     }
     if (state.candles4h.length < 50) {
@@ -416,6 +373,9 @@ async function calculateAll() {
     state.htfFilter   = state.currentPrice > state.emaHTF;
     state.rsiInZone   = state.rsi >= CONFIG.strategy.rsiMin && state.rsi <= CONFIG.strategy.rsiMax;
     state.trendUp     = state.goldenCross && state.htfFilter;
+    const previousCloses = closes.slice(0, -1);
+    state.previousTrendUp = calcEMA(previousCloses, CONFIG.strategy.emaFast) > calcEMA(previousCloses, CONFIG.strategy.emaSlow)
+        && previousCloses.at(-1) > calcEMA(previousCloses, CONFIG.strategy.emaHTF);
     state.adx         = calcADX(state.candles1h, CONFIG.strategy.adxPeriod);
     state.signalStrength = (state.goldenCross?1:0) + (state.htfFilter?1:0) + (state.rsiInZone?1:0);
 
@@ -490,6 +450,10 @@ async function sendTelegramMessageWithRetry(text, chatId, options = {}) {
 // ─────────────────────────────────────────
 // COACH RESPONSES
 // ─────────────────────────────────────────
+function escapeTelegramHtml(value) {
+    return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function coachAnswerEma() {
     const ema = state.emaHTF;
     const price = state.currentPrice;
@@ -593,7 +557,7 @@ function coachAnswerHelp() {
         `/ema     — EMA 800 Analyse & Trigger-Preis\n` +
         `/daily   — Vollständiges Tages-Briefing\n` +
         `/hilfe   — Diese Übersicht\n\n` +
-        `<i>Gratis Crypto-Daten via CryptoCompare. Keine Anlageberatung.</i>`;
+        `<i>Öffentliche BTCUSDT-Marktdaten von Binance. Keine Anlageberatung.</i>`;
 }
 
 function coachFallback(q) {
@@ -616,11 +580,11 @@ async function pollAndRespond() {
 
     let updates;
     try {
-        const url = `https://api.telegram.org/bot${token}/getUpdates?timeout=10&offset=${offset}&allowed_updates=["message"]`;
+        const query = new URLSearchParams({ timeout: '10', offset: String(offset), allowed_updates: JSON.stringify(['message']) });
+        const url = `https://api.telegram.org/bot${token}/getUpdates?${query}`;
         updates = await fetchJSON(url);
     } catch (e) {
-        console.error('getUpdates error:', e.message);
-        return;
+        throw new Error(`Telegram polling failed: ${e.message}`);
     }
 
     if (!updates.ok || !updates.result.length) return;
@@ -632,7 +596,7 @@ async function pollAndRespond() {
         if (!msg || !msg.text) continue;
         const text   = msg.text.trim();
         const chatId = String(msg.chat.id);
-        console.log(`📨 Received from ${chatId}: ${text}`);
+        if (chatId !== String(CONFIG.telegram.chatId).trim()) continue;
 
         let reply;
         if      (text.startsWith('/status')) reply = coachAnswerStatus();
@@ -667,7 +631,7 @@ async function formatDailyUpdate(newsItems = []) {
     const timeStr = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 
     const fg = s.fearGreedIndex;
-    const fgText  = fg < 20 ? 'Extreme Angst' : fg < 40 ? 'Angst' : fg < 60 ? 'Neutral' : fg < 80 ? 'Gier' : 'Extreme Gier';
+    const fgText  = fg === null ? 'Nicht verfügbar' : fg < 20 ? 'Extreme Angst' : fg < 40 ? 'Angst' : fg < 60 ? 'Neutral' : fg < 80 ? 'Gier' : 'Extreme Gier';
     const fgEmoji = fg < 20 ? '😱' : fg < 40 ? '😰' : fg < 60 ? '😐' : fg < 80 ? '🤑' : '🔥';
     const fgBar   = '█'.repeat(Math.round(fg/10)) + '░'.repeat(10 - Math.round(fg/10));
     const scoreBar = '█'.repeat(Math.round(s.signalScore/10)) + '░'.repeat(10 - Math.round(s.signalScore/10));
@@ -683,7 +647,7 @@ async function formatDailyUpdate(newsItems = []) {
 
     m += `💰 <b>MARKT DASHBOARD</b>\n\n`;
     m += `<b>Bitcoin:</b> ${priceStr}  ${changeStr}\n\n`;
-    m += `${fgEmoji} Fear &amp; Greed: <b>${fg}</b>/100 (${fgText})\n   ${fgBar}\n\n`;
+    m += fg === null ? 'Fear &amp; Greed: nicht verfügbar\n\n' : `${fgEmoji} Fear &amp; Greed: <b>${fg}</b>/100 (${fgText})\n   ${fgBar}\n\n`;
     m += `📊 Signal-Score: <b>${s.signalScore}</b>/100\n   ${scoreBar}\n\n`;
 
     m += `━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
@@ -735,7 +699,7 @@ async function formatDailyUpdate(newsItems = []) {
         m += `━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
         m += `📰 <b>TOP CRYPTO NEWS</b>\n\n`;
         newsItems.forEach((n, i) => {
-            m += `${i+1}. <b>${n.title}</b>\n   📌 ${n.source}\n\n`;
+            m += `${i+1}. <b>${escapeTelegramHtml(n.title)}</b>\n   📌 ${escapeTelegramHtml(n.source)}\n\n`;
         });
     }
 
@@ -854,12 +818,15 @@ function resetDailyStatsIfNeeded(prev) {
 function calcOpenRiskPct(position, currentPrice, accountSize) {
     if (!position || !position.trailingStop || !currentPrice) return 0;
     const riskPerUnit = Math.max(currentPrice - position.trailingStop, 0);
-    const positionValue = position.entryPrice * (accountSize * (CONFIG.coach.riskPerTrade / 100) / Math.max(position.entryPrice - position.trailingStop, 0.001));
-    return (riskPerUnit / accountSize) * 100;
+    const size = position.sizeBTC || accountSize * (CONFIG.coach.riskPerTrade / 100) / (position.entryATR * CONFIG.strategy.atrMultiplier);
+    if (!Number.isFinite(size) || size <= 0) return CONFIG.coach.maxOpenRisk;
+    return (riskPerUnit * size / accountSize) * 100;
 }
 
 function recordClosedTrade(prev, position, exitPrice, exitReason) {
     const pnlPct = ((exitPrice - position.entryPrice) / position.entryPrice) * 100;
+    const size = position.sizeBTC || CONFIG.coach.accountSize * (CONFIG.coach.riskPerTrade / 100) / (position.entryATR * CONFIG.strategy.atrMultiplier);
+    const accountPnlPct = Number.isFinite(size) ? (exitPrice - position.entryPrice) * size / CONFIG.coach.accountSize * 100 : 0;
     const exitTime = new Date().toISOString();
     const trade = {
         entryTime: position.entryTime,
@@ -873,7 +840,7 @@ function recordClosedTrade(prev, position, exitPrice, exitReason) {
     return {
         ...prev,
         tradeHistory: history,
-        dailyPnL: parseFloat(((prev.dailyPnL || 0) + pnlPct).toFixed(4)),
+        dailyPnL: parseFloat(((prev.dailyPnL || 0) + accountPnlPct).toFixed(4)),
         dailyTradeCount: (prev.dailyTradeCount || 0) + 1,
         openRiskPct: 0,
         lastExitTime: exitTime  // for cooldown filter
@@ -886,17 +853,16 @@ function loadPreviousState() {
             return normalizePersistedState(JSON.parse(fs.readFileSync(CONFIG.stateFile, 'utf8')));
         }
     } catch (e) {
-        console.error('loadPreviousState:', e.message);
+        throw new Error(`Bot state could not be read: ${e.message}`);
     }
     return normalizePersistedState();
 }
 
 function saveState(data) {
-    try {
-        fs.writeFileSync(CONFIG.stateFile, JSON.stringify(normalizePersistedState(data)));
-    } catch (e) {
-        console.error('saveState:', e.message);
-    }
+    fs.mkdirSync(path.dirname(CONFIG.stateFile), { recursive: true });
+    const temporary = `${CONFIG.stateFile}.${process.pid}.tmp`;
+    fs.writeFileSync(temporary, JSON.stringify(normalizePersistedState(data)), { mode: 0o600 });
+    fs.renameSync(temporary, CONFIG.stateFile);
 }
 
 function buildPersistedState(prev, overrides = {}) {
@@ -945,9 +911,11 @@ async function flushPendingNotifications(prev) {
     console.log(`📬 Replaying ${fresh.length} queued Telegram message(s)...`);
     const remaining = [];
     for (const item of fresh) {
+        if (item.type === 'DAILY_REPORT' && item.createdAt && item.createdAt.slice(0, 10) !== new Date().toISOString().slice(0, 10)) continue;
         const ok = await sendTelegramMessageWithRetry(item.text, item.chatId, { attempts: 3, delayMs: 1200 });
         if (ok) {
             console.log(`✅ Delivered queued notification (${item.type})`);
+            if (item.type === 'DAILY_REPORT') next.lastDailyUpdate = new Date().toISOString();
             continue;
         }
         remaining.push({
@@ -1044,7 +1012,7 @@ async function checkSignal() {
         }
     } else {
         // Fresh cross: trendUp (EMA15>EMA300 AND price>EMA800) just turned true this candle
-        const freshCross = !prev.lastTrendUp && state.trendUp;
+        const freshCross = !state.previousTrendUp && state.trendUp;
         const adxOk = Number.isFinite(state.adx) && state.adx >= CONFIG.strategy.adxThreshold;
         // Skip Sunday (UTC) entries — backtest showed +12% return improvement
         const isSundayUTC = new Date().getUTCDay() === 0;
@@ -1072,6 +1040,7 @@ async function checkSignal() {
                 return;
             }
             const newPos = { entryPrice: state.currentPrice, entryTime: new Date().toISOString(), trailingStop: state.currentPrice - state.atr * CONFIG.strategy.atrMultiplier, highestPrice: state.currentPrice, currentTier: 1, entryATR: state.atr };
+            newPos.sizeBTC = CONFIG.coach.accountSize * CONFIG.coach.riskPerTrade / 100 / (state.atr * CONFIG.strategy.atrMultiplier);
             const entryMsg = msgEntry(newPos);
             const entrySent = await sendTelegramMessageWithRetry(entryMsg);
             if (!entrySent) {
@@ -1100,7 +1069,7 @@ async function checkSignal() {
     }
     const finalState = loadPreviousState();
     if (finalState.pendingNotifications.length) {
-        console.warn(`⚠️ ${finalState.pendingNotifications.length} Telegram message(s) queued for retry next run`);
+        throw new Error(`${finalState.pendingNotifications.length} Telegram message(s) queued for retry next run`);
     }
     console.log('✅ Done!');
 }
@@ -1128,6 +1097,7 @@ async function sendDailyUpdate() {
     let prev = await flushPendingNotifications(loadPreviousState());
     saveState(prev);
     await pollAndRespond();
+    if (loadPreviousState().lastDailyUpdate?.slice(0, 10) === new Date().toISOString().slice(0, 10)) return;
     const msg = await formatDailyUpdate(news);
     const ok  = await sendTelegramMessageWithRetry(msg);
     if (!ok) {
@@ -1143,7 +1113,7 @@ async function sendDailyUpdate() {
     saveState(buildPersistedState(prev, { lastDailyUpdate: new Date().toISOString() }));
     const finalState = loadPreviousState();
     if (finalState.pendingNotifications.length) {
-        console.warn(`⚠️ ${finalState.pendingNotifications.length} Telegram message(s) queued for retry next run`);
+        throw new Error(`${finalState.pendingNotifications.length} Telegram message(s) queued for retry next run`);
     }
     console.log('✅ Daily update sent!');
 }
@@ -1151,9 +1121,23 @@ async function sendDailyUpdate() {
 // ─────────────────────────────────────────
 // ENTRY POINT
 // ─────────────────────────────────────────
-const cmd = (process.argv[2] || 'check');
-if (cmd === 'daily') {
-    sendDailyUpdate().catch(e => { console.error('💥', e.message); process.exit(1); });
-} else {
-    checkSignal().catch(e => { console.error('⚠️', e.message); process.exit(1); });
+async function diagnose() {
+    assertTelegramConfigured();
+    const root = `https://api.telegram.org/bot${CONFIG.telegram.botToken}`;
+    const me = await fetchJSON(`${root}/getMe`);
+    const webhook = await fetchJSON(`${root}/getWebhookInfo`);
+    if (webhook.result?.url) throw new Error('Webhook is active; getUpdates polling cannot run concurrently. Remove the webhook or use its receiver.');
+    const chat = await fetchJSON(`${root}/getChat`, JSON.stringify({ chat_id: CONFIG.telegram.chatId }));
+    await calculateAll();
+    console.log(`Diagnostics OK: bot=${me.ok}, chat=${chat.ok}, market candles=${state.candles1h.length}. No message sent.`);
 }
+
+if (require.main === module) {
+    const cmd = process.argv[2] || 'check';
+    const commands = { daily: sendDailyUpdate, check: checkSignal, diagnose };
+    if (!commands[cmd]) { console.error('Usage: node bot.js check|daily|diagnose'); process.exitCode = 1; }
+    else commands[cmd]().catch(e => { console.error(e.message); process.exitCode = 1; });
+}
+module.exports = { CONFIG, state, fetchJSON, useClosedCandles, escapeTelegramHtml, normalizePersistedState,
+    loadPreviousState, saveState, buildTradePlan, calculateAll, formatDailyUpdate, pollAndRespond,
+    flushPendingNotifications, sendDailyUpdate, calcOpenRiskPct, recordClosedTrade };

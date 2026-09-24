@@ -41,7 +41,7 @@ let state = {
     athChange: null,
     fearGreedIndex: null,
     fearGreedSource: 'CoinMarketCap',
-    fearGreedMode: 'cmc',
+    fearGreedMode: window.MarketAPI?.staticHost ? 'alt' : 'cmc',
     fearGreedHistory: [],
     fundingRate: null,
     openInterest: null,
@@ -237,14 +237,14 @@ function resetUpdateRequestCache() {
 
 function getMarketOverviewPayload() {
     if (!updateRequestCache.marketOverviewPromise) {
-        updateRequestCache.marketOverviewPromise = fetchWithTimeout(CONFIG.apis.marketOverview, 12000);
+        updateRequestCache.marketOverviewPromise = window.MarketAPI.get('market/overview');
     }
     return updateRequestCache.marketOverviewPromise;
 }
 
 function getDerivativesPayload() {
     if (!updateRequestCache.derivativesPromise) {
-        updateRequestCache.derivativesPromise = fetchWithTimeout(CONFIG.apis.binanceDerivatives, 12000);
+        updateRequestCache.derivativesPromise = window.MarketAPI.get('binance/derivatives');
     }
     return updateRequestCache.derivativesPromise;
 }
@@ -846,7 +846,7 @@ function getCoinMarketCapConfig() {
         storedConfig = {};
     }
 
-    const hostedDefaultProxy = typeof window !== 'undefined' && /^https?:$/i.test(window.location.protocol)
+    const hostedDefaultProxy = typeof window !== 'undefined' && /^https?:$/i.test(window.location.protocol) && !window.MarketAPI?.staticHost
         ? '/api/cmc/fear-and-greed/historical'
         : '';
 
@@ -2403,18 +2403,15 @@ function setTelegramPreviewButtonState(mode) {
 }
 
 function getTelegramCredentials() {
+    const token = localStorage.getItem('telegram_bot_token');
+    const chatId = localStorage.getItem('telegram_chat_id');
+    if (token && chatId) return { token: token.trim(), chatId: chatId.trim(), source: 'localStorage' };
     if (window.TELEGRAM_CONFIG?.botToken && window.TELEGRAM_CONFIG?.chatId) {
         return {
             token: window.TELEGRAM_CONFIG.botToken,
             chatId: window.TELEGRAM_CONFIG.chatId,
             source: 'config'
         };
-    }
-
-    const token = localStorage.getItem('telegram_bot_token');
-    const chatId = localStorage.getItem('telegram_chat_id');
-    if (token && chatId) {
-        return { token, chatId, source: 'localStorage' };
     }
 
     return null;
@@ -2426,8 +2423,12 @@ async function sendTelegramMessage(text) {
         return { success: false, error: 'credentials_missing' };
     }
 
+    const buttons = ['sendToTelegramBtn', 'tgSaveCreds'].map(id => document.getElementById(id)).filter(Boolean);
+    if (buttons.some(button => button.disabled)) return { success: false, error: 'Versand läuft bereits.' };
+    buttons.forEach(button => { button.disabled = true; });
     try {
         const response = await fetch(`https://api.telegram.org/bot${creds.token}/sendMessage`, {
+            signal: AbortSignal.timeout(15000),
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -2442,7 +2443,9 @@ async function sendTelegramMessage(text) {
         const data = await response.json();
         return { success: Boolean(data.ok), error: data.description || 'Unbekannter Fehler' };
     } catch (error) {
-        return { success: false, error: error.message || 'Netzwerkfehler' };
+        return { success: false, error: error.name === 'TimeoutError' ? 'Telegram antwortet nicht. Bitte erneut versuchen.' : 'Telegram konnte nicht erreicht werden. Verbindung und Zugangsdaten prüfen.' };
+    } finally {
+        buttons.forEach(button => { button.disabled = false; });
     }
 }
 
@@ -2466,14 +2469,21 @@ function setTelegramStatus(message, tone = 'neutral') {
             : 'rgba(230, 238, 248, 0.88)';
 }
 
+let telegramReturnFocus = null;
 function openTelegramPreview(mode = 'signal') {
     const overlay = document.getElementById('telegramPreview');
     const content = document.getElementById('telegramPreviewContent');
     const configForm = document.getElementById('telegramConfigForm');
     if (!overlay || !content) return;
-    content.dataset.message = buildTelegramPreviewMessage(mode);
-    content.innerHTML = buildTelegramPreviewHtml(mode);
+    const ready = Number.isFinite(state.price) && state.lastUpdate;
+    document.getElementById('sendToTelegramBtn').disabled = !ready;
+    content.dataset.message = ready ? buildTelegramPreviewMessage(mode) : '';
+    if (ready) content.innerHTML = buildTelegramPreviewHtml(mode);
+    else content.textContent = 'Die Marktdaten werden noch geladen oder sind nicht verfügbar. Bitte den Bericht nach der Aktualisierung erneut öffnen.';
+    telegramReturnFocus = document.activeElement;
     overlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    document.getElementById('closeTelegramPreview')?.focus();
     if (configForm) configForm.style.display = 'none';
     setTelegramStatus('');
     setTelegramPreviewButtonState(mode);
@@ -2483,7 +2493,20 @@ function closeTelegramPreview() {
     const overlay = document.getElementById('telegramPreview');
     if (!overlay) return;
     overlay.style.display = 'none';
+    document.body.style.overflow = '';
+    telegramReturnFocus?.focus();
 }
+
+document.addEventListener('keydown', event => {
+    const overlay = document.getElementById('telegramPreview');
+    if (!overlay || overlay.style.display !== 'flex') return;
+    if (event.key === 'Escape') { event.preventDefault(); closeTelegramPreview(); }
+    if (event.key !== 'Tab') return;
+    const focusable = [...overlay.querySelectorAll('button, input, a[href]')].filter(el => !el.disabled && el.getClientRects().length);
+    const first = focusable[0], last = focusable.at(-1);
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+});
 
 function applyUiTextFixes() {
     const setText = (selector, value) => {
@@ -2497,8 +2520,8 @@ function applyUiTextFixes() {
     };
 
     setText('.notification-icon', '🤖');
-    setText('#testDailyUpdate', 'Tagesbericht testen');
-    setText('#testSignalCheck', 'Signalprüfung testen');
+    setText('#testDailyUpdate', 'Tagesbericht ansehen');
+    setText('#testSignalCheck', 'Signal ansehen');
     setText('.telegram-preview-header span', '📱 Telegram Vorschau');
     setText('#closeTelegramPreview', '×');
     setText('.logo-icon', '₿');
@@ -4150,11 +4173,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    document.getElementById('editTelegramConfig')?.addEventListener('click', () => {
+        prefillTelegramConfigForm();
+        document.getElementById('telegramConfigForm').style.display = 'block';
+        document.getElementById('tgTokenInput').focus();
+        setTelegramStatus('Diese Zugangsdaten gelten nur für den manuellen Versand in diesem Browser.');
+    });
+
     const sendToTelegramBtn = document.getElementById('sendToTelegramBtn');
     if (sendToTelegramBtn) {
         sendToTelegramBtn.addEventListener('click', async () => {
             const previewContent = document.getElementById('telegramPreviewContent')?.dataset?.message?.trim()
-                || document.getElementById('telegramPreviewContent')?.textContent?.trim()
                 || '';
             const configForm = document.getElementById('telegramConfigForm');
             const creds = getTelegramCredentials();
@@ -4188,7 +4217,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const chatId = document.getElementById('tgChatIdInput')?.value?.trim() || '';
             const configForm = document.getElementById('telegramConfigForm');
             const previewContent = document.getElementById('telegramPreviewContent')?.dataset?.message?.trim()
-                || document.getElementById('telegramPreviewContent')?.textContent?.trim()
                 || '';
 
             if (!token || !chatId) {

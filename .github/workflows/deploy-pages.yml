@@ -25,19 +25,29 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Inject OpenAI API Key into Coach
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Verify application
+        run: node --test tests/*.test.cjs
+
+      - name: Assemble public site
         run: |
-          if [ -n "$OPENAI_API_KEY" ]; then
-            echo "✅ Injecting OpenAI key into trader_coach.html..."
-            # Replace the placeholder comment with the actual key init script
-            sed -i "s|// __OPENAI_KEY_INJECT__|const _presetKey = '${OPENAI_API_KEY}';|g" web/trader_coach.html
-            echo "✅ Key injected successfully"
-          else
-            echo "⚠️ No OPENAI_API_KEY secret set — coach runs without preset key"
-            sed -i "s|// __OPENAI_KEY_INJECT__|const _presetKey = '';|g" web/trader_coach.html
-          fi
+          mkdir -p _site/api _site/lib _site/web
+          cp index.html *.css _site/
+          for file in *.js; do
+            case "$file" in
+              *config*|backtest-*.js|spot-sell-test.js) ;;
+              *) cp "$file" _site/ ;;
+            esac
+          done
+          cp -R api/* _site/api/
+          cp lib/*.mjs _site/lib/
+          cp web/*.html _site/web/
+          echo '// Optional credentials are entered locally through the dashboard.' > _site/telegram-config.js
+          echo '// No public API key. Configure a server proxy to use CoinMarketCap.' > _site/cmc-config.js
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -45,7 +55,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: '_site'
 
       - name: Deploy to GitHub Pages
         id: deployment

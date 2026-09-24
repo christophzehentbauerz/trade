@@ -7,11 +7,11 @@
     <title>BTC Markt-Dashboard</title>
     <meta name="description"
         content="Echtzeit Bitcoin Marktanalyse mit technischen Indikatoren, On-Chain Daten und Trading-Signalen">
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="analysis-styles.css">
-    <link rel="stylesheet" href="bot-signal.css">
+    <link rel="stylesheet" href="styles.css?v=20260924-3">
+    <link rel="stylesheet" href="analysis-styles.css?v=20260924-3">
+    <link rel="stylesheet" href="bot-signal.css?v=20260924-3">
     <!-- Modern design layer — must load last to override -->
-    <link rel="stylesheet" href="modern.css">
+    <link rel="stylesheet" href="modern.css?v=20260924-3">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
@@ -26,55 +26,7 @@
     </div>
 
     <main class="app" id="main-content" tabindex="-1">
-        <!-- Notification Settings Bar -->
-        <section class="notification-settings telegram-bar">
-            <div class="notification-settings-content">
-                <div class="notification-info">
-                    <span class="notification-icon">🤖</span>
-                    <div class="notification-text">
-                        <strong>Telegram-Bot-Test</strong>
-                        <span class="notification-status">
-                            Teste die Bot-Nachrichten direkt im Browser
-                        </span>
-                    </div>
-                </div>
-                <div class="notification-buttons">
-                    <button id="testDailyUpdate" class="notif-btn telegram-test-btn" onclick="openTelegramPreview('daily')">
-                        Tagesbericht testen
-                    </button>
-                    <button id="testSignalCheck" class="notif-btn telegram-test-btn active" onclick="openTelegramPreview('signal')">
-                        Signalprüfung testen
-                    </button>
-                </div>
-            </div>
-            <!-- Telegram Preview Container (Initially Hidden) -->
-            <div id="telegramPreview" class="telegram-preview-overlay" style="display: none;">
-                <div class="telegram-preview-modal">
-                    <div class="telegram-preview-header">
-                        <span>📱 Telegram Vorschau</span>
-                        <button id="closeTelegramPreview" class="close-preview-btn" onclick="closeTelegramPreview()">×</button>
-                    </div>
-                    <pre id="telegramPreviewContent"></pre>
-                    <div class="telegram-preview-footer">
-                        <div id="telegramConfigForm" style="display: none;">
-                            <input type="password" id="tgTokenInput" placeholder="Bot-Token eingeben">
-                            <input type="text" id="tgChatIdInput" placeholder="Chat-ID eingeben">
-                            <button id="tgSaveCreds" type="button">Speichern und senden</button>
-                            <div class="telegram-config-help">
-                                Alternativ kannst du eine <strong>telegram-config.js</strong> Datei mit Bot-Token und Chat-ID anlegen.
-                            </div>
-                        </div>
-                        <div class="qt-actions">
-                            <span id="tgStatusMsg"></span>
-                            <button id="sendToTelegramBtn" class="telegram-send-btn" type="button">An Telegram senden</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Header -->
-        <header class="header">
+<header class="header">
             <div class="header-left">
                 <div class="logo">
                     <span class="logo-icon">₿</span>
@@ -108,6 +60,122 @@
                 </div>
             </div>
         </header>
+<section class="price-ticker-bar" aria-label="Bitcoin Live-Preis und Marktdaten">
+            <div class="ticker-price">
+                <span class="ticker-currency" aria-hidden="true">$</span>
+                <span class="ticker-value" id="btcPrice" aria-live="polite" aria-atomic="true">--,---</span>
+                <span class="live-status-badge" id="liveStatusBadge" data-state="offline" role="status" aria-label="Live-Stream Status">⚪ INIT</span>
+                <span class="ticker-change" id="priceChange">
+                    <span class="change-value">--%</span>
+                    <span class="change-period">24h</span>
+                </span>
+            </div>
+            <div class="ticker-meta">
+                <div class="ticker-item" title="Gesamtwert aller existierenden Bitcoins zusammen">
+                    <span class="ticker-label">MCap</span>
+                    <span class="ticker-data" id="marketCap">$--</span>
+                </div>
+                <div class="ticker-item" title="Handelsvolumen in den letzten 24 Stunden">
+                    <span class="ticker-label">Vol 24h</span>
+                    <span class="ticker-data" id="volume24h">$--</span>
+                </div>
+                <div class="ticker-item" title="All-Time High">
+                    <span class="ticker-label">ATH</span>
+                    <span class="ticker-data" id="ath">$--</span>
+                </div>
+                <div class="ticker-item" title="Entfernung vom Allzeithoch">
+                    <span class="ticker-label">vom ATH</span>
+                    <span class="ticker-data" id="athChange">--%</span>
+                </div>
+                <div class="ticker-item" title="Fear & Greed Index">
+                    <span class="ticker-label">F&G</span>
+                    <span class="ticker-data" id="tickerFearGreed">--</span>
+                </div>
+            </div>
+            <div class="ticker-sources" id="tickerSources">
+                Preis, Marktkapitalisierung, Volumen und ATH: CoinGecko | Fear & Greed: CoinMarketCap
+            </div>
+            <div class="live-timestamp-row">
+                <span class="live-timestamp" id="coinGeckoTimestampText">CoinGecko Stand: --</span>
+                <span class="live-timestamp" id="fearGreedTickerTimestampText">Fear &amp; Greed Stand: --</span>
+            </div>
+        </section>
+<section class="bot-signal-section" id="botSignalSection" data-signal="LOADING">
+            <div class="bot-signal-header">
+                <h2><span class="bot-icon">🤖</span> Bot-Strategie · Markt-Setup</h2>
+                <span class="bot-status" id="botSignalStatus">Lade...</span>
+            </div>
+            <div class="bot-signal-body">
+                <div class="bot-signal-main">
+                    <div class="bot-signal-badge bot-signal-neutral" id="botSignalBadge">--</div>
+                    <div class="bot-signal-label" id="botSignalLabel">Wird geladen...</div>
+                </div>
+                <div class="bot-checks-grid" id="botChecksGrid"></div>
+                <div class="bot-trade-levels" id="botTradeLevels" style="display: none;"></div>
+                <div class="bot-chart-container">
+                    <div id="botChart" class="bot-chart"></div>
+                </div>
+                <div class="bot-chart-freshness" id="botChartFreshness" aria-live="polite">
+                    Chart-Daten werden geladen…
+                </div>
+                <div class="bot-strategy-stats">
+                    <span class="stat-label">Archivierter Backtest · keine Live-Performance:</span>
+                    <span class="stat-value">+47% Total · CAGR 10.6% · PF 2.51 · MaxDD -4.8% · 53 Trades</span>
+                </div>
+            </div>
+        </section>
+        <!-- Notification Settings Bar -->
+        <section class="notification-settings telegram-bar">
+            <div class="notification-settings-content">
+                <div class="notification-info">
+                    <span class="notification-icon">🤖</span>
+                    <div class="notification-text">
+                        <strong>Telegram-Berichte</strong>
+                        <span class="notification-status">
+                            Vorschau und manueller Versand · unabhängig vom automatischen Bot
+                        </span>
+                        <span id="botAutomationStatus" class="notification-status" role="status">Automatischer Bot: Status wird geprüft …</span>
+                        <a class="bot-run-link" href="https://github.com/christophzehentbauerz/trade/actions" target="_blank" rel="noopener noreferrer">Bot-Ausführungen auf GitHub ansehen ↗</a>
+                    </div>
+                </div>
+                <div class="notification-buttons">
+                    <button id="testDailyUpdate" class="notif-btn telegram-test-btn" >
+                        Tagesbericht ansehen
+                    </button>
+                    <button id="testSignalCheck" class="notif-btn telegram-test-btn active" >
+                        Signalprüfung testen
+                    </button>
+                </div>
+            </div>
+            <!-- Telegram Preview Container (Initially Hidden) -->
+            <div id="telegramPreview" class="telegram-preview-overlay" style="display: none;">
+                <div class="telegram-preview-modal" role="dialog" aria-modal="true" aria-label="Telegram-Bericht">
+                    <div class="telegram-preview-header">
+                        <span>📱 Telegram Vorschau</span>
+                        <button id="closeTelegramPreview" class="close-preview-btn" >×</button>
+                    </div>
+                    <pre id="telegramPreviewContent"></pre>
+                    <div class="telegram-preview-footer">
+                        <div id="telegramConfigForm" style="display: none;">
+                            <input type="password" id="tgTokenInput" aria-label="Telegram Bot-Token" autocomplete="off" placeholder="Bot-Token eingeben">
+                            <input type="text" id="tgChatIdInput" aria-label="Telegram Chat-ID" placeholder="Chat-ID eingeben">
+                            <button id="tgSaveCreds" type="button">Speichern und senden</button>
+                            <div class="telegram-config-help">
+                                Alternativ kannst du eine <strong>telegram-config.js</strong> Datei mit Bot-Token und Chat-ID anlegen.
+                            </div>
+                        </div>
+                        <div class="qt-actions">
+                            <span id="tgStatusMsg" role="status" aria-live="polite"></span>
+                            <button id="editTelegramConfig" class="notif-btn" type="button">Zugangsdaten</button>
+                            <button id="sendToTelegramBtn" class="telegram-send-btn" type="button">An Telegram senden</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Header -->
+
 
         <!-- How it Works Section (Collapsible) -->
         <section class="how-it-works-section">
@@ -704,79 +772,18 @@
         </section>
 
         <!-- Price Ticker Bar -->
-        <section class="price-ticker-bar" aria-label="Bitcoin Live-Preis und Marktdaten">
-            <div class="ticker-price">
-                <span class="ticker-currency" aria-hidden="true">$</span>
-                <span class="ticker-value" id="btcPrice" aria-live="polite" aria-atomic="true">--,---</span>
-                <span class="live-status-badge" id="liveStatusBadge" data-state="offline" role="status" aria-label="Live-Stream Status">⚪ INIT</span>
-                <span class="ticker-change" id="priceChange">
-                    <span class="change-value">--%</span>
-                    <span class="change-period">24h</span>
-                </span>
-            </div>
-            <div class="ticker-meta">
-                <div class="ticker-item" title="Gesamtwert aller existierenden Bitcoins zusammen">
-                    <span class="ticker-label">MCap</span>
-                    <span class="ticker-data" id="marketCap">$--</span>
-                </div>
-                <div class="ticker-item" title="Handelsvolumen in den letzten 24 Stunden">
-                    <span class="ticker-label">Vol 24h</span>
-                    <span class="ticker-data" id="volume24h">$--</span>
-                </div>
-                <div class="ticker-item" title="All-Time High">
-                    <span class="ticker-label">ATH</span>
-                    <span class="ticker-data" id="ath">$--</span>
-                </div>
-                <div class="ticker-item" title="Entfernung vom Allzeithoch">
-                    <span class="ticker-label">vom ATH</span>
-                    <span class="ticker-data" id="athChange">--%</span>
-                </div>
-                <div class="ticker-item" title="Fear & Greed Index">
-                    <span class="ticker-label">F&G</span>
-                    <span class="ticker-data" id="tickerFearGreed">--</span>
-                </div>
-            </div>
-            <div class="ticker-sources" id="tickerSources">
-                Preis, Marktkapitalisierung, Volumen und ATH: CoinGecko | Fear & Greed: CoinMarketCap
-            </div>
-            <div class="live-timestamp-row">
-                <span class="live-timestamp" id="coinGeckoTimestampText">CoinGecko Stand: --</span>
-                <span class="live-timestamp" id="fearGreedTickerTimestampText">Fear &amp; Greed Stand: --</span>
-            </div>
-        </section>
+
 
         <!-- Telegram Bot Live Signal — same strategy as the bot uses -->
-        <section class="bot-signal-section" id="botSignalSection" data-signal="LOADING">
-            <div class="bot-signal-header">
-                <h2><span class="bot-icon">🤖</span> Telegram-Bot Live-Signal</h2>
-                <span class="bot-status" id="botSignalStatus">Lade...</span>
-            </div>
-            <div class="bot-signal-body">
-                <div class="bot-signal-main">
-                    <div class="bot-signal-badge bot-signal-neutral" id="botSignalBadge">--</div>
-                    <div class="bot-signal-label" id="botSignalLabel">Wird geladen...</div>
-                </div>
-                <div class="bot-checks-grid" id="botChecksGrid"></div>
-                <div class="bot-trade-levels" id="botTradeLevels" style="display: none;"></div>
-                <div class="bot-chart-container">
-                    <div id="botChart" class="bot-chart"></div>
-                </div>
-                <div class="bot-chart-freshness" id="botChartFreshness" aria-live="polite">
-                    Chart-Daten werden geladen…
-                </div>
-                <div class="bot-strategy-stats">
-                    <span class="stat-label">Backtest 4.1 Jahre (BTC 1h, inkl. 0.3% Fees+Slip):</span>
-                    <span class="stat-value">+47% Total · CAGR 10.6% · PF 2.51 · MaxDD -4.8% · 53 Trades</span>
-                </div>
-            </div>
-        </section>
+
 
         <!-- Bot Trade Journal — last 90 days replay -->
         <section class="bot-trades-section" id="botTradesSection" aria-labelledby="botTradesHeader">
             <div class="bot-signal-header">
-                <h2 id="botTradesHeader"><span class="bot-icon" aria-hidden="true">📒</span> Bot Trade-Historie</h2>
+                <h2 id="botTradesHeader"><span class="bot-icon" aria-hidden="true">📒</span> Historische Strategie-Simulation</h2>
                 <span class="bot-status" id="botTradeStatus">Lade Backtest…</span>
             </div>
+            <p class="simulation-note">Simulation auf Stundenkursen, ohne Gebühren und Slippage. Keine tatsächlich ausgeführten Orders und kein Telegram-Versandprotokoll.</p>
             <div class="bot-last-trigger" id="botLastTrigger" data-state="loading" aria-live="polite">
                 <div class="lt-empty">Lade letzten Trigger…</div>
             </div>
@@ -1548,8 +1555,8 @@
                                 <div class="ls-short" id="lsShort" style="width: 50%"></div>
                             </div>
                             <div class="ls-labels">
-                                <span id="longPercent">50%</span>
-                                <span id="shortPercent">50%</span>
+                                <span id="longPercent">--%</span>
+                                <span id="shortPercent">--%</span>
                             </div>
                             <div class="item-explanation">
                                 Mehr Shorts = Konträr bullish<br>
@@ -1822,23 +1829,25 @@
     </main>
 
     <!-- Telegram Config (optional - erstelle telegram-config.js aus telegram-config.example.js) -->
-    <script src="telegram-config.js" onerror="/* config nicht vorhanden, localStorage wird verwendet */"></script>
+    <script src="telegram-config.js?v=20260924-3" onerror="/* config nicht vorhanden, localStorage wird verwendet */"></script>
     <!-- CoinMarketCap Config (optional - erstelle cmc-config.js aus cmc-config.example.js) -->
-    <script src="cmc-config.js" onerror="/* config nicht vorhanden, CMC bleibt deaktiviert */"></script>
+    <script src="cmc-config.js?v=20260924-3" onerror="/* config nicht vorhanden, CMC bleibt deaktiviert */"></script>
 
-    <script src="smart-money-strategy.js" defer></script>
-    <script src="smart-money-signals.js" defer></script>
-    <script src="backtester.js" defer></script>
-    <script src="live-analysis.js" defer></script>
-    <script src="app.js" defer></script>
-    <script src="trend-strategy.js" defer></script>
-    <script src="spot-strategy.js" defer></script>
+    <script src="market-client.js?v=20260924-3" defer></script>
+    <script src="bot-health.js?v=20260924-3" defer></script>
+    <script src="smart-money-strategy.js?v=20260924-3" defer></script>
+    <script src="smart-money-signals.js?v=20260924-3" defer></script>
+    <script src="backtester.js?v=20260924-3" defer></script>
+    <script src="live-analysis.js?v=20260924-3" defer></script>
+    <script src="app.js?v=20260924-3" defer></script>
+    <script src="trend-strategy.js?v=20260924-3" defer></script>
+    <script src="spot-strategy.js?v=20260924-3" defer></script>
 
     <!-- Bot Live Signal: same strategy as Telegram bot (EMA + ADX + Fresh Cross) -->
     <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js" defer></script>
-    <script src="bot-signal.js" defer></script>
-    <script src="live-price.js" defer></script>
-    <script src="bot-trades.js" defer></script>
+    <script src="bot-signal.js?v=20260924-3" defer></script>
+    <script src="live-price.js?v=20260924-3" defer></script>
+    <script src="bot-trades.js?v=20260924-3" defer></script>
 
     <!-- Sync Fear & Greed value to ticker bar -->
     <script>

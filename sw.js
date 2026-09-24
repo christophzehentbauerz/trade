@@ -4,7 +4,7 @@
 // when the network is dead (offline mode).
 // =====================================================
 
-const VERSION = 'v7';
+const VERSION = 'v8';
 const STATIC_CACHE = `btc-static-${VERSION}`;
 const NETWORK_TIMEOUT_MS = 5000;
 
@@ -16,7 +16,7 @@ self.addEventListener('activate', (event) => {
     event.waitUntil((async () => {
         // Delete every old cache from previous SW versions
         const keys = await caches.keys();
-        await Promise.all(keys.filter(k => k !== STATIC_CACHE).map(k => caches.delete(k)));
+        await Promise.all(keys.filter(k => k.startsWith('btc-static-') && k !== STATIC_CACHE).map(k => caches.delete(k)));
         await self.clients.claim();
     })());
 });
@@ -56,6 +56,9 @@ self.addEventListener('fetch', (event) => {
     // Skip cross-origin requests (CDN, Binance WS, CryptoCompare, CoinGecko, etc.)
     // Browser handles those itself, no SW interference.
     if (url.origin !== self.location.origin) return;
+    // Never replay cached market responses or local credential files.
+    if (url.pathname.includes('/api/') && !url.pathname.endsWith('.js')) return;
+    if (/\/(telegram|cmc)-config\.js$/.test(url.pathname)) return;
 
     event.respondWith(networkFirst(request));
 });

@@ -26,9 +26,9 @@ export default async function handler(request, response) {
 
     try {
         const [fundingRes, openInterestRes, longShortRes] = await Promise.all([
-            fetch('https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&limit=1'),
-            fetch('https://fapi.binance.com/fapi/v1/openInterest?symbol=BTCUSDT'),
-            fetch('https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1')
+            fetch('https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&limit=1', { signal: AbortSignal.timeout(12000) }),
+            fetch('https://fapi.binance.com/fapi/v1/openInterest?symbol=BTCUSDT', { signal: AbortSignal.timeout(12000) }),
+            fetch('https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1', { signal: AbortSignal.timeout(12000) })
         ]);
 
         if (!fundingRes.ok) throw new Error(`Funding HTTP ${fundingRes.status}`);

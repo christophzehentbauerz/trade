@@ -77,22 +77,8 @@ const TrendStrategy = {
     // Fetch 1H candles from Binance
     async fetchKlines() {
         try {
-            const url = `https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=${this.config.candleCount}`;
-            const response = await fetch(url);
-
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-            const data = await response.json();
-
-            // Parse: [openTime, open, high, low, close, volume, ...]
-            return data.map(candle => ({
-                time: candle[0],
-                open: parseFloat(candle[1]),
-                high: parseFloat(candle[2]),
-                low: parseFloat(candle[3]),
-                close: parseFloat(candle[4]),
-                volume: parseFloat(candle[5])
-            }));
+            const { fetchCandles } = await import('./lib/market-data.mjs');
+            return fetchCandles('1h', this.config.candleCount);
         } catch (error) {
             console.error('TrendGuard: Error fetching klines:', error);
             this.state.error = error.message;
